@@ -10,4 +10,22 @@
   <artifactId>vfs2provider-jdbctable</artifactId>
   <name>SEEBURGER VFS2 JDBC Tables Provider </name>
 
+  <dependencies>
+
+	<!--  Used by StandaloneClient to create Derby test database -->
+  	<dependency>
+  		<groupId>org.apache.derby</groupId>
+  		<artifactId>derby</artifactId>
+  		<version>10.9.1.0</version>
+  		<scope>test</scope>
+  	</dependency>
+  	<dependency>
+        <groupId>com.googlecode.flyway</groupId>
+        <artifactId>flyway-core</artifactId>
+        <version>2.2</version>
+        <scope>test</scope>
+	</dependency>
+
+  </dependencies>
+
 </project>

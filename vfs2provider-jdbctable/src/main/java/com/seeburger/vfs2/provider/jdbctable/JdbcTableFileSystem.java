@@ -18,22 +18,11 @@ import org.apache.commons.vfs2.provider.AbstractFileSystem;
 public class JdbcTableFileSystem
     extends AbstractFileSystem
 {
-	DataSource dataSource;
 	String tableName;
 
     protected JdbcTableFileSystem(final FileName rootName, final FileSystemOptions opts)
     {
         super(rootName, null, opts);
-        String jndiName = JdbcTableFileSystemConfigBuilder.getInstance().getDatasource(opts);
-        try
-        {
-        	Hashtable<String, String> ht = new Hashtable<String, String>(); ht.put(Context.INITIAL_CONTEXT_FACTORY, "com.sun.jndi.rmi.registry.RegistryContextFactory");
-        	dataSource = (DataSource) new InitialContext(ht).lookup(jndiName);
-        }
-        catch (Exception e)
-        {
-        	System.err.println("Datasource not found. jndiName=" + jndiName +". cause=" + e);
-        }
         tableName = JdbcTableFileSystemConfigBuilder.getInstance().getTablename(opts);
     }
 
@@ -49,7 +38,6 @@ public class JdbcTableFileSystem
     @Override
     public void doCloseCommunicationLink()
     {
-    	dataSource = null;
     }
 
     /**

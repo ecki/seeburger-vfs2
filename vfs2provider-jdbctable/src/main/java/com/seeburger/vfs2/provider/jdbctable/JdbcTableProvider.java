@@ -4,6 +4,8 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 
+import javax.sql.DataSource;
+
 import org.apache.commons.vfs2.Capability;
 import org.apache.commons.vfs2.FileName;
 import org.apache.commons.vfs2.FileSystem;
@@ -13,6 +15,7 @@ import org.apache.commons.vfs2.FileSystemOptions;
 import org.apache.commons.vfs2.UserAuthenticationData;
 import org.apache.commons.vfs2.provider.AbstractOriginatingFileProvider;
 import org.apache.commons.vfs2.util.UserAuthenticatorUtils;
+import org.apache.derby.jdbc.EmbeddedDataSource40;
 
 public class JdbcTableProvider
     extends AbstractOriginatingFileProvider
@@ -37,14 +40,26 @@ public class JdbcTableProvider
         Capability.LIST_CHILDREN
     }));
 
+	private DataSource dataSource;
+
     /**
      * Constructs a new provider.
      */
     public JdbcTableProvider()
     {
+    	this(null);
+    }
+
+    /**
+     * Constructs a new provider.
+     */
+    public JdbcTableProvider(DataSource dataSource)
+    {
         super();
         setFileNameParser(JdbcTableNameParser.getInstance());
+        this.dataSource = dataSource;
     }
+
 
     /**
      * Creates a {@link FileSystem}.
@@ -55,7 +70,6 @@ public class JdbcTableProvider
     {
     	// name can be instance of GenericFileName or URLFileName
         //final URLFileName rootName = (UrlFileNameParser) name;
-
         UserAuthenticationData authData = null;
         try
         {
