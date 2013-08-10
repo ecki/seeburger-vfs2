@@ -1,5 +1,6 @@
 package com.seeburger.vfs2.provider.jdbctable;
 
+import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.sql.Blob;
@@ -48,7 +49,7 @@ public class JdbcTableRowFile extends AbstractFileObject
             //cGeneration BIGINT,
             //cBlob BLOB);
             ps = connection.prepareStatement("SELECT cSize,cLastModified,cBlob FROM tBlobs WHERE cID=?");
-            ps.setString(1, getKey(1));
+            setPrimaryKey(ps, 0);
             rs = ps.executeQuery();
             if (!rs.next())
             {
@@ -60,7 +61,7 @@ public class JdbcTableRowFile extends AbstractFileObject
             blob = rs.getBlob(3);
 
             if (blob == null)
-            	throw new RuntimeException("Critical inconsitency, blob column is null for " +getName());
+                throw new RuntimeException("Critical inconsitency, blob column is null for " +getName());
 
             long blobLength = (blob!=null)?blob.length():-1;
 
@@ -104,15 +105,6 @@ public class JdbcTableRowFile extends AbstractFileObject
 
     }
 
-    private String getKey(int i)
-    {
-        if (i != 1)
-        {
-            throw new IllegalArgumentException("getKey only supports one column key");
-        }
-        return getName().getBaseName();
-    }
-
     @Override
     protected void doDetach() throws Exception {
         System.out.println("Detaching " + getName());
@@ -134,14 +126,14 @@ public class JdbcTableRowFile extends AbstractFileObject
 
     @Override
     protected void doSetAttribute(String attrName, Object value)
-            throws Exception {
+                    throws Exception {
         // TODO Auto-generated method stub
         super.doSetAttribute(attrName, value);
     }
 
     @Override
     protected RandomAccessContent doGetRandomAccessContent(RandomAccessMode mode)
-            throws Exception {
+                    throws Exception {
         // TODO Auto-generated method stub
         return super.doGetRandomAccessContent(mode);
     }
@@ -176,15 +168,9 @@ public class JdbcTableRowFile extends AbstractFileObject
     @Override
     protected InputStream doGetInputStream() throws Exception
     {
-        System.out.println("doGetInputStream " + getName());
-        return null;
-    }
-
-    @Override
-    protected FileContentInfoFactory getFileContentInfoFactory()
-    {
-        System.out.println("getFileContentInfoFactory");
-        return new JdbcTableContentInfoFactory(); // TODO: singleton
+        // TODO: make a stream which can re-open blobs
+        byte[] blob = readData();
+        return new ByteArrayInputStream(blob);
     }
 
     @Override
@@ -195,33 +181,36 @@ public class JdbcTableRowFile extends AbstractFileObject
         return fs.resolveFile(children);
     }
 
-    /** Called by the OutputStream to set the result
-     * @throws SQLException */
+    /**
+     * Called by the OutputStream to set the result
+     * @throws SQLException
+     */
     void writeData(byte[] byteArray) throws SQLException
-	{
+    {
+        long now = System.currentTimeMillis(); // TODO: DB side?
         Connection connection = provider.dataSource.getConnection();
         PreparedStatement ps = null;
         ResultSet rs = null;
-        Blob blob = null;
-        long now = System.currentTimeMillis(); // TODO: DB side?
         try
         {
-//	    	cID varchar(30) PRIMARY KEY,
-//	    	cSize BIGINT NOT NULL,
-//	    	cLastModified BIGINT NOT NULL,
-//	    	cMarkGarbage BIGINT,
-//	    	cUserMark1 BIGINT,
-//	    	cUserMark2 BIGINT,
-//	    	cBlob BLOB);
+            //	    	cID varchar(30) PRIMARY KEY,
+            //	    	cSize BIGINT NOT NULL,
+            //	    	cLastModified BIGINT NOT NULL,
+            //	    	cMarkGarbage BIGINT,
+            //	    	cUserMark1 BIGINT,
+            //	    	cUserMark2 BIGINT,
+            //	    	cBlob BLOB);
             ps = connection.prepareStatement("INSERT INTO tBlobs (cID,cSize,cLastModified,cMarkGarbage,cBlob) VALUES (?,?,?,?,?)");
-            ps.setString(1, getKey(1));
+            setPrimaryKey(ps, 0);
             ps.setLong(2, byteArray.length);
             ps.setLong(3, now);
             ps.setLong(4, now);
             ps.setBytes(5, byteArray);
-            ps.executeUpdate();
-            ps.close();
-            connection.close();
+            int count = ps.executeUpdate();
+            if (count != 1)
+                throw new RuntimeException("Inserting different than 1 (" + count + ") records for " + getName());
+            connection.commit();
+            connection = null;
             lastModified = now;
             contentSize = byteArray.length;
             // TODO: attached?
@@ -229,11 +218,64 @@ public class JdbcTableRowFile extends AbstractFileObject
         }
         finally
         {
-            safeFree(blob);
+            if (connection != null)
+                connection.rollback();
             safeClose(rs);
             safeClose(ps);
             safeClose(connection);
         }
-}
+    }
 
+    /**
+     * Called to read Data for the InputStream
+     * @throws SQLException
+     */
+    byte[] readData() throws SQLException
+    {
+        Connection connection = provider.dataSource.getConnection();
+        PreparedStatement ps = null;
+        ResultSet rs = null;
+        try
+        {
+            ps = connection.prepareStatement("SELECT cBlob FROM tBlobs WHERE cID=?");
+            setPrimaryKey(ps, 0);
+            rs = ps.executeQuery();
+
+            if (rs.next() == false)
+                throw new RuntimeException("Database row not found for "+getName()); // TODO: deleted?
+
+            Blob blob = rs.getBlob(1);
+            if (blob == null)
+                throw new RuntimeException("Blob column is null for "+getName());
+
+            // cannot access Blob after ResultSet#next() or connection#close()
+            byte[] bytes = blob.getBytes(1, 1*1014*1024);
+            if (bytes == null)
+                throw new RuntimeException("Blob column content is null for " + getName());
+
+            if (rs.next() != false)
+                throw new RuntimeException("More than one match for " + getName());
+
+            return bytes;
+        }
+        finally
+        {
+            //safeFree(blob);
+            safeClose(rs);
+            safeClose(ps);
+            safeClose(connection);
+        }
+    }
+
+    /**
+     * Sets primary key of this file on resultset.
+     *
+     * @param before number of bind parameters before first key, typically 0
+     * @throws SQLException
+     * */
+    private void setPrimaryKey(PreparedStatement ps, int before) throws SQLException
+    {
+        String name = getName().getBaseName();
+        ps.setString(before + 1, name);
+    }
 }
