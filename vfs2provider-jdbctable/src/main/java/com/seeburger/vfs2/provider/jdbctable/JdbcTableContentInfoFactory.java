@@ -21,21 +21,13 @@ import org.apache.commons.vfs2.FileContentInfo;
 import org.apache.commons.vfs2.FileContentInfoFactory;
 import org.apache.commons.vfs2.FileSystemException;
 import org.apache.commons.vfs2.impl.DefaultFileContentInfo;
+import org.apache.commons.vfs2.util.FileObjectUtils;
 
-/**
- * Creates FileContentInfo instances for HTTP.
- */
 public class JdbcTableContentInfoFactory implements FileContentInfoFactory
 {
     public FileContentInfo create(final FileContent fileContent) throws FileSystemException
     {
-        //final JdbcTableObject jdbcFile = (JdbcTableObject) FileObjectUtils.getAbstractFileObject(fileContent.getFile());
-
-        String contentType = null;
-        String contentEncoding = null;
-
-        //
-
-        return new DefaultFileContentInfo(contentType, contentEncoding);
+    	// TODO: file type could by mapped to column (blob, ...)
+    	return new DefaultFileContentInfo(null, null);
     }
 }
