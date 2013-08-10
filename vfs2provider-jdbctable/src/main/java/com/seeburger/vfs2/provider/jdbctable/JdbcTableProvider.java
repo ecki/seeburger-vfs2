@@ -40,7 +40,7 @@ public class JdbcTableProvider
         Capability.LIST_CHILDREN
     }));
 
-	private DataSource dataSource;
+	DataSource dataSource;
 
     /**
      * Constructs a new provider.
@@ -81,7 +81,7 @@ public class JdbcTableProvider
             UserAuthenticatorUtils.cleanup(authData);
         }
 
-        return new JdbcTableFileSystem(name, fileSystemOptions);
+        return new JdbcTableFileSystem(name, this, fileSystemOptions);
     }
 
     @Override

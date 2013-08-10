@@ -1,5 +1,7 @@
 package com.seeburger.vfs2.provider.jdbctable.test;
 
+import java.io.IOException;
+import java.io.OutputStream;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
@@ -21,10 +23,10 @@ public class StandaloneClient {
 
 	/**
 	 * @param args
-	 * @throws FileSystemException
 	 * @throws SQLException
+	 * @throws IOException
 	 */
-	public static void main(String[] args) throws FileSystemException, SQLException
+	public static void main(String[] args) throws SQLException, IOException
 	{
 		DataSource ds = createDatasource();
 		DefaultFileSystemManager manager = new DefaultFileSystemManager();
@@ -52,8 +54,19 @@ public class StandaloneClient {
 		listFiles("a1=", a1);
 		System.out.println("-- a1 refresh");
 		a1.refresh();
-		a1 = manager.resolveFile("seejt:///key/a1");
-		listFiles("a1=", a1);
+		listFiles("axxx=", a1);
+
+		FileObject ax = null;
+		for(int i=0;i<1000;i++)
+		{
+			ax = manager.resolveFile("seejt:///key/abcd" + i + "_" + System.currentTimeMillis());
+			//ax.createFile();
+			OutputStream os = ax.getContent().getOutputStream();
+			os.write(1); os.write(2); os.write(3); os.close();
+			ax = manager.resolveFile(ax.toString());
+			if (i % 50 == 0)
+				listFiles("axxx("+i+")=", ax);
+		}
 	}
 
 	private static DataSource createDatasource() throws SQLException
@@ -99,7 +112,7 @@ public class StandaloneClient {
 		}
 		else if (file.getType() == FileType.FILE)
 		{
-			System.out.println(prefix + file);
+			System.out.println(prefix + file + " size " + file.getContent().getSize());
 		}
 		else
 		{

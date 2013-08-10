@@ -1,5 +1,6 @@
 package com.seeburger.vfs2.provider.jdbctable;
 
+import java.nio.file.spi.FileSystemProvider;
 import java.util.Collection;
 import java.util.Hashtable;
 
@@ -19,14 +20,18 @@ public class JdbcTableFileSystem
     extends AbstractFileSystem
 {
 	String tableName;
+	JdbcTableProvider provider;
 
-    protected JdbcTableFileSystem(final FileName rootName, final FileSystemOptions opts)
+    protected JdbcTableFileSystem(final FileName rootName,
+							      final JdbcTableProvider jdbcTableProvider,
+			                      final FileSystemOptions fileSystemOptions)
     {
-        super(rootName, null, opts);
-        tableName = JdbcTableFileSystemConfigBuilder.getInstance().getTablename(opts);
+        super(rootName, /*parentlayer*/null, fileSystemOptions);
+        this.tableName = JdbcTableFileSystemConfigBuilder.getInstance().getTablename(fileSystemOptions);
+        this.provider = jdbcTableProvider;
     }
 
-    /**
+	/**
      * Adds the capabilities of this file system.
      */
     @Override
@@ -62,5 +67,17 @@ public class JdbcTableFileSystem
 
     	throw new FileNotFoundException(name);
     }
+
+	DataSource getDatasource()
+	{
+
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	String getTableName()
+	{
+		return tableName;
+	}
 
 }
