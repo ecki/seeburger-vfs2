@@ -15,7 +15,6 @@ import org.apache.commons.vfs2.FileSystemOptions;
 import org.apache.commons.vfs2.UserAuthenticationData;
 import org.apache.commons.vfs2.provider.AbstractOriginatingFileProvider;
 import org.apache.commons.vfs2.util.UserAuthenticatorUtils;
-import org.apache.derby.jdbc.EmbeddedDataSource40;
 
 public class JdbcTableProvider
     extends AbstractOriginatingFileProvider
