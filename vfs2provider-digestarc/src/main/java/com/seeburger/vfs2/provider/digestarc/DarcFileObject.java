@@ -2,7 +2,6 @@ package com.seeburger.vfs2.provider.digestarc;
 
 import java.io.InputStream;
 
-import org.apache.commons.vfs2.FileContent;
 import org.apache.commons.vfs2.FileSystemException;
 import org.apache.commons.vfs2.FileType;
 import org.apache.commons.vfs2.provider.AbstractFileName;
@@ -142,12 +141,5 @@ public class DarcFileObject extends AbstractFileObject
 		darcDirectory = null;
 		darcFile = null;
 		type = FileType.IMAGINARY;
-	}
-
-
-	@Override
-	protected FileContent doCreateFileContent() throws FileSystemException {
-		// TODO Auto-generated method stub
-		return super.doCreateFileContent();
 	}
 }
