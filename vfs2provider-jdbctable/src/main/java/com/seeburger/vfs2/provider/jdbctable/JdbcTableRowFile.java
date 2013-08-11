@@ -10,7 +10,6 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Map;
 
-import org.apache.commons.vfs2.FileContentInfoFactory;
 import org.apache.commons.vfs2.FileName;
 import org.apache.commons.vfs2.FileObject;
 import org.apache.commons.vfs2.FileSystem;
@@ -107,7 +106,33 @@ public class JdbcTableRowFile extends AbstractFileObject
 
     @Override
     protected void doDetach() throws Exception {
-        System.out.println("Detaching " + getName());
+        //System.out.println("Detaching " + getName());
+    }
+
+    @Override
+    protected void doDelete()
+        throws Exception
+    {
+        Connection connection = provider.dataSource.getConnection();
+        PreparedStatement ps = null;
+        try
+        {
+            ps = connection.prepareStatement("DELETE FROM tBlobs WHERE cID=?");
+            setPrimaryKey(ps, 0);
+            int count = ps.executeUpdate();
+            if (count != 0 && count != 1)
+                throw new RuntimeException("Corruption suspected, deleting different than 1 (" + count + ") records for " + getName());
+            connection.commit();
+            connection = null;
+            injectType(FileType.IMAGINARY); // TODO: needed?
+        }
+        finally
+        {
+            if (connection != null)
+                connection.rollback();
+            safeClose(ps);
+            safeClose(connection);
+        }
     }
 
     @Override
@@ -187,6 +212,7 @@ public class JdbcTableRowFile extends AbstractFileObject
      */
     void writeData(byte[] byteArray) throws SQLException
     {
+        // TODO: needs to handle update/append (MERGE) as well
         long now = System.currentTimeMillis(); // TODO: DB side?
         Connection connection = provider.dataSource.getConnection();
         PreparedStatement ps = null;
@@ -262,6 +288,31 @@ public class JdbcTableRowFile extends AbstractFileObject
         {
             //safeFree(blob);
             safeClose(rs);
+            safeClose(ps);
+            safeClose(connection);
+        }
+    }
+
+    @Override
+    protected void doRename(FileObject newfile)
+        throws Exception
+    {
+        long now = System.currentTimeMillis();
+        Connection connection = provider.dataSource.getConnection();
+        PreparedStatement ps = null;
+        try
+        {
+            ps = connection.prepareStatement("UPDATE tBlobs SET cID=?,cLastModified=? WHERE cID=?");
+            setPrimaryKey(ps, 2); // 1!
+            ps.setString(1, newfile.getName().getBaseName());
+            ps.setLong(2, now); // TODO: metalast
+            int count = ps.executeUpdate();
+            if (count != 1)
+                throw new RuntimeException("Inconsitent result " + count +" while rename to " + newfile.getName() + " from " + getName());
+            connection.commit();
+        }
+        finally
+        {
             safeClose(ps);
             safeClose(connection);
         }
