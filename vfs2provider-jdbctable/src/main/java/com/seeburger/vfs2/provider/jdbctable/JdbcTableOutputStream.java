@@ -59,7 +59,7 @@ public class JdbcTableOutputStream extends OutputStream
         }
         try
         {
-            this.closed = true;
+            this.closed = true; // TODO
             this.file.writeData(bufferStream.toByteArray());
         }
         catch (Exception e)
