@@ -3,13 +3,13 @@ package com.seeburger.vfs2.provider.jdbctable.test;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
 import java.sql.SQLException;
+import java.util.Date;
 
 import javax.sql.DataSource;
 
 import org.apache.commons.vfs2.CacheStrategy;
+import org.apache.commons.vfs2.FileContent;
 import org.apache.commons.vfs2.FileObject;
 import org.apache.commons.vfs2.FileSystemException;
 import org.apache.commons.vfs2.FileType;
@@ -41,7 +41,7 @@ public class StandaloneClient {
         System.out.println("key=" + key + " " + key.getFileSystem() + " root=" + root) ;
         listFiles("|", root);
 
-        FileObject a1 = manager.resolveFile("seejt:///key/a1");
+        FileObject a1 = manager.resolveFile("seejt:///key/abc");
         listFiles("a1=", a1);
         FileObject b2 = manager.resolveFile("seejt:///key/b2");
         listFiles("b2=", b2);
@@ -59,7 +59,10 @@ public class StandaloneClient {
 
         FileObject ax = null;
         long now = System.currentTimeMillis();
-        for(int i=0;i<1000;i++)
+        int count = 1000;
+
+        System.out.println("Reading ("+count+") ...");
+        for(int i=0; i<count; i++)
         {
             ax = manager.resolveFile("seejt:///key/abcd_" + now + "_" +  i);
             //ax.createFile();
@@ -67,9 +70,11 @@ public class StandaloneClient {
             os.write(1); os.write(2); os.write(3); os.close();
             ax = manager.resolveFile(ax.toString());
             if (i % 50 == 0)
-                listFiles("axxx("+i+")=", ax);
+                listFiles("("+i+")  ", ax);
         }
-        for(int i=0;i<1000;i++)
+
+        System.out.println("Reading ("+count+") ...");
+        for(int i=0; i<count; i++)
         {
             ax = manager.resolveFile("seejt:///key/abcd_" + now + "_"+  i);
             InputStream is = ax.getContent().getInputStream();
@@ -77,8 +82,9 @@ public class StandaloneClient {
                 System.out.println("not 1 2 3");
             is.close();
             if (i % 100 == 0)
-                listFiles("axxx("+i+")=", ax);
+                listFiles("("+i+")  ", ax);
         }
+        System.out.println("Have a good time.");
     }
 
     private static DataSource createDatasource() throws SQLException
@@ -87,10 +93,12 @@ public class StandaloneClient {
         ds.setUser("SEEASOWN");
         ds.setPassword("secret");
         ds.setCreateDatabase("create");
-        ds.setDatabaseName("target/TESTDB");
+        ds.setDatabaseName("target/SimpleDerbyTestDB");
 
         Flyway flyway = new Flyway();
         flyway.setDataSource(ds);
+        flyway.setValidateOnMigrate(true);
+        flyway.setCleanOnValidationError(true);
         flyway.migrate();
 
         MigrationInfo[] states = flyway.info().all();
@@ -102,17 +110,40 @@ public class StandaloneClient {
 
     private static void listFiles(String prefix, FileObject file) throws FileSystemException
     {
+        String type = " (";
+        if (file.isHidden())
+            type+="H";
+        else
+            type+=".";
+        if (file.isReadable())
+            type+="R";
+        else
+            type+=".";
+        if (file.isWriteable())
+            type+="W";
+        else
+            type+=".";
+        type+=")";
+        FileContent content = file.getContent();
+        if (content != null)
+        {
+            try { type += " date=" + new Date(content.getLastModifiedTime()); }catch (Exception ig) { }
+            try { type += " size=" + content.getSize();  }catch (Exception ig) { }
+            try { type += " att=" + content.getAttributes();  }catch (Exception ig) { }
+        }
+
+
         if (file.getType().hasChildren())
         {
             FileObject[] children = null;
             try
             {
                 children = file.getChildren();
-                System.out.println(prefix + file + "/");
+                System.out.println(prefix + file + " /" + type);
             }
             catch (FileSystemException ignored)
             {
-                System.out.println(prefix + file + "/ (" + ignored + ")");
+                System.out.println(prefix + file + "/ (" + ignored + ")" + type);
             }
             if (children != null)
             {
@@ -124,11 +155,11 @@ public class StandaloneClient {
         }
         else if (file.getType() == FileType.FILE)
         {
-            System.out.println(prefix + file + " size " + file.getContent().getSize());
+            System.out.println(prefix + file + type);
         }
         else
         {
-            System.out.println(prefix + "(" + file + ")");
+            System.out.println(prefix + "(" + file + ")" + type);
         }
     }
 
