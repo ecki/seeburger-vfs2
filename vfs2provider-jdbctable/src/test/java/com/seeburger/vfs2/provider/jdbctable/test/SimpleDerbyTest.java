@@ -12,6 +12,7 @@ import java.sql.SQLException;
 import javax.sql.DataSource;
 
 import org.apache.commons.vfs2.CacheStrategy;
+import org.apache.commons.vfs2.FileContent;
 import org.apache.commons.vfs2.FileObject;
 import org.apache.commons.vfs2.FileSystemException;
 import org.apache.commons.vfs2.FileType;
@@ -152,7 +153,7 @@ public class SimpleDerbyTest
     }
 
     @Test
-    public void testDeleteMissingFile() throws IOException, SQLException
+    public void testDeleteVanishedFile() throws IOException, SQLException
     {
         final long now = System.currentTimeMillis();
 
@@ -246,7 +247,7 @@ public class SimpleDerbyTest
 
 
     @Test
-    public void testDeleteVanishedFile() throws IOException
+    public void testDeleteMissingFile() throws IOException
     {
         final long now = System.currentTimeMillis();
 
@@ -314,6 +315,36 @@ public class SimpleDerbyTest
         is.close();
 
         testFile.getContent().close();
+    }
+
+    @Test
+    public void testReadVanishedFile() throws IOException, SQLException
+    {
+        final long now = System.currentTimeMillis();
+
+        final FileObject testFile = manager.resolveFile("seejt:///key/readfile_"+now);
+        final FileContent content = testFile.getContent();
+        testFile.createFile();
+        assertEquals(true, testFile.exists());
+
+        // now VFS thinks the file exists, we delete it in SQL
+        Connection c = dataSource.getConnection();
+        PreparedStatement ps = c.prepareStatement("DELETE FROM tBlobs WHERE cID=?");
+        ps.setString(1, "readfile_" + now);
+        int count = ps.executeUpdate();
+        assertEquals(1, count); // proof the file existed
+        c.commit();
+        c.close();
+
+        try
+        {
+            content.getInputStream();
+            fail("Expected a FileSystemException");
+        }
+        catch (FileSystemException fse)
+        {
+            assertTrue(fse.getCause().toString().contains("row not found"));
+        }
     }
 
 }

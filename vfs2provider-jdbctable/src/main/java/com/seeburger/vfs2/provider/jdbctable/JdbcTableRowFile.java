@@ -1,6 +1,7 @@
 package com.seeburger.vfs2.provider.jdbctable;
 
 import java.io.ByteArrayInputStream;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.sql.Blob;
@@ -262,7 +263,7 @@ public class JdbcTableRowFile extends AbstractFileObject
      * Called to read Data for the InputStream
      * @throws SQLException
      */
-    byte[] readData() throws SQLException
+    byte[] readData() throws IOException, SQLException
     {
         Connection connection = provider.dataSource.getConnection();
         PreparedStatement ps = null;
@@ -275,7 +276,7 @@ public class JdbcTableRowFile extends AbstractFileObject
 
             if (rs.next() == false)
             {
-                throw new RuntimeException("Database row not found for " + getName()); // TODO: deleted?
+                throw new IOException("Database row not found for " + getName()); // TODO: deleted?
             }
 
             Blob blob = rs.getBlob(1);
