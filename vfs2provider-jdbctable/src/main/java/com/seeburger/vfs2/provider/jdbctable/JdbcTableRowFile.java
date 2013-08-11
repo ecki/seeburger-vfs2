@@ -42,30 +42,25 @@ public class JdbcTableRowFile extends AbstractFileObject
         Blob blob = null;
         try
         {
-            //cID varchar(30) PRIMARY KEY,
-            //cSize BIGINT,
-            //cLastModifies BIGINT,
-            //cGeneration BIGINT,
-            //cBlob BLOB);
-            ps = connection.prepareStatement("SELECT cSize,cLastModified,cBlob FROM tBlobs WHERE cID=?");
-            setPrimaryKey(ps, 0);
+            ps = connection.prepareStatement("SELECT cLastModified,cBlob FROM tBlobs WHERE cID=?");
+            setPrimaryKey(ps, this, 0);
             rs = ps.executeQuery();
             if (!rs.next())
             {
                 injectType(FileType.IMAGINARY);
                 return;
             }
-            contentSize  = rs.getLong(1);
-            lastModified = rs.getLong(2);
-            blob = rs.getBlob(3);
+            lastModified = rs.getLong(1);
+            blob = rs.getBlob(2);
 
             if (blob == null)
+            {
                 throw new RuntimeException("Critical inconsitency, blob column is null for " +getName());
+            }
 
-            long blobLength = (blob!=null)?blob.length():-1;
+            contentSize = blob.length();
 
-            if (blobLength != contentSize) // TOOD compressed
-                throw new RuntimeException("Critical inconsitency between metadata (" + contentSize + ") and BLOB (" + blobLength + " for " + getName());
+            // TODO: additional attributes
 
             if (rs.next())
             {
@@ -83,27 +78,6 @@ public class JdbcTableRowFile extends AbstractFileObject
         }
     }
 
-    private void safeFree(Blob blob)
-    {
-        try { blob.free(); } catch (Exception ignored) { }
-    }
-
-    private void safeClose(Connection connection)
-    {
-        try { connection.close(); } catch (Exception ignored) { }
-    }
-
-    private void safeClose(PreparedStatement ps)
-    {
-        try { ps.close(); } catch (Exception ignored) { }
-    }
-
-    private void safeClose(ResultSet rs)
-    {
-        try { rs.close(); } catch (Exception ignored) { }
-
-    }
-
     @Override
     protected void doDetach() throws Exception {
         //System.out.println("Detaching " + getName());
@@ -118,7 +92,7 @@ public class JdbcTableRowFile extends AbstractFileObject
         try
         {
             ps = connection.prepareStatement("DELETE FROM tBlobs WHERE cID=?");
-            setPrimaryKey(ps, 0);
+            setPrimaryKey(ps, this, 0);
             int count = ps.executeUpdate();
             if (count != 0 && count != 1)
                 throw new RuntimeException("Corruption suspected, deleting different than 1 (" + count + ") records for " + getName());
@@ -151,14 +125,16 @@ public class JdbcTableRowFile extends AbstractFileObject
 
     @Override
     protected void doSetAttribute(String attrName, Object value)
-                    throws Exception {
+                    throws Exception
+    {
         // TODO Auto-generated method stub
         super.doSetAttribute(attrName, value);
     }
 
     @Override
     protected RandomAccessContent doGetRandomAccessContent(RandomAccessMode mode)
-                    throws Exception {
+                    throws Exception
+    {
         // TODO Auto-generated method stub
         return super.doGetRandomAccessContent(mode);
     }
@@ -186,7 +162,9 @@ public class JdbcTableRowFile extends AbstractFileObject
     protected long doGetContentSize() throws Exception
     {
         if (contentSize < 0)
+        {
             throw new RuntimeException("Cannot determine size, failed to attach " + getName());
+        }
         return contentSize;
     }
 
@@ -206,6 +184,34 @@ public class JdbcTableRowFile extends AbstractFileObject
         return fs.resolveFile(children);
     }
 
+    @Override
+    protected void doRename(FileObject newfile)
+        throws Exception
+    {
+        long now = System.currentTimeMillis();
+        Connection connection = provider.dataSource.getConnection();
+        PreparedStatement ps = null;
+        try
+        {
+            ps = connection.prepareStatement("UPDATE tBlobs SET cID=?,cLastModified=? WHERE cID=?");
+            setPrimaryKey(ps, this, 2);
+            setPrimaryKey(ps, (JdbcTableRowFile)newfile, 0);
+            ps.setLong(2, now); // TODO: metalast
+
+            int count = ps.executeUpdate();
+            if (count != 1)
+            {
+                throw new RuntimeException("Inconsitent result " + count +" while rename to " + newfile.getName() + " from " + getName());
+            }
+            connection.commit();
+        }
+        finally
+        {
+            safeClose(ps);
+            safeClose(connection);
+        }
+    }
+
     /**
      * Called by the OutputStream to set the result
      * @throws SQLException
@@ -219,33 +225,33 @@ public class JdbcTableRowFile extends AbstractFileObject
         ResultSet rs = null;
         try
         {
-            //	    	cID varchar(30) PRIMARY KEY,
-            //	    	cSize BIGINT NOT NULL,
-            //	    	cLastModified BIGINT NOT NULL,
-            //	    	cMarkGarbage BIGINT,
-            //	    	cUserMark1 BIGINT,
-            //	    	cUserMark2 BIGINT,
-            //	    	cBlob BLOB);
             ps = connection.prepareStatement("INSERT INTO tBlobs (cID,cSize,cLastModified,cMarkGarbage,cBlob) VALUES (?,?,?,?,?)");
-            setPrimaryKey(ps, 0);
+            setPrimaryKey(ps, this, 0);
             ps.setLong(2, byteArray.length);
             ps.setLong(3, now);
             ps.setLong(4, now);
             ps.setBytes(5, byteArray);
+
             int count = ps.executeUpdate();
             if (count != 1)
+            {
                 throw new RuntimeException("Inserting different than 1 (" + count + ") records for " + getName());
+            }
+
             connection.commit();
             connection = null;
+
             lastModified = now;
             contentSize = byteArray.length;
-            // TODO: attached?
-            injectType(FileType.FILE);
+
+            injectType(FileType.FILE); // TODO: attached?
         }
         finally
         {
             if (connection != null)
+            {
                 connection.rollback();
+            }
             safeClose(rs);
             safeClose(ps);
             safeClose(connection);
@@ -264,69 +270,91 @@ public class JdbcTableRowFile extends AbstractFileObject
         try
         {
             ps = connection.prepareStatement("SELECT cBlob FROM tBlobs WHERE cID=?");
-            setPrimaryKey(ps, 0);
+            setPrimaryKey(ps, this, 0);
             rs = ps.executeQuery();
 
             if (rs.next() == false)
-                throw new RuntimeException("Database row not found for "+getName()); // TODO: deleted?
+            {
+                throw new RuntimeException("Database row not found for " + getName()); // TODO: deleted?
+            }
 
             Blob blob = rs.getBlob(1);
             if (blob == null)
-                throw new RuntimeException("Blob column is null for "+getName());
+            {
+                throw new RuntimeException("Blob column is null for " + getName());
+            }
 
             // cannot access Blob after ResultSet#next() or connection#close()
             byte[] bytes = blob.getBytes(1, 1*1014*1024);
+            blob.free();
+
             if (bytes == null)
+            {
                 throw new RuntimeException("Blob column content is null for " + getName());
+            }
 
             if (rs.next() != false)
+            {
                 throw new RuntimeException("More than one match for " + getName());
+            }
 
             return bytes;
         }
         finally
         {
-            //safeFree(blob);
             safeClose(rs);
             safeClose(ps);
             safeClose(connection);
         }
     }
 
-    @Override
-    protected void doRename(FileObject newfile)
-        throws Exception
-    {
-        long now = System.currentTimeMillis();
-        Connection connection = provider.dataSource.getConnection();
-        PreparedStatement ps = null;
-        try
-        {
-            ps = connection.prepareStatement("UPDATE tBlobs SET cID=?,cLastModified=? WHERE cID=?");
-            setPrimaryKey(ps, 2); // 1!
-            ps.setString(1, newfile.getName().getBaseName());
-            ps.setLong(2, now); // TODO: metalast
-            int count = ps.executeUpdate();
-            if (count != 1)
-                throw new RuntimeException("Inconsitent result " + count +" while rename to " + newfile.getName() + " from " + getName());
-            connection.commit();
-        }
-        finally
-        {
-            safeClose(ps);
-            safeClose(connection);
-        }
-    }
-
     /**
-     * Sets primary key of this file on resultset.
+     * Sets primary key of this file on prepared statement.
+     * <P>
+     * Supports multi column keys (driven by {@link #getKeys(JdbcTableRowFile)}).
      *
      * @param before number of bind parameters before first key, typically 0
      * @throws SQLException
      * */
-    private void setPrimaryKey(PreparedStatement ps, int before) throws SQLException
+    private void setPrimaryKey(PreparedStatement ps, JdbcTableRowFile file, int before) throws SQLException
     {
-        String name = getName().getBaseName();
-        ps.setString(before + 1, name);
+        String[] keys = getKeys(file);
+        for(int i=0;i<keys.length;i++)
+        {
+            ps.setString(before + i + 1, keys[i]);
+        }
+    }
+
+    /**
+     * Convert file name into composed key.
+     *
+     * @param newfile
+     * @return
+     */
+    private String[] getKeys(FileObject file)
+    {
+        return new String[] { file.getName().getBaseName() };
+    }
+
+
+    private void safeFree(Blob blob)
+    {
+        try { blob.free(); } catch (Exception ignored) { }
+    }
+
+    private void safeClose(Connection connection)
+    {
+        try { connection.close(); } catch (Exception ignored) { }
+    }
+
+    private void safeClose(PreparedStatement ps)
+    {
+        try { ps.close(); } catch (Exception ignored) { }
+    }
+
+    private void safeClose(ResultSet rs)
+    {
+        try { rs.close(); } catch (Exception ignored) { }
+
     }
 }
