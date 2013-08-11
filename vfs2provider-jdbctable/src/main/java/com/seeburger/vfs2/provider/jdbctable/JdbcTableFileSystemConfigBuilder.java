@@ -28,16 +28,6 @@ public class JdbcTableFileSystemConfigBuilder extends FileSystemConfigBuilder
         return BUILDER;
     }
 
-    public void setDatasource(final FileSystemOptions opts, final DataSource dataSource)
-    {
-        setParam(opts, "datasource", dataSource);
-    }
-
-    public String getDatasource(final FileSystemOptions opts)
-    {
-        return getString(opts, "datasource", "java:/DataSource");
-    }
-
     public void setTablename(final FileSystemOptions opts, final String name)
     {
         setParam(opts, "table", name);
