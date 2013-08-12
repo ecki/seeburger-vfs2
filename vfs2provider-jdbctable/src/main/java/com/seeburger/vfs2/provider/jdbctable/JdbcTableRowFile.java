@@ -43,23 +43,33 @@ public class JdbcTableRowFile extends AbstractFileObject
         Blob blob = null;
         try
         {
-            ps = connection.prepareStatement("SELECT cLastModified,cBlob FROM tBlobs WHERE cID=?");
+            ps = connection.prepareStatement("SELECT cName,cLastModified,cBlob FROM tBlobs WHERE (cParent=? AND cName=?) OR (cParent=? AND cName='')");
             setPrimaryKey(ps, this, 0);
+            ps.setString(3, getName().getPathDecoded());
             rs = ps.executeQuery();
             if (!rs.next())
             {
                 injectType(FileType.IMAGINARY);
                 return;
             }
-            lastModified = rs.getLong(1);
-            blob = rs.getBlob(2);
-
-            if (blob == null)
+            String name = rs.getString(1);
+            lastModified = rs.getLong(2);
+            if (name == null || name.isEmpty())
             {
-                throw new RuntimeException("Critical inconsitency, blob column is null for " +getName());
+                injectType(FileType.FOLDER);
+            }
+            else
+            {
+                blob = rs.getBlob(3);
+                if (blob == null)
+                {
+                    throw new RuntimeException("Critical inconsitency, blob column is null for " +getName());
+                }
+
+                contentSize = blob.length();
+                injectType(FileType.FILE);
             }
 
-            contentSize = blob.length();
 
             // TODO: additional attributes
 
@@ -67,12 +77,51 @@ public class JdbcTableRowFile extends AbstractFileObject
             {
                 throw new RuntimeException("Critical consitency problem, duplicate response to " + getName());
             }
-
-            injectType(FileType.FILE);
         }
         finally
         {
             safeFree(blob);
+            safeClose(rs);
+            safeClose(ps);
+            safeClose(connection);
+        }
+    }
+
+    @Override
+    protected void doCreateFolder()
+        throws Exception
+    {
+        long now = System.currentTimeMillis(); // TODO: DB side?
+        Connection connection = provider.dataSource.getConnection();
+        PreparedStatement ps = null;
+        ResultSet rs = null;
+        try
+        {
+            ps = connection.prepareStatement("INSERT INTO tBlobs (cParent,cName,cSize,cLastModified,cMarkGarbage) VALUES (?,'',-1,?,?)");
+            ps.setString(1, getName().getPathDecoded());
+            ps.setLong(2, now);
+            ps.setLong(3, now);
+
+            int count = ps.executeUpdate();
+            if (count != 1)
+            {
+                throw new RuntimeException("Inserting different than 1 (" + count + ") records for " + getName());
+            }
+
+            connection.commit();
+            connection = null;
+
+            lastModified = now;
+            contentSize = -1;
+
+            injectType(FileType.FOLDER); // TODO: attached?
+        }
+        finally
+        {
+            if (connection != null)
+            {
+                connection.rollback();
+            }
             safeClose(rs);
             safeClose(ps);
             safeClose(connection);
@@ -92,7 +141,7 @@ public class JdbcTableRowFile extends AbstractFileObject
         PreparedStatement ps = null;
         try
         {
-            ps = connection.prepareStatement("DELETE FROM tBlobs WHERE cID=?");
+            ps = connection.prepareStatement("DELETE FROM tBlobs WHERE cParent=? AND cName=?");
             setPrimaryKey(ps, this, 0);
             int count = ps.executeUpdate();
             if (count != 0 && count != 1)
@@ -194,10 +243,10 @@ public class JdbcTableRowFile extends AbstractFileObject
         PreparedStatement ps = null;
         try
         {
-            ps = connection.prepareStatement("UPDATE tBlobs SET cID=?,cLastModified=? WHERE cID=?");
-            setPrimaryKey(ps, this, 2);
+            ps = connection.prepareStatement("UPDATE tBlobs SET cParent=?,cName=?,cLastModified=? WHERE cParent=? AND cName=?");
+            setPrimaryKey(ps, this, 3);
             setPrimaryKey(ps, (JdbcTableRowFile)newfile, 0);
-            ps.setLong(2, now); // TODO: metalast
+            ps.setLong(3, now); // TODO: metalast
 
             int count = ps.executeUpdate();
             if (count != 1)
@@ -216,8 +265,9 @@ public class JdbcTableRowFile extends AbstractFileObject
     /**
      * Called by the OutputStream to set the result
      * @throws SQLException
+     * @throws FileSystemException
      */
-    void writeData(byte[] byteArray) throws SQLException
+    void writeData(byte[] byteArray) throws SQLException, FileSystemException
     {
         // TODO: needs to handle update/append (MERGE) as well
         long now = System.currentTimeMillis(); // TODO: DB side?
@@ -226,12 +276,12 @@ public class JdbcTableRowFile extends AbstractFileObject
         ResultSet rs = null;
         try
         {
-            ps = connection.prepareStatement("INSERT INTO tBlobs (cID,cSize,cLastModified,cMarkGarbage,cBlob) VALUES (?,?,?,?,?)");
+            ps = connection.prepareStatement("INSERT INTO tBlobs (cParent,cName,cSize,cLastModified,cMarkGarbage,cBlob) VALUES (?,?,?,?,?,?)");
             setPrimaryKey(ps, this, 0);
-            ps.setLong(2, byteArray.length);
-            ps.setLong(3, now);
+            ps.setLong(3, byteArray.length);
             ps.setLong(4, now);
-            ps.setBytes(5, byteArray);
+            ps.setLong(5, now);
+            ps.setBytes(6, byteArray);
 
             int count = ps.executeUpdate();
             if (count != 1)
@@ -270,7 +320,7 @@ public class JdbcTableRowFile extends AbstractFileObject
         ResultSet rs = null;
         try
         {
-            ps = connection.prepareStatement("SELECT cBlob FROM tBlobs WHERE cID=?");
+            ps = connection.prepareStatement("SELECT cBlob FROM tBlobs WHERE cParent=? AND cName=?");
             setPrimaryKey(ps, this, 0);
             rs = ps.executeQuery();
 
@@ -316,8 +366,9 @@ public class JdbcTableRowFile extends AbstractFileObject
      *
      * @param before number of bind parameters before first key, typically 0
      * @throws SQLException
+     * @throws FileSystemException
      * */
-    private void setPrimaryKey(PreparedStatement ps, JdbcTableRowFile file, int before) throws SQLException
+    private void setPrimaryKey(PreparedStatement ps, JdbcTableRowFile file, int before) throws SQLException, FileSystemException
     {
         String[] keys = getKeys(file);
         for(int i=0;i<keys.length;i++)
@@ -331,10 +382,11 @@ public class JdbcTableRowFile extends AbstractFileObject
      *
      * @param newfile
      * @return
+     * @throws FileSystemException
      */
-    private String[] getKeys(FileObject file)
+    private String[] getKeys(FileObject file) throws FileSystemException
     {
-        return new String[] { file.getName().getBaseName() };
+        return new String[] { file.getName().getParent().getPathDecoded(), file.getName().getBaseName() };
     }
 
 

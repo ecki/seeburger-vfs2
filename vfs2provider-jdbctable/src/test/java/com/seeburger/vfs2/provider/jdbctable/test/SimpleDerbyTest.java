@@ -167,7 +167,7 @@ public class SimpleDerbyTest
 
         // now VFS thinks the file exists, we delete it in SQL
         Connection c = dataSource.getConnection();
-        PreparedStatement ps = c.prepareStatement("DELETE FROM tBlobs WHERE cID=?");
+        PreparedStatement ps = c.prepareStatement("DELETE FROM tBlobs WHERE cParent='/key' AND cName=?");
         ps.setString(1, "missingfile_" + now);
         int count = ps.executeUpdate();
         assertEquals(1, count); // proof the file existed
@@ -329,7 +329,7 @@ public class SimpleDerbyTest
 
         // now VFS thinks the file exists, we delete it in SQL
         Connection c = dataSource.getConnection();
-        PreparedStatement ps = c.prepareStatement("DELETE FROM tBlobs WHERE cID=?");
+        PreparedStatement ps = c.prepareStatement("DELETE FROM tBlobs WHERE cParent='/key' and cName=?");
         ps.setString(1, "readfile_" + now);
         int count = ps.executeUpdate();
         assertEquals(1, count); // proof the file existed
