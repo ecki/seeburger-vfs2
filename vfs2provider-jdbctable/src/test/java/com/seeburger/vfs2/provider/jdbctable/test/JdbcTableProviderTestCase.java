@@ -69,13 +69,17 @@ public class JdbcTableProviderTestCase extends AbstractProviderTestConfig implem
         if (!inited)
         {
             // Import the test tree
-            final FileObject fo = manager.resolveFile("seejt:/key/");
+            FileObject fo = manager.resolveFile("seejt:/key/");
             final JdbcTableFileSystem  fs = (JdbcTableFileSystem) fo.getFileSystem();
             // fs.importTree(getTestDirectory());
-            final FileObject from = manager.resolveFile(new File("."), getTestDirectory());
+            FileObject from = manager.resolveFile(new File("."), getTestDirectory());
             fo.copyFrom(from, new AllFileSelector());
             fo.close();
 
+            fo = manager.resolveFile("seejt:/key/code");
+            from = manager.resolveFile(new File("."), "target/test-classes/code");
+            fo.copyFrom(from, new AllFileSelector());
+            fo.close();
             inited=true;
         }
 

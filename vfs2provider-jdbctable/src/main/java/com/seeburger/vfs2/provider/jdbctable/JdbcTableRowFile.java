@@ -221,6 +221,8 @@ public class JdbcTableRowFile extends AbstractFileObject
     @Override
     protected InputStream doGetInputStream() throws Exception
     {
+        if (!getType().hasContent())
+            throw new FileSystemException("vfs.provider/read-not-file.error", getName());
         // TODO: make a stream which can re-open blobs
         byte[] blob = readData();
         return new ByteArrayInputStream(blob);

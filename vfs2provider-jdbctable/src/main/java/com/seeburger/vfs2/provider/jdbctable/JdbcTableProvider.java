@@ -35,8 +35,8 @@ public class JdbcTableProvider
         Capability.URI,
         Capability.GET_LAST_MODIFIED,
         Capability.ATTRIBUTES,
-        Capability.RANDOM_ACCESS_READ,
-        Capability.LIST_CHILDREN,
+        //Capability.RANDOM_ACCESS_READ,
+        //Capability.LIST_CHILDREN,
         Capability.APPEND_CONTENT, // conditional
         Capability.RENAME          // conditional
     }));
