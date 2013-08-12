@@ -27,6 +27,7 @@ public class JdbcTableProvider
 
     static final Collection<Capability> capabilities = Collections.unmodifiableCollection(Arrays.asList(new Capability[]
     {
+        Capability.CREATE,
         Capability.GET_TYPE,
         Capability.READ_CONTENT,
         Capability.WRITE_CONTENT,
@@ -36,8 +37,10 @@ public class JdbcTableProvider
         Capability.GET_LAST_MODIFIED,
         Capability.ATTRIBUTES,
         //Capability.RANDOM_ACCESS_READ,
+        //Capability.RANDOM_ACCESS_WRITE,
         //Capability.LIST_CHILDREN,
         Capability.APPEND_CONTENT, // conditional
+        Capability.DELETE,         // conditional
         Capability.RENAME          // conditional
     }));
 
