@@ -7,6 +7,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 
 import javax.sql.DataSource;
@@ -114,7 +115,7 @@ public class SimpleDerbyTest
     }
 
     @Test
-    public void testEmptydir() throws FileSystemException
+    public void testCreateFolder() throws FileSystemException, SQLException
     {
         final long now = System.currentTimeMillis();
 
@@ -125,7 +126,82 @@ public class SimpleDerbyTest
         testFile.createFolder();
         assertEquals(true,  testFile.exists());
         assertEquals(FileType.FOLDER, testFile.getType());
+
+        Connection c = dataSource.getConnection();
+        PreparedStatement ps = c.prepareStatement("SELECT cName,cParent FROM tBlobs WHERE cParent=? AND cName=?");
+        ps.setString(1, "/key");
+        ps.setString(2, "dir_"+now);
+        ResultSet rs = ps.executeQuery();
+        assertTrue(rs.next());
+        final String name = rs.getString(1);
+        assertEquals("dir_"+now, name);
+        final String folder = rs.getString(2);
+        assertEquals("/key", folder);
+        rs.close(); ps.close(); c.close();
     }
+
+    @Test
+    public void testCreateFolders() throws FileSystemException, SQLException
+    {
+        final long now = System.currentTimeMillis();
+
+        final FileObject testFile1 = manager.resolveFile("seejt:///key/dir_"+now+"/sub/file1");
+        final FileObject testFile2 = manager.resolveFile("seejt:///key/dir_"+now+"/sub/file2");
+        assertEquals(false, testFile1.exists());
+        assertEquals(false, testFile2.exists());
+        assertEquals(FileType.IMAGINARY, testFile1.getType());
+        assertEquals(FileType.IMAGINARY, testFile2.getType());
+
+        final FileObject testFolder = manager.resolveFile("seejt:///key/dir_"+now+"/sub");
+        assertEquals(false, testFolder.exists());
+        assertEquals(FileType.IMAGINARY, testFolder.getType());
+
+        // creating the files...
+        testFile1.createFile();
+        testFile2.createFile();
+        assertEquals(true, testFile1.exists());
+        assertEquals(true, testFile2.exists());
+        assertEquals(FileType.FILE, testFile1.getType());
+        assertEquals(FileType.FILE, testFile2.getType());
+
+        // .. will also create the parent folder
+        assertEquals(true, testFolder.exists());
+        assertEquals(FileType.FOLDER, testFolder.getType());
+
+        // ensure we have 2 files in DB ...
+        Connection c = dataSource.getConnection();
+        PreparedStatement ps = c.prepareStatement("SELECT cName FROM tBlobs WHERE cParent=? AND cSize=0");
+        ps.setString(1, "/key/dir_"+now+"/sub");
+        ResultSet rs = ps.executeQuery();
+        assertTrue(rs.next());
+        String name = rs.getString(1);
+        int flag = 0;
+        if (name.equals("file1"))
+            flag |= 1;
+        else if (name.equals("file2"))
+            flag |= 2;
+        assertTrue(rs.next());
+        name = rs.getString(1);
+        if (name.equals("file1"))
+            flag |= 1;
+        else if (name.equals("file2"))
+            flag |= 2;
+        assertEquals(3, flag);
+        assertFalse(rs.next());
+        rs.close(); ps.close();
+
+        // ...and one auto-created folder
+        ps = c.prepareStatement("SELECT cName FROM tBlobs WHERE cParent=? AND cSize=-2");
+        ps.setString(1, "/key/dir_"+now);
+        rs = ps.executeQuery();
+        assertTrue(rs.next());
+        name = rs.getString(1);
+        assertEquals("sub", name);
+        assertFalse(rs.next());
+        rs.close(); ps.close();
+        c.close();
+    }
+
 
     @Test
     public void testEmptydirs() throws FileSystemException
@@ -151,10 +227,11 @@ public class SimpleDerbyTest
         final long now = System.currentTimeMillis();
         // now VFS thinks the file exists, we delete it in SQL
         Connection c = dataSource.getConnection();
-        PreparedStatement ps = c.prepareStatement("INSERT INTO tBlobs (cParent,cName,cSize,cLastModified,cMarkGarbage) VALUES(?,'',-1,?,?)");
-        ps.setString(1, "/key/newdir_"+now);
-        ps.setLong(2, now);
+        PreparedStatement ps = c.prepareStatement("INSERT INTO tBlobs (cParent,cName,cSize,cLastModified,cMarkGarbage) VALUES(?,?,-2,?,?)");
+        ps.setString(1, "/key");
+        ps.setString(2, "newdir_"+now);
         ps.setLong(3, now);
+        ps.setLong(4, now);
         int count = ps.executeUpdate();
         assertEquals(1, count); // proof the file existed
         commitAndClose(ps,c);
@@ -243,7 +320,7 @@ public class SimpleDerbyTest
         assertEquals(true,  testFile.exists());
         assertEquals(FileType.FILE, testFile.getType());
 
-        testFile.moveTo(targetFile);
+        testFile.moveTo(targetFile); // TODO: make overwrites this atomic in the provider
 
         assertEquals(false,  testFile.exists());
         assertEquals(FileType.IMAGINARY, testFile.getType());

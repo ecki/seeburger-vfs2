@@ -43,18 +43,17 @@ public class JdbcTableRowFile extends AbstractFileObject
         Blob blob = null;
         try
         {
-            ps = connection.prepareStatement("SELECT cName,cLastModified,cBlob FROM tBlobs WHERE (cParent=? AND cName=?) OR (cParent=? AND cName='')");
+            ps = connection.prepareStatement("SELECT cSize,cLastModified,cBlob FROM tBlobs WHERE (cParent=? AND cName=?)");
             setPrimaryKey(ps, this, 0);
-            ps.setString(3, getName().getPathDecoded());
             rs = ps.executeQuery();
             if (!rs.next())
             {
                 injectType(FileType.IMAGINARY);
                 return;
             }
-            String name = rs.getString(1);
+            long size = rs.getLong(1);
             lastModified = rs.getLong(2);
-            if (name == null || name.isEmpty())
+            if (size == -2)
             {
                 injectType(FileType.FOLDER);
             }
@@ -97,10 +96,10 @@ public class JdbcTableRowFile extends AbstractFileObject
         ResultSet rs = null;
         try
         {
-            ps = connection.prepareStatement("INSERT INTO tBlobs (cParent,cName,cSize,cLastModified,cMarkGarbage) VALUES (?,'',-1,?,?)");
-            ps.setString(1, getName().getPathDecoded());
-            ps.setLong(2, now);
+            ps = connection.prepareStatement("INSERT INTO tBlobs (cParent,cName,cSize,cLastModified,cMarkGarbage) VALUES (?,?,-2,?,?)");
+            setPrimaryKey(ps, this, 0);
             ps.setLong(3, now);
+            ps.setLong(4, now);
 
             int count = ps.executeUpdate();
             if (count != 1)
@@ -141,7 +140,7 @@ public class JdbcTableRowFile extends AbstractFileObject
         PreparedStatement ps = null;
         try
         {
-            ps = connection.prepareStatement("DELETE FROM tBlobs WHERE cParent=? AND cName=?");
+            ps = connection.prepareStatement("DELETE FROM tBlobs WHERE cParent=? AND cName=?"); // TODO: recursive?
             setPrimaryKey(ps, this, 0);
             int count = ps.executeUpdate();
             if (count != 0 && count != 1)
@@ -388,7 +387,9 @@ public class JdbcTableRowFile extends AbstractFileObject
      */
     private String[] getKeys(FileObject file) throws FileSystemException
     {
-        return new String[] { file.getName().getParent().getPathDecoded(), file.getName().getBaseName() };
+        return new String[] {
+                              file.getName().getParent().getPathDecoded(),
+                              file.getName().getBaseName() };
     }
 
 
