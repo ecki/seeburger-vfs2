@@ -12,54 +12,56 @@ import org.apache.commons.vfs2.CacheStrategy;
 import org.apache.commons.vfs2.FileContent;
 import org.apache.commons.vfs2.FileObject;
 import org.apache.commons.vfs2.FileSystemException;
+import org.apache.commons.vfs2.FileSystemManager;
 import org.apache.commons.vfs2.FileType;
 import org.apache.commons.vfs2.impl.DefaultFileSystemManager;
 import org.apache.derby.jdbc.EmbeddedDataSource40;
 
 import com.googlecode.flyway.core.Flyway;
-import com.googlecode.flyway.core.api.MigrationInfo;
 import com.seeburger.vfs2.provider.jdbctable.JdbcTableProvider;
 
-public class StandaloneClient {
 
-    /**
-     * @param args
-     * @throws SQLException
-     * @throws IOException
-     */
+public class StandaloneClient
+{
     public static void main(String[] args) throws SQLException, IOException
     {
         DataSource ds = createDatasource();
-        DefaultFileSystemManager manager = new DefaultFileSystemManager();
-        manager.addProvider("seejt", new JdbcTableProvider(ds));
-        manager.setCacheStrategy(CacheStrategy.ON_RESOLVE);
-        manager.init();
+        FileSystemManager manager = createManager(ds);
 
         final FileObject key = manager.resolveFile("seejt:/key");
         final FileObject root = key.getFileSystem().getRoot();
 
-        System.out.println("key=" + key + " " + key.getFileSystem() + " root=" + root) ;
+        System.out.println("key=" + key + " rootFile=" + root + " rootURI=" + key.getFileSystem().getRootURI()) ;
+
         listFiles("|", root);
 
-        FileObject a1 = manager.resolveFile("seejt:///key/abc");
-        listFiles("a1=", a1);
+        System.out.println("-- resolving a1+b2");
+        FileObject a1 = manager.resolveFile("seejt:///key/a1");
         FileObject b2 = manager.resolveFile("seejt:///key/b2");
-        listFiles("b2=", b2);
-        b2 = manager.resolveFile("seejt:///key/b2");
-        listFiles("b2=", b2);
-        System.out.println("-- a1 retry resolve");
+        listFiles("|  a1=", a1);
+        listFiles("|  b2=", b2);
+        System.out.println("-- resolving again");
         a1 = manager.resolveFile("seejt:///key/a1");
-        listFiles("a1=", a1);
-        System.out.println("-- a1 retry children");
-        a1 = key.getChild("a1");
-        listFiles("a1=", a1);
-        System.out.println("-- a1 refresh");
-        a1.refresh();
-        listFiles("axxx=", a1);
+        b2 = manager.resolveFile("seejt:///key/b2");
+        listFiles("|  a1=", a1);
+        listFiles("|  b2=", b2);
 
+        System.out.println("-- getting named child a1+b2");
+        a1 = key.getChild("a1");
+        b2 = key.getChild("b2");
+        listFiles("|  a1=", a1);
+        listFiles("|  b2=", b2);
+
+        System.out.println("-- refreshing");
+        a1.refresh();
+        b2.refresh();
+        listFiles("|  a1=", a1);
+        listFiles("|  b2=", b2);
+
+        int count = 1000;
         FileObject ax = null;
         long now = System.currentTimeMillis();
-        int count = 1000;
+        long start = System.nanoTime();
 
         System.out.println("Reading ("+count+") ...");
         for(int i=0; i<count; i++)
@@ -69,9 +71,12 @@ public class StandaloneClient {
             OutputStream os = ax.getContent().getOutputStream();
             os.write(1); os.write(2); os.write(3); os.close();
             ax = manager.resolveFile(ax.toString());
-            if (i % 50 == 0)
-                listFiles("("+i+")  ", ax);
+            if (i % 200 == 0)
+                listFiles("("+i+") ", ax);
         }
+
+        long middle = System.nanoTime();
+        System.out.printf("Write Time: %,.3f ms.%n", (middle - start) / 1000000.0);
 
         System.out.println("Reading ("+count+") ...");
         for(int i=0; i<count; i++)
@@ -81,10 +86,22 @@ public class StandaloneClient {
             if (is.read() != 1 || is.read() != 2 || is.read() != 3)
                 System.out.println("not 1 2 3");
             is.close();
-            if (i % 100 == 0)
+            if (i % 200 == 0)
                 listFiles("("+i+")  ", ax);
         }
-        System.out.println("Have a good time.");
+
+        long end = System.nanoTime();
+        System.out.printf("Read Time: %,.3f ms. Have a good time.%n", (end - middle) / 1000000.0);
+    }
+
+    private static FileSystemManager createManager(DataSource ds) throws FileSystemException
+    {
+        DefaultFileSystemManager manager = new DefaultFileSystemManager();
+        manager.addProvider("seejt", new JdbcTableProvider(ds));
+        manager.setCacheStrategy(CacheStrategy.ON_RESOLVE);
+        manager.init();
+
+        return manager;
     }
 
     private static DataSource createDatasource() throws SQLException
@@ -100,10 +117,6 @@ public class StandaloneClient {
         flyway.setValidateOnMigrate(true);
         flyway.setCleanOnValidationError(true);
         flyway.migrate();
-
-        MigrationInfo[] states = flyway.info().all();
-        for(MigrationInfo state : states)
-            System.out.println("- " + state.getVersion() + "__" + state.getDescription() + " " + state.getInstalledOn() + " " + state.getChecksum() + " " + state.getState());
 
         return ds;
     }
@@ -159,7 +172,7 @@ public class StandaloneClient {
         }
         else
         {
-            System.out.println(prefix + "(" + file + ")" + type);
+            System.out.println(prefix + file + " MISSING " + type);
         }
     }
 
