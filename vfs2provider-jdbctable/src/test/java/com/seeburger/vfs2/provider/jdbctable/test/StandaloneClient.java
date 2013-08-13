@@ -123,7 +123,7 @@ public class StandaloneClient
 
     static void listFiles(String prefix, FileObject file) throws FileSystemException
     {
-        String type = " (";
+        String type = "";
         if (file.isHidden())
             type+="H";
         else
@@ -152,11 +152,11 @@ public class StandaloneClient
             try
             {
                 children = file.getChildren();
-                System.out.println(prefix + file + " /" + type);
+                System.out.println(prefix + file + " (d" + type);
             }
             catch (FileSystemException ignored)
             {
-                System.out.println(prefix + file + "/ (" + ignored + ")" + type);
+                System.out.println(prefix + file + " (d"+type + " (" + ignored + ")");
             }
             if (children != null)
             {
@@ -168,11 +168,11 @@ public class StandaloneClient
         }
         else if (file.getType() == FileType.FILE)
         {
-            System.out.println(prefix + file + type);
+            System.out.println(prefix + file + " (." + type);
         }
         else
         {
-            System.out.println(prefix + file + " MISSING " + type);
+            System.out.println(prefix + file + " (-" + type);
         }
     }
 
