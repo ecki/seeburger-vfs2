@@ -27,6 +27,15 @@ import org.apache.commons.vfs2.util.RandomAccessMode;
 
 public class JdbcTableRowFile extends AbstractFileObject
 {
+    public static class DataDescription
+    {
+        long generation;
+        long dataLength;
+
+        byte[] buffer;
+        long pos;
+    }
+
     JdbcTableProvider provider;
     long lastModified = -1;
     long contentSize = -1;
@@ -251,9 +260,9 @@ public class JdbcTableRowFile extends AbstractFileObject
     {
         if (!getType().hasContent())
             throw new FileSystemException("vfs.provider/read-not-file.error", getName());
-        // TODO: make a stream which can re-open blobs
-        byte[] blob = readData();
-        return new ByteArrayInputStream(blob);
+
+        // the input stream will open this row/blob multiple times to fetch new buffers
+        return new JdbcTableInputStream(this);
     }
 
     @Override
@@ -340,15 +349,18 @@ public class JdbcTableRowFile extends AbstractFileObject
 
     /**
      * Called to read Data for the InputStream
+     * @param len the maximum length of buffer to return
+     * @param position in stream, first byte is pos=0
      * @throws SQLException
      */
-    byte[] readData() throws IOException, SQLException
+    byte[] readData(long pos, int len) throws IOException
     {
-        Connection connection = provider.dataSource.getConnection();
+        Connection connection = null;
         PreparedStatement ps = null;
         ResultSet rs = null;
         try
         {
+            connection = provider.dataSource.getConnection();
             ps = connection.prepareStatement("SELECT cBlob FROM tBlobs WHERE cParent=? AND cName=?");
             setPrimaryKey(ps, this, 0);
             rs = ps.executeQuery();
@@ -365,7 +377,7 @@ public class JdbcTableRowFile extends AbstractFileObject
             }
 
             // cannot access Blob after ResultSet#next() or connection#close()
-            byte[] bytes = blob.getBytes(1, 1*1014*1024);
+            byte[] bytes = blob.getBytes(pos+1, len);
             blob.free();
 
             if (bytes == null)
@@ -380,6 +392,10 @@ public class JdbcTableRowFile extends AbstractFileObject
 
             return bytes;
         }
+        catch (SQLException ex)
+        {
+            throw new IOException("database problem while reading blob.", ex);
+        }
         finally
         {
             safeClose(rs);
@@ -387,6 +403,7 @@ public class JdbcTableRowFile extends AbstractFileObject
             safeClose(connection);
         }
     }
+
 
     /**
      * Sets primary key of this file on prepared statement.
@@ -441,4 +458,36 @@ public class JdbcTableRowFile extends AbstractFileObject
         try { rs.close(); } catch (Exception ignored) { }
 
     }
+
+    DataDescription startReadData(int bufsize) throws IOException
+    {
+        // TODO: synchronized
+        long currentSize = getContent().getSize();
+        long currentGen = 1l; // TODO - lastModified?
+
+        DataDescription desc = new DataDescription();
+        desc.generation = currentGen;
+        desc.dataLength = currentSize;
+        desc.pos = 0;
+        desc.buffer = readData(0, bufsize); // might be smaller
+
+        return desc;
+    }
+
+    void nextReadData(DataDescription desc, int bufsize) throws IOException
+    {
+        long currentSize = getContent().getSize();
+        long currentGen = 1l;
+
+        if (desc.dataLength != currentSize || desc.generation != currentGen)
+        {
+            throw new IOException("Input Stream cannot be read on position " + desc.pos + " - content has changed.");
+        }
+
+        int len = (int)Math.min(bufsize,  desc.dataLength - desc.pos);
+        desc.buffer = readData(desc.pos, len);
+
+        return;
+    }
+
 }
