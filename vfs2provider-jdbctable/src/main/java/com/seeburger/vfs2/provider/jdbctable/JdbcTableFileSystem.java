@@ -38,7 +38,7 @@ public class JdbcTableFileSystem extends AbstractFileSystem
     @Override
     public void doCloseCommunicationLink()
     {
-        System.out.println("doCloseCommunicationLink() " + toString());
+//System.out.println("doCloseCommunicationLink() " + toString());
     }
 
     /**
