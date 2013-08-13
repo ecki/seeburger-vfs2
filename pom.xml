@@ -29,6 +29,10 @@
   				<artifactId>maven-scm-provider-svnexe</artifactId>
   				<groupId>org.apache.maven.scm</groupId>
   			</exclusion>
+  			<exclusion>
+  			    <artifactId>regexp</artifactId>
+  			    <groupId>regexp</groupId>
+  			</exclusion>
   		</exclusions>
   	</dependency>
 
@@ -38,6 +42,12 @@
   		<version>2.0</version>
   		<scope>test</scope>
   		<classifier>tests</classifier>
+        <exclusions>
+            <exclusion>
+                <artifactId>regexp</artifactId>
+                <groupId>regexp</groupId>
+            </exclusion>
+        </exclusions>
 	</dependency>
 
     <dependency>
