@@ -38,7 +38,7 @@ public class JdbcTableProvider
         Capability.ATTRIBUTES,
         //Capability.RANDOM_ACCESS_READ,
         //Capability.RANDOM_ACCESS_WRITE,
-        //Capability.LIST_CHILDREN,
+        Capability.LIST_CHILDREN,
         Capability.APPEND_CONTENT, // conditional
         Capability.DELETE,         // conditional
         Capability.RENAME          // conditional

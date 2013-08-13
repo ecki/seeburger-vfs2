@@ -121,7 +121,7 @@ public class StandaloneClient
         return ds;
     }
 
-    private static void listFiles(String prefix, FileObject file) throws FileSystemException
+    static void listFiles(String prefix, FileObject file) throws FileSystemException
     {
         String type = " (";
         if (file.isHidden())

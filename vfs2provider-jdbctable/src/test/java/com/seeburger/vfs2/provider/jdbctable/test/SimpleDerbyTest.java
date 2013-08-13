@@ -63,6 +63,7 @@ public class SimpleDerbyTest
 
         Flyway flyway = new Flyway();
         flyway.setDataSource(ds);
+        flyway.setValidateOnMigrate(true);
         flyway.setCleanOnValidationError(true);
         flyway.migrate();
 
@@ -201,6 +202,48 @@ public class SimpleDerbyTest
         rs.close(); ps.close();
         c.close();
     }
+
+
+    @Test
+    public void testCreateAndListFolders() throws FileSystemException, SQLException
+    {
+        final long now = System.currentTimeMillis();
+
+        final FileObject testFile1 = manager.resolveFile("seejt:///key/dir_"+now+"/sub/file1");
+        final FileObject testFile2 = manager.resolveFile("seejt:///key/dir_"+now+"/sub/file2");
+        assertEquals(false, testFile1.exists());
+        assertEquals(false, testFile2.exists());
+        assertEquals(FileType.IMAGINARY, testFile1.getType());
+        assertEquals(FileType.IMAGINARY, testFile2.getType());
+
+        final FileObject testFolder = manager.resolveFile("seejt:///key/dir_"+now+"/sub");
+        assertEquals(false, testFolder.exists());
+        assertEquals(FileType.IMAGINARY, testFolder.getType());
+
+        // creating the files...
+        testFile1.createFile();
+        testFile2.createFile();
+        assertEquals(true, testFile1.exists());
+        assertEquals(true, testFile2.exists());
+        assertEquals(FileType.FILE, testFile1.getType());
+        assertEquals(FileType.FILE, testFile2.getType());
+
+        // .. will also create the parent folder
+        assertEquals(true, testFolder.exists());
+        assertEquals(FileType.FOLDER, testFolder.getType());
+
+        // ensure we have 2 subfolders to list
+        FileObject[] children = testFolder.getChildren();
+        assertEquals(2, children.length);
+        for(int i=0;i<children.length;i++)
+        {
+            System.out.println("f=" + children[i]);
+            assertTrue(children[i].exists());
+            assertEquals(FileType.FILE, children[i].getType());
+            assertEquals(0, children[i].getContent().getSize());
+        }
+    }
+
 
 
     @Test

@@ -9,9 +9,12 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
 import org.apache.commons.vfs2.FileName;
+import org.apache.commons.vfs2.FileNotFolderException;
 import org.apache.commons.vfs2.FileObject;
 import org.apache.commons.vfs2.FileSystem;
 import org.apache.commons.vfs2.FileSystemException;
@@ -201,10 +204,36 @@ public class JdbcTableRowFile extends AbstractFileObject
         throw new IllegalStateException("doGetType should not be needed after attach");
     }
 
+    // TODO: it is better to instead implement #doListChildrenResolved() to save the attachs -> attachFile(rs) method
     @Override
     protected String[] doListChildren() throws Exception
     {
-        return null;
+        if (!getType().hasChildren())
+        {
+            throw new FileNotFolderException(this);
+        }
+        Connection connection = provider.dataSource.getConnection();
+        PreparedStatement ps = null;
+        ResultSet rs = null;
+        try
+        {
+            List<String> children = new ArrayList<String>(32);
+            ps = connection.prepareStatement("SELECT cName FROM tBlobs WHERE cParent=?"); // TODO: order?
+            ps.setString(1, getName().getPathDecoded());
+            rs = ps.executeQuery();
+            while(rs.next())
+            {
+                String name = rs.getString(1);
+                children.add(name);
+            }
+            return children.toArray(new String[children.size()]);
+        }
+        finally
+        {
+            safeClose(rs);
+            safeClose(ps);
+            safeClose(connection);
+        }
     }
 
     @Override
@@ -268,7 +297,7 @@ public class JdbcTableRowFile extends AbstractFileObject
      * @throws SQLException
      * @throws FileSystemException
      */
-    void writeData(byte[] byteArray) throws SQLException, FileSystemException
+    void writeData(byte[] byteArray) throws Exception
     {
         // TODO: needs to handle update/append (MERGE) as well
         long now = System.currentTimeMillis(); // TODO: DB side?
@@ -290,13 +319,12 @@ public class JdbcTableRowFile extends AbstractFileObject
                 throw new RuntimeException("Inserting different than 1 (" + count + ") records for " + getName());
             }
 
-            connection.commit();
-            connection = null;
+            connection.commit(); connection.close(); connection = null; // TODO: null/close?
 
             lastModified = now;
             contentSize = byteArray.length;
 
-            injectType(FileType.FILE); // TODO: attached?
+            endOutput(); // setsFile type (and trigger notifications)
         }
         finally
         {
