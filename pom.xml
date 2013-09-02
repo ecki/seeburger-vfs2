@@ -9,6 +9,11 @@
   <name>SEEBURGER VFS2 Parent</name>
   <description>Modules for the apache-commons VFS2 project.</description>
 
+  <properties>
+    <maven.build.timestamp.format>yyyyMMdd-HHmm</maven.build.timestamp.format>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+  </properties>
+
   <modules>
   	<module>vfs2provider-jdbctable</module>
   	<module>vfs2provider-digestarc</module>
@@ -58,5 +63,16 @@
     </dependency>
 
   </dependencies>
+
+    <distributionManagement>
+        <repository>
+            <id>release</id>
+            <url>http://repo.seeburger.de/archiva/repository/release/</url>
+        </repository>
+        <snapshotRepository>
+            <id>snapshot</id>
+            <url>http://repo.seeburger.de/archiva/repository/snapshot/</url>
+        </snapshotRepository>
+    </distributionManagement>
 
 </project>
