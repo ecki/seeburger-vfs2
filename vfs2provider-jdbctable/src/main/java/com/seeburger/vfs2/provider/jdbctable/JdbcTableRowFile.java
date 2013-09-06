@@ -74,7 +74,7 @@ public class JdbcTableRowFile extends AbstractFileObject
                 blob = rs.getBlob(3);
                 if (blob == null)
                 {
-                    throw new RuntimeException("Critical inconsitency, blob column is null for " +getName());
+                    throw new IOException("Critical inconsitency, blob column is null for " +getName());
                 }
 
                 contentSize = blob.length();
@@ -86,7 +86,7 @@ public class JdbcTableRowFile extends AbstractFileObject
 
             if (rs.next())
             {
-                throw new RuntimeException("Critical consitency problem, duplicate response to " + getName());
+                throw new IOException("Critical consitency problem, duplicate response to " + getName());
             }
         }
         finally
@@ -116,7 +116,7 @@ public class JdbcTableRowFile extends AbstractFileObject
             int count = ps.executeUpdate();
             if (count != 1)
             {
-                throw new RuntimeException("Inserting different than 1 (" + count + ") records for " + getName());
+                throw new IOException("Inserting different than 1 (" + count + ") records for " + getName());
             }
 
             connection.commit();
@@ -156,7 +156,7 @@ public class JdbcTableRowFile extends AbstractFileObject
             setPrimaryKey(ps, this, 0);
             int count = ps.executeUpdate();
             if (count != 0 && count != 1)
-                throw new RuntimeException("Corruption suspected, deleting different than 1 (" + count + ") records for " + getName());
+                throw new IOException("Corruption suspected, deleting different than 1 (" + count + ") records for " + getName());
             connection.commit();
             connection = null;
             injectType(FileType.IMAGINARY); // TODO: needed?
@@ -250,7 +250,7 @@ public class JdbcTableRowFile extends AbstractFileObject
     {
         if (contentSize < 0)
         {
-            throw new RuntimeException("Cannot determine size, failed to attach " + getName());
+            throw new IOException("Cannot determine size, failed to attach " + getName());
         }
         return contentSize;
     }
@@ -290,7 +290,7 @@ public class JdbcTableRowFile extends AbstractFileObject
             int count = ps.executeUpdate();
             if (count != 1)
             {
-                throw new RuntimeException("Inconsitent result " + count +" while rename to " + newfile.getName() + " from " + getName());
+                throw new IOException("Inconsitent result " + count +" while rename to " + newfile.getName() + " from " + getName());
             }
             connection.commit();
         }
@@ -306,10 +306,140 @@ public class JdbcTableRowFile extends AbstractFileObject
      * @throws SQLException
      * @throws FileSystemException
      */
-    void writeData(byte[] byteArray) throws Exception
+    void writeData(byte[] byteArray, boolean append) throws Exception
     {
-        // TODO: needs to handle update/append (MERGE) as well
         long now = System.currentTimeMillis(); // TODO: DB side?
+        // TODO: needs to handle concurrent modifications (i.e. changes since attach)
+        if (exists())
+        {
+            if (append)
+                writeDataUpdate(now, byteArray);
+            else
+                writeDataOverwrite(now, byteArray);
+        } else {
+            writeDataInsert(now, byteArray);
+        }
+    }
+
+    private void writeDataOverwrite(long now, byte[] byteArray) throws SQLException, IOException
+    {
+        Connection connection = provider.dataSource.getConnection();
+        PreparedStatement ps = null;
+        ResultSet rs = null;
+        try
+        {
+            ps = connection.prepareStatement("UPDATE tBlobs SET cSize=?, cLastModified=?, cMarkGarbage=?, cBlob=? WHERE (cParent=? AND cName=?)");
+            setPrimaryKey(ps, this, 4);
+            ps.setLong(1, byteArray.length);
+            ps.setLong(2, now);
+            ps.setLong(3, now);
+            ps.setBytes(4, byteArray);
+
+            int count = ps.executeUpdate();
+            if (count != 1)
+            {
+                throw new IOException("Updating different than 1 (" + count + ") records for " + getName());
+            }
+
+            connection.commit(); connection.close(); connection = null; // TODO: null/close?
+
+            lastModified = now;
+            contentSize = byteArray.length;
+
+            try
+            {
+                endOutput(); // setsFile type (and trigger notifications)
+            }
+            catch (FileSystemException fse)
+            {
+                throw fse;
+            }
+            catch (Exception e)
+            {
+                throw new IOException(e);
+            }
+        }
+        finally
+        {
+            if (connection != null)
+            {
+                connection.rollback();
+            }
+            safeClose(rs);
+            safeClose(ps);
+            safeClose(connection);
+        }
+    }
+
+    private void writeDataUpdate(long now, byte[] byteArray) throws SQLException, IOException
+    {
+        Connection connection = provider.dataSource.getConnection();
+        PreparedStatement ps = null;
+        ResultSet rs = null;
+        Blob blob = null;
+        try
+        {
+            ps = connection.prepareStatement("SELECT cBlob, cSize, cMarkGarbage, cLastModified FROM tBlobs WHERE (cParent=? AND cName=?) FOR UPDATE", ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_UPDATABLE);
+            setPrimaryKey(ps, this, 0);
+            rs = ps.executeQuery();
+
+            if (rs.next() == false)
+            {
+                throw new IOException("Database row not found for " + getName()); // TODO: deleted?
+            }
+
+            blob = rs.getBlob(1);
+            if (blob == null)
+            {
+                throw new IOException("Blob column is null for " + getName());
+            }
+            final long newLength = blob.length() + byteArray.length;
+            blob.setBytes(blob.length() +1 , byteArray);
+            rs.updateBlob(1, blob);
+            rs.updateLong(2, newLength);
+            rs.updateLong(3, now);
+            rs.updateLong(4, now);
+
+            rs.updateRow();
+
+            if (rs.next() != false)
+            {
+                throw new IOException("More than one match for " + getName());
+            }
+
+            connection.commit(); connection.close(); connection = null; // TODO: null/close?
+
+            lastModified = now;
+            contentSize = newLength;
+
+            try
+            {
+                endOutput(); // setsFile type (and trigger notifications)
+            }
+            catch (FileSystemException fse)
+            {
+                throw fse;
+            }
+            catch (Exception e)
+            {
+                throw new IOException(e);
+            }
+        }
+        finally
+        {
+            if (connection != null)
+            {
+                connection.rollback();
+            }
+            safeFree(blob);
+            safeClose(rs);
+            safeClose(ps);
+            safeClose(connection);
+        }
+    }
+
+    private void writeDataInsert(long now, byte[] byteArray) throws SQLException, IOException
+    {
         Connection connection = provider.dataSource.getConnection();
         PreparedStatement ps = null;
         ResultSet rs = null;
@@ -325,7 +455,7 @@ public class JdbcTableRowFile extends AbstractFileObject
             int count = ps.executeUpdate();
             if (count != 1)
             {
-                throw new RuntimeException("Inserting different than 1 (" + count + ") records for " + getName());
+                throw new IOException("Inserting different than 1 (" + count + ") records for " + getName());
             }
 
             connection.commit(); connection.close(); connection = null; // TODO: null/close?
@@ -333,7 +463,18 @@ public class JdbcTableRowFile extends AbstractFileObject
             lastModified = now;
             contentSize = byteArray.length;
 
-            endOutput(); // setsFile type (and trigger notifications)
+            try
+            {
+                endOutput(); // setsFile type (and trigger notifications)
+            }
+            catch (FileSystemException fse)
+            {
+                throw fse;
+            }
+            catch (Exception e)
+            {
+                throw new IOException(e);
+            }
         }
         finally
         {
@@ -373,7 +514,7 @@ public class JdbcTableRowFile extends AbstractFileObject
             Blob blob = rs.getBlob(1);
             if (blob == null)
             {
-                throw new RuntimeException("Blob column is null for " + getName());
+                throw new IOException("Blob column is null for " + getName());
             }
 
             // cannot access Blob after ResultSet#next() or connection#close()
@@ -382,12 +523,12 @@ public class JdbcTableRowFile extends AbstractFileObject
 
             if (bytes == null)
             {
-                throw new RuntimeException("Blob column content is null for " + getName());
+                throw new IOException("Blob column content is null for " + getName());
             }
 
             if (rs.next() != false)
             {
-                throw new RuntimeException("More than one match for " + getName());
+                throw new IOException("More than one match for " + getName());
             }
 
             return bytes;

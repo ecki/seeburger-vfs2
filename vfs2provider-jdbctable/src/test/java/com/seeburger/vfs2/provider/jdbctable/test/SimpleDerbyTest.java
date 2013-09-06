@@ -2,6 +2,7 @@ package com.seeburger.vfs2.provider.jdbctable.test;
 
 import static org.junit.Assert.*;
 
+import java.io.DataInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -462,7 +463,7 @@ public class SimpleDerbyTest
     }
 
 
-    @Test @Ignore
+    @Test
     public void testAppend() throws IOException
     {
         final long now = System.currentTimeMillis();
@@ -484,14 +485,18 @@ public class SimpleDerbyTest
 
         // validate content
         InputStream is = testFile.getContent().getInputStream();
-        if (is.read() != 1 || is.read() != 2 || is.read() != 3)
-            fail("Read wrong content");
-        is.close();
+        DataInputStream dis = new DataInputStream(is);
+        byte[] buf = new byte[3];
+        dis.readFully(buf);
+        dis.close();
+
+        byte[] expectedBuf = new byte[3]; expectedBuf[0]=1; expectedBuf[1]=2; expectedBuf[2]=3;
+        assertArrayEquals(expectedBuf, buf);
 
         testFile.getContent().close();
     }
 
-    @Test @Ignore
+    @Test
     public void testOverwrite() throws IOException
     {
         final long now = System.currentTimeMillis();

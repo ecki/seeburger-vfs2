@@ -15,14 +15,12 @@ public class JdbcTableOutputStream extends OutputStream
     protected boolean closed = false;
     private IOException exc;
     private ByteArrayOutputStream bufferStream = new ByteArrayOutputStream();
+    private boolean append;
 
     public JdbcTableOutputStream(JdbcTableRowFile file, boolean append) throws IOException
     {
         this.file = file;
-        if (append)
-        {
-            throw new IOException("Appending not supported.");
-        }
+        this.append = append;
     }
 
     @Override
@@ -59,7 +57,7 @@ public class JdbcTableOutputStream extends OutputStream
         this.closed = true; // TODO - after Exception?
         try
         {
-            this.file.writeData(bufferStream.toByteArray());
+            this.file.writeData(bufferStream.toByteArray(), append);
             // writeData calls endOutput
         }
         catch (Exception e)
