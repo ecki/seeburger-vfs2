@@ -74,7 +74,7 @@ public class SimpleDerbyTest
     @AfterClass
     public static void destroyDatabase()
     {
-        System.out.println("Tearing down DB");
+        System.out.println("Tearing down database");
         EmbeddedDataSource40 ds = (EmbeddedDataSource40)dataSource; dataSource = null;
         ds.setShutdownDatabase("true");
     }
@@ -89,8 +89,10 @@ public class SimpleDerbyTest
         assertEquals("/",root.getName().getPath());
         assertEquals("seejt", root.getName().getScheme());
         assertNull(root.getParent());
-        System.out.println("root = " + root + " parent=" + root.getParent());
+
         assertEquals("/key", key.getName().getPath());
+
+        assertEquals(root, key.getParent());
     }
 
     @Test
@@ -107,11 +109,16 @@ public class SimpleDerbyTest
         os.close();
         assertEquals(true, testFile.exists());
         assertEquals(false, testFile.getContent().isOpen());
+
+        // validate content
         InputStream is = testFile.getContent().getInputStream();
         assertEquals(true, testFile.getContent().isOpen());
-        if (is.read() != 1 || is.read() != 2 || is.read() != 3)
-            fail("Read wrong content");
-        is.close();
+        DataInputStream dis = new DataInputStream(is);
+        byte[] buf = new byte[3];
+        dis.readFully(buf);
+        dis.close();
+        byte[] expectedBuf = new byte[3]; expectedBuf[0]=1; expectedBuf[1]=2; expectedBuf[2]=3;
+        assertArrayEquals(expectedBuf, buf);
         assertEquals(false, testFile.getContent().isOpen());
         testFile.getContent().close();
     }
@@ -238,7 +245,7 @@ public class SimpleDerbyTest
         assertEquals(2, children.length);
         for(int i=0;i<children.length;i++)
         {
-            System.out.println("f=" + children[i]);
+            //System.out.println("f=" + children[i]);
             assertTrue(children[i].exists());
             assertEquals(FileType.FILE, children[i].getType());
             assertEquals(0, children[i].getContent().getSize());
@@ -350,20 +357,95 @@ public class SimpleDerbyTest
         assertEquals(FileType.IMAGINARY, testFile.getType());
     }
 
-    @Test
-    public void testRename() throws IOException, SQLException
+    @Test(expected=FileSystemException.class)
+    public void testRenameNonexistingOverNonexisting() throws FileSystemException
     {
         final long now = System.currentTimeMillis();
 
+        // create one file and make sure the target does not exist
         final FileObject testFile = manager.resolveFile("seejt:///key/renameme_"+now);
         final FileObject targetFile = manager.resolveFile("seejt:///key/renamed_"+now);
+
         assertEquals(false, testFile.exists());
         assertEquals(FileType.IMAGINARY, testFile.getType());
+        assertEquals(false, targetFile.exists());
+        assertEquals(FileType.IMAGINARY, targetFile.getType());
 
+        // rename non-existing file to non-existing file, will fail
+        testFile.moveTo(targetFile);
+    }
+
+    @Test(expected=FileSystemException.class)
+    public void testRenameNonexistingOverExisting() throws FileSystemException
+    {
+        final long now = System.currentTimeMillis();
+
+        // create one file and make sure the target does not exist
+        final FileObject testFile = manager.resolveFile("seejt:///key/renameme_"+now);
+        final FileObject targetFile = manager.resolveFile("seejt:///key/renamed_"+now);
+
+        assertEquals(false, testFile.exists());
+        assertEquals(FileType.IMAGINARY, testFile.getType());
+        assertEquals(false, targetFile.exists());
+        assertEquals(FileType.IMAGINARY, targetFile.getType());
+        targetFile.createFile();
+        assertEquals(true,  targetFile.exists());
+        assertEquals(FileType.FILE, targetFile.getType());
+
+        // rename non-existing file over existing, will fail
+        testFile.moveTo(targetFile);
+    }
+
+    @Test
+    public void testRenameOverNonexisting() throws IOException, SQLException
+    {
+        final long now = System.currentTimeMillis();
+
+        // create one file and make sure the target does not exist
+        final FileObject testFile = manager.resolveFile("seejt:///key/renameme_"+now);
+        final FileObject targetFile = manager.resolveFile("seejt:///key/renamed_"+now);
+
+        assertEquals(false, testFile.exists());
+        assertEquals(FileType.IMAGINARY, testFile.getType());
         testFile.createFile();
         assertEquals(true,  testFile.exists());
         assertEquals(FileType.FILE, testFile.getType());
 
+        assertEquals(false, targetFile.exists());
+        assertEquals(FileType.IMAGINARY, targetFile.getType());
+
+        // rename existing file to nonexisting
+        testFile.moveTo(targetFile);
+
+        assertEquals(false,  testFile.exists());
+        assertEquals(FileType.IMAGINARY, testFile.getType());
+
+        assertEquals(true,  targetFile.exists());
+        assertEquals(FileType.FILE, targetFile.getType());
+    }
+
+    @Test
+    public void testRenameOverExisting() throws IOException, SQLException
+    {
+        final long now = System.currentTimeMillis();
+
+        // create two files
+        final FileObject testFile = manager.resolveFile("seejt:///key/renameme_"+now);
+        final FileObject targetFile = manager.resolveFile("seejt:///key/renamed_"+now);
+
+        assertEquals(false, testFile.exists());
+        assertEquals(FileType.IMAGINARY, testFile.getType());
+        testFile.createFile();
+        assertEquals(true,  testFile.exists());
+        assertEquals(FileType.FILE, testFile.getType());
+
+        assertEquals(false, targetFile.exists());
+        assertEquals(FileType.IMAGINARY, targetFile.getType());
+        targetFile.createFile();
+        assertEquals(true,  targetFile.exists());
+        assertEquals(FileType.FILE, targetFile.getType());
+
+        // rename existing file over existing target
         testFile.moveTo(targetFile); // TODO: make overwrites this atomic in the provider
 
         assertEquals(false,  testFile.exists());
@@ -372,6 +454,7 @@ public class SimpleDerbyTest
         assertEquals(true,  targetFile.exists());
         assertEquals(FileType.FILE, targetFile.getType());
     }
+
 
     @Test @Ignore // does not reject rename of open/missing files
     public void testRenameOpen() throws IOException, SQLException
@@ -485,11 +568,12 @@ public class SimpleDerbyTest
 
         // validate content
         InputStream is = testFile.getContent().getInputStream();
+        assertEquals(true, testFile.getContent().isOpen());
         DataInputStream dis = new DataInputStream(is);
         byte[] buf = new byte[3];
         dis.readFully(buf);
         dis.close();
-
+        assertEquals(false, testFile.getContent().isOpen());
         byte[] expectedBuf = new byte[3]; expectedBuf[0]=1; expectedBuf[1]=2; expectedBuf[2]=3;
         assertArrayEquals(expectedBuf, buf);
 
@@ -513,12 +597,18 @@ public class SimpleDerbyTest
         os.close();
 
         assertEquals(2,  testFile.getContent().getSize());
+        assertEquals(false, testFile.getContent().isOpen());
 
         // validate content
         InputStream is = testFile.getContent().getInputStream();
-        if (is.read() != 2 || is.read() != 3)
-            fail("Read wrong content");
-        is.close();
+        assertEquals(true, testFile.getContent().isOpen());
+        DataInputStream dis = new DataInputStream(is);
+        byte[] buf = new byte[2];
+        dis.readFully(buf);
+        dis.close();
+        assertEquals(false, testFile.getContent().isOpen());
+        byte[] expectedBuf = new byte[2]; expectedBuf[0]=2; expectedBuf[1]=3;
+        assertArrayEquals(expectedBuf, buf);
 
         testFile.getContent().close();
     }
