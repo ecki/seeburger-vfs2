@@ -1,6 +1,5 @@
 package com.seeburger.vfs2.provider.jdbctable;
 
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -119,13 +118,13 @@ public class JdbcTableRowFile extends AbstractFileObject
                 throw new IOException("Inserting different than 1 (" + count + ") records for " + getName());
             }
 
+            // TODO: update last modified of parent
+
             connection.commit();
-            connection = null;
+            connection.close(); connection = null;
 
             lastModified = now;
             contentSize = -1;
-
-            injectType(FileType.FOLDER); // TODO: attached?
         }
         finally
         {
@@ -152,14 +151,19 @@ public class JdbcTableRowFile extends AbstractFileObject
         PreparedStatement ps = null;
         try
         {
-            ps = connection.prepareStatement("DELETE FROM tBlobs WHERE cParent=? AND cName=?"); // TODO: recursive?
+            ps = connection.prepareStatement("DELETE FROM tBlobs WHERE cParent=? AND cName=?"); // TODO: ensure no children?
             setPrimaryKey(ps, this, 0);
             int count = ps.executeUpdate();
+
             if (count != 0 && count != 1)
+            {
                 throw new IOException("Corruption suspected, deleting different than 1 (" + count + ") records for " + getName());
+            }
+
+            // TODO: update last modified of parent
+
             connection.commit();
-            connection = null;
-            injectType(FileType.IMAGINARY); // TODO: needed?
+            connection.close(); connection = null;
         }
         finally
         {
@@ -209,7 +213,6 @@ public class JdbcTableRowFile extends AbstractFileObject
     @Override
     protected FileType doGetType() throws Exception
     {
-        // TODO
         throw new IllegalStateException("doGetType should not be needed after attach");
     }
 
@@ -227,7 +230,7 @@ public class JdbcTableRowFile extends AbstractFileObject
         try
         {
             List<String> children = new ArrayList<String>(32);
-            ps = connection.prepareStatement("SELECT cName FROM tBlobs WHERE cParent=?"); // TODO: order?
+            ps = connection.prepareStatement("SELECT cName FROM tBlobs WHERE cParent=?");
             ps.setString(1, getName().getPathDecoded());
             rs = ps.executeQuery();
             while(rs.next())
@@ -285,17 +288,23 @@ public class JdbcTableRowFile extends AbstractFileObject
             ps = connection.prepareStatement("UPDATE tBlobs SET cParent=?,cName=?,cLastModified=? WHERE cParent=? AND cName=?");
             setPrimaryKey(ps, this, 3);
             setPrimaryKey(ps, (JdbcTableRowFile)newfile, 0);
-            ps.setLong(3, now); // TODO: metalast
+            ps.setLong(3, now);
 
             int count = ps.executeUpdate();
             if (count != 1)
             {
                 throw new IOException("Inconsitent result " + count +" while rename to " + newfile.getName() + " from " + getName());
             }
+
+            // TODO: update parent lastModified
+
             connection.commit();
+            connection.close(); connection = null;
         }
         finally
         {
+            if (connection != null)
+                connection.rollback();
             safeClose(ps);
             safeClose(connection);
         }
@@ -341,7 +350,8 @@ public class JdbcTableRowFile extends AbstractFileObject
                 throw new IOException("Updating different than 1 (" + count + ") records for " + getName());
             }
 
-            connection.commit(); connection.close(); connection = null; // TODO: null/close?
+            connection.commit(); // TODO: move behind endOutput?
+            connection.close(); connection = null;
 
             lastModified = now;
             contentSize = byteArray.length;
@@ -385,7 +395,7 @@ public class JdbcTableRowFile extends AbstractFileObject
 
             if (rs.next() == false)
             {
-                throw new IOException("Database row not found for " + getName()); // TODO: deleted?
+                throw new IOException("Database row not found for " + getName()); // TODO: deleted -> insert?
             }
 
             blob = rs.getBlob(1);
@@ -407,7 +417,8 @@ public class JdbcTableRowFile extends AbstractFileObject
                 throw new IOException("More than one match for " + getName());
             }
 
-            connection.commit(); connection.close(); connection = null; // TODO: null/close?
+            connection.commit();
+            connection.close(); connection = null;
 
             lastModified = now;
             contentSize = newLength;
@@ -458,7 +469,8 @@ public class JdbcTableRowFile extends AbstractFileObject
                 throw new IOException("Inserting different than 1 (" + count + ") records for " + getName());
             }
 
-            connection.commit(); connection.close(); connection = null; // TODO: null/close?
+            connection.commit();
+            connection.close(); connection = null;
 
             lastModified = now;
             contentSize = byteArray.length;
@@ -475,6 +487,9 @@ public class JdbcTableRowFile extends AbstractFileObject
             {
                 throw new IOException(e);
             }
+
+            // TODO: update last modified of parent
+
         }
         finally
         {
@@ -508,7 +523,7 @@ public class JdbcTableRowFile extends AbstractFileObject
 
             if (rs.next() == false)
             {
-                throw new IOException("Database row not found for " + getName()); // TODO: deleted?
+                throw new IOException("Database row not found for " + getName()); // TODO: Filenotfound exception?
             }
 
             Blob blob = rs.getBlob(1);
