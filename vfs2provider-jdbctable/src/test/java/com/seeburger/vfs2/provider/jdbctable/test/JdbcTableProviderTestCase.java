@@ -1,10 +1,3 @@
-/*
- * JdbcTableProviderTestCase.java
- *
- * created at 11.08.2013 by Eckenfel <YOURMAILADDRESS>
- *
- * Copyright (c) SEEBURGER AG, Germany. All Rights Reserved.
- */
 package com.seeburger.vfs2.provider.jdbctable.test;
 
 import java.io.File;
@@ -20,16 +13,15 @@ import org.apache.commons.vfs2.impl.DefaultFileSystemManager;
 import org.apache.commons.vfs2.test.AbstractProviderTestConfig;
 import org.apache.commons.vfs2.test.ProviderTestConfig;
 import org.apache.commons.vfs2.test.ProviderTestSuite;
-import org.apache.derby.jdbc.EmbeddedDataSource40;
+import org.apache.derby.jdbc.EmbeddedDataSource;
 
 import com.googlecode.flyway.core.Flyway;
-import com.seeburger.vfs2.provider.jdbctable.JdbcTableFileSystem;
 import com.seeburger.vfs2.provider.jdbctable.JdbcTableProvider;
 
 
 public class JdbcTableProviderTestCase extends AbstractProviderTestConfig implements ProviderTestConfig
 {
-    private static EmbeddedDataSource40 dataSource;
+    private static EmbeddedDataSource dataSource;
     private boolean inited;
 
 
@@ -39,12 +31,10 @@ public class JdbcTableProviderTestCase extends AbstractProviderTestConfig implem
     {
         if (!manager.hasProvider("seejt"))
         {
-            System.out.println("Adding provider seejt");
             manager.addProvider("seejt", new JdbcTableProvider(dataSource));
         } else {
             System.out.println("Already has provider seejt");
         }
-
     }
 
     /**
@@ -58,7 +48,6 @@ public class JdbcTableProviderTestCase extends AbstractProviderTestConfig implem
         {
             // Import the test tree
             FileObject base = manager.resolveFile("seejt:/key/test-data");
-            final JdbcTableFileSystem  fs = (JdbcTableFileSystem)base.getFileSystem();
 
             // fs.importTree(getTestDirectory());
             FileObject from = manager.resolveFile(new File("."), getTestDirectory());
@@ -81,7 +70,7 @@ public class JdbcTableProviderTestCase extends AbstractProviderTestConfig implem
      */
     public static Test suite() throws Exception
     {
-        EmbeddedDataSource40 ds = new EmbeddedDataSource40();
+        EmbeddedDataSource ds = new EmbeddedDataSource();
         ds.setUser("SEEASOWN");
         ds.setPassword("secret");
         ds.setCreateDatabase("create");

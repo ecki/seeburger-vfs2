@@ -1,6 +1,8 @@
 package com.seeburger.vfs2.provider.jdbctable;
 
 
+import java.sql.Connection;
+import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
@@ -39,6 +41,7 @@ public class JdbcTableProvider
     }));
 
 	DataSource dataSource;
+    boolean supportsAppendBlob;
 
 
 	/**
@@ -49,6 +52,7 @@ public class JdbcTableProvider
         super();
         setFileNameParser(JdbcTableNameParser.getInstance());
         this.dataSource = dataSource;
+        this.supportsAppendBlob = supportsAppendBlob(dataSource); // TODO: dialect
     }
 
     @Override
@@ -69,5 +73,42 @@ public class JdbcTableProvider
     public Collection<Capability> getCapabilities()
     {
         return capabilities;
+    }
+
+    public boolean supportsAppendBlob()
+    {
+        return supportsAppendBlob;
+    }
+
+    public boolean supportsAppendBlob(DataSource ds)
+    {
+        Connection c = null;
+        try
+        {
+            c = ds.getConnection();
+            String product = c.getMetaData().getDatabaseProductName();
+            if (product.contains("H2"))
+                return false;
+            else
+                return true;
+        }
+        catch (SQLException e)
+        {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+            return true;
+        }
+        finally
+        {
+            safeClose(c);
+        }
+    }
+
+    private void safeClose(Connection c)
+    {
+        try
+        {
+            c.close();
+        } catch (Exception ignored) { }
     }
 }

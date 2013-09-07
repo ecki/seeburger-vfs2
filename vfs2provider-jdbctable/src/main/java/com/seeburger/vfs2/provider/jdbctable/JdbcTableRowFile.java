@@ -389,7 +389,8 @@ public class JdbcTableRowFile extends AbstractFileObject
         Blob blob = null;
         try
         {
-            ps = connection.prepareStatement("SELECT cBlob, cSize, cMarkGarbage, cLastModified FROM tBlobs WHERE (cParent=? AND cName=?) FOR UPDATE", ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_UPDATABLE);
+            // some DB (like H2) require the PK Columns in the Result Set to be able to use updateRow()
+            ps = connection.prepareStatement("SELECT cBlob, cSize, cMarkGarbage, cLastModified, cParent, cName FROM tBlobs WHERE (cParent=? AND cName=?) FOR UPDATE", ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_UPDATABLE);
             setPrimaryKey(ps, this, 0);
             rs = ps.executeQuery();
 
@@ -403,8 +404,21 @@ public class JdbcTableRowFile extends AbstractFileObject
             {
                 throw new IOException("Blob column is null for " + getName());
             }
+
             final long newLength = blob.length() + byteArray.length;
-            blob.setBytes(blob.length() +1 , byteArray);
+            if (provider.supportsAppendBlob())
+            {
+                blob.setBytes(blob.length() + 1 , byteArray);
+            }
+            else
+            {
+                final int oldLen = (int)blob.length();
+                byte[] buf = new byte[(int)newLength];
+                byte[] oldBuf = blob.getBytes(1, oldLen);
+                System.arraycopy(oldBuf, 0, buf, 0, oldLen);
+                System.arraycopy(byteArray, 0, buf, oldLen, byteArray.length);
+                blob.setBytes(1, buf);
+            }
             rs.updateBlob(1, blob);
             rs.updateLong(2, newLength);
             rs.updateLong(3, now);
@@ -514,6 +528,7 @@ public class JdbcTableRowFile extends AbstractFileObject
         Connection connection = null;
         PreparedStatement ps = null;
         ResultSet rs = null;
+        Blob blob = null;
         try
         {
             connection = provider.dataSource.getConnection();
@@ -526,7 +541,7 @@ public class JdbcTableRowFile extends AbstractFileObject
                 throw new IOException("Database row not found for " + getName()); // TODO: Filenotfound exception?
             }
 
-            Blob blob = rs.getBlob(1);
+            blob = rs.getBlob(1);
             if (blob == null)
             {
                 throw new IOException("Blob column is null for " + getName());
@@ -534,7 +549,6 @@ public class JdbcTableRowFile extends AbstractFileObject
 
             // cannot access Blob after ResultSet#next() or connection#close()
             byte[] bytes = blob.getBytes(pos+1, len);
-            blob.free();
 
             if (bytes == null)
             {
@@ -554,6 +568,7 @@ public class JdbcTableRowFile extends AbstractFileObject
         }
         finally
         {
+            safeFree(blob);
             safeClose(rs);
             safeClose(ps);
             safeClose(connection);
@@ -601,6 +616,8 @@ public class JdbcTableRowFile extends AbstractFileObject
 
     private void safeClose(Connection connection)
     {
+        if (connection == null)
+            return;
         try { connection.close(); } catch (Exception ignored) { }
     }
 
