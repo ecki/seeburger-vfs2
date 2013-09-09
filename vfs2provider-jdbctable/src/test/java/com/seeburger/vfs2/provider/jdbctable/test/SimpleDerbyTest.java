@@ -14,7 +14,7 @@ public class SimpleDerbyTest extends SimpleTestsBase
     {
         System.out.println("Starting database");
         EmbeddedDataSource ds = new EmbeddedDataSource();
-        ds.setUser("SEEASOWN");
+        ds.setUser("VFSTEST");
         ds.setPassword("secret");
         ds.setCreateDatabase("create");
         ds.setDatabaseName("target/SimpleDerbyTestDB");

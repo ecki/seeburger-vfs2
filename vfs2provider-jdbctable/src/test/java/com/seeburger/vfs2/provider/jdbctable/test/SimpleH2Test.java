@@ -24,10 +24,10 @@ public class SimpleH2Test extends SimpleTestsBase
     {
         System.out.println("Starting H2 database");
         JdbcDataSource ds = new JdbcDataSource();
-        ds.setUser("SEEASDB");
+        ds.setUser("VFSTEST");
         ds.setPassword("secret");
+        // make sure mem database is not anonymous and will not get droped on conenction close
         ds.setURL("jdbc:h2:mem:test;DB_CLOSE_DELAY=-1;JMX=TRUE");
-        //ds.setURL("jdbc:h2:target/SimpleH2TestDB;JMX=TRUE");
 
         Flyway flyway = new Flyway();
         flyway.setDataSource(ds);

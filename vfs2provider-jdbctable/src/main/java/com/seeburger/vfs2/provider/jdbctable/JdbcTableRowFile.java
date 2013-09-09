@@ -534,7 +534,6 @@ public class JdbcTableRowFile extends AbstractFileObject
         Connection connection = null;
         PreparedStatement ps = null;
         ResultSet rs = null;
-        long size = 0l;
         Blob blob = null;
         try
         {
@@ -548,11 +547,11 @@ public class JdbcTableRowFile extends AbstractFileObject
                 throw new IOException("Database row not found for " + getName()); // TODO: Filenotfound exception?
             }
 
-            size = rs.getLong(1);
+            final long size = rs.getLong(1);
             blob = rs.getBlob(2);
             if (size != 0 && blob == null)
             {
-                throw new IOException("Blob column is null for " + getName());
+                throw new IOException("Blob column is null, expecting " + size + " bytes for " + getName());
             }
 
             // cannot access Blob after ResultSet#next() or connection#close()
@@ -572,19 +571,20 @@ public class JdbcTableRowFile extends AbstractFileObject
 
             if (bytes == null)
             {
-                throw new IOException("Blob column content is null for " + getName());
+                throw new IOException("Blob column content is null, expecting " + size + " bytes for " + getName());
             }
 
             if (rs.next() != false)
             {
-                throw new IOException("More than one match for " + getName());
+                throw new IOException("Consitency Problem, more than one Database row for " + getName());
             }
 
             return bytes;
         }
         catch (SQLException ex)
         {
-            throw new IOException("database problem while reading blob.", ex);
+            // TODO: retry?
+            throw new IOException("Database problem while reading blob for " + getName(), ex);
         }
         finally
         {
