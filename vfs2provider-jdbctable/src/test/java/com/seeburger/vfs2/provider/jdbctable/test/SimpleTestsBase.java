@@ -604,6 +604,43 @@ public abstract class SimpleTestsBase
     }
 
     @Test
+    public void testMultipleWrites() throws IOException
+    {
+        final long now = System.currentTimeMillis();
+
+        FileObject testFile = manager.resolveFile("seejt:///key/multiwrite_"+now);
+
+        OutputStream os = testFile.getContent().getOutputStream();
+        os.write(1);
+        byte buf[] = new byte[2]; buf[0] = 2; buf[1] = 3;
+        os.write(buf);
+        os.write(buf);
+        os.flush();
+        os.write(buf);
+        os.close();
+
+        assertEquals(true, testFile.exists());
+        assertEquals(false, testFile.getContent().isOpen());
+        assertEquals(7,  testFile.getContent().getSize());
+
+        // validate content
+        InputStream is = testFile.getContent().getInputStream();
+        assertEquals(true, testFile.getContent().isOpen());
+        DataInputStream dis = new DataInputStream(is);
+        buf = new byte[7];
+        dis.readFully(buf);
+        dis.close();
+        assertEquals(false, testFile.getContent().isOpen());
+        testFile.getContent().close();
+
+        byte[] expectedBuf = new byte[] { 1, 2, 3, 2, 3, 2, 3};
+        assertArrayEquals(expectedBuf, buf);
+
+        verifyDatabase();
+    }
+
+
+    @Test
     public void testOverwrite() throws IOException
     {
         final long now = System.currentTimeMillis();
