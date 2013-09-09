@@ -78,6 +78,7 @@ public class JdbcTableProviderTestCase extends AbstractProviderTestConfig implem
 
         Flyway flyway = new Flyway();
         flyway.setDataSource(ds);
+        flyway.setLocations("db/migration/h2_derby");
         flyway.setCleanOnValidationError(true);
         flyway.migrate();
 

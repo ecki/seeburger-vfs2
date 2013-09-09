@@ -21,6 +21,7 @@ public class SimpleDerbyTest extends SimpleTestsBase
 
         Flyway flyway = new Flyway();
         flyway.setDataSource(ds);
+        flyway.setLocations("db/migration/h2_derby");
         flyway.setValidateOnMigrate(true);
         flyway.setCleanOnValidationError(true);
         flyway.migrate();

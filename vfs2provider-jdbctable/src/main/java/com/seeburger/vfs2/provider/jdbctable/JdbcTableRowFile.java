@@ -26,6 +26,11 @@ import org.apache.commons.vfs2.util.RandomAccessMode;
 
 public class JdbcTableRowFile extends AbstractFileObject
 {
+    /** value of size entry for folders in db. */
+    final static long FOLDER_SIZE = -2;
+    /** size of virtual files (never in DB) */
+    final static long VIRTUAL_SIZE = -1;
+
     public static class DataDescription
     {
         long generation;
@@ -37,7 +42,7 @@ public class JdbcTableRowFile extends AbstractFileObject
 
     JdbcTableProvider provider;
     long lastModified = -1;
-    long contentSize = -1;
+    long contentSize = VIRTUAL_SIZE;
 
     public JdbcTableRowFile(AbstractFileName name, JdbcTableFileSystem fs)
     {
@@ -64,19 +69,19 @@ public class JdbcTableRowFile extends AbstractFileObject
             }
             long size = rs.getLong(1);
             lastModified = rs.getLong(2);
-            if (size == -2)
+            if (size == FOLDER_SIZE)
             {
                 injectType(FileType.FOLDER);
             }
             else
             {
                 blob = rs.getBlob(3);
-                if (blob == null)
+                if (blob == null && size > 0)
                 {
                     throw new IOException("Critical inconsitency, blob column is null for " +getName());
                 }
 
-                contentSize = blob.length();
+                contentSize = size;
                 injectType(FileType.FILE);
             }
 
@@ -107,10 +112,11 @@ public class JdbcTableRowFile extends AbstractFileObject
         ResultSet rs = null;
         try
         {
-            ps = connection.prepareStatement("INSERT INTO tBlobs (cParent,cName,cSize,cLastModified,cMarkGarbage) VALUES (?,?,-2,?,?)");
+            ps = connection.prepareStatement("INSERT INTO tBlobs (cParent,cName,cSize,cLastModified,cMarkGarbage) VALUES (?,?,?,?,?)");
             setPrimaryKey(ps, this, 0);
-            ps.setLong(3, now);
+            ps.setLong(3, FOLDER_SIZE);
             ps.setLong(4, now);
+            ps.setLong(5, now);
 
             int count = ps.executeUpdate();
             if (count != 1)
@@ -528,11 +534,12 @@ public class JdbcTableRowFile extends AbstractFileObject
         Connection connection = null;
         PreparedStatement ps = null;
         ResultSet rs = null;
+        long size = 0l;
         Blob blob = null;
         try
         {
             connection = provider.dataSource.getConnection();
-            ps = connection.prepareStatement("SELECT cBlob FROM tBlobs WHERE cParent=? AND cName=?");
+            ps = connection.prepareStatement("SELECT cSize,cBlob FROM tBlobs WHERE cParent=? AND cName=?");
             setPrimaryKey(ps, this, 0);
             rs = ps.executeQuery();
 
@@ -541,14 +548,27 @@ public class JdbcTableRowFile extends AbstractFileObject
                 throw new IOException("Database row not found for " + getName()); // TODO: Filenotfound exception?
             }
 
-            blob = rs.getBlob(1);
-            if (blob == null)
+            size = rs.getLong(1);
+            blob = rs.getBlob(2);
+            if (size != 0 && blob == null)
             {
                 throw new IOException("Blob column is null for " + getName());
             }
 
             // cannot access Blob after ResultSet#next() or connection#close()
-            byte[] bytes = blob.getBytes(pos+1, len);
+
+            byte[] bytes;
+
+            if (pos > size)
+            {
+                throw new IOException("Requesting position " + pos + " but Blob size is " + size + " for file " + getName());
+            }
+
+            // Oracle might have null for empty blob, so we dont touch it at all
+            if (size == 0)
+                bytes = new byte[0];
+            else
+                bytes = blob.getBytes(pos+1, len);
 
             if (bytes == null)
             {
