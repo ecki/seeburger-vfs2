@@ -53,7 +53,7 @@ public class JdbcTableRowFile extends AbstractFileObject
     @Override
     protected void doAttach() throws Exception
     {
-        Connection connection = provider.dataSource.getConnection();
+        Connection connection = provider.getConnection();
         PreparedStatement ps = null;
         ResultSet rs = null;
         Blob blob = null;
@@ -95,10 +95,7 @@ public class JdbcTableRowFile extends AbstractFileObject
         }
         finally
         {
-            safeFree(blob);
-            safeClose(rs);
-            safeClose(ps);
-            safeClose(connection);
+            provider.closeConnection(blob, rs, ps, connection);
         }
     }
 
@@ -107,7 +104,7 @@ public class JdbcTableRowFile extends AbstractFileObject
         throws Exception
     {
         long now = System.currentTimeMillis(); // TODO: DB side?
-        Connection connection = provider.dataSource.getConnection();
+        Connection connection = provider.getConnection();
         PreparedStatement ps = null;
         ResultSet rs = null;
         try
@@ -134,13 +131,7 @@ public class JdbcTableRowFile extends AbstractFileObject
         }
         finally
         {
-            if (connection != null)
-            {
-                connection.rollback();
-            }
-            safeClose(rs);
-            safeClose(ps);
-            safeClose(connection);
+            provider.rollbackConnection(null, rs, ps, connection);
         }
     }
 
@@ -153,7 +144,7 @@ public class JdbcTableRowFile extends AbstractFileObject
     protected void doDelete()
         throws Exception
     {
-        Connection connection = provider.dataSource.getConnection();
+        Connection connection = provider.getConnection();
         PreparedStatement ps = null;
         try
         {
@@ -173,10 +164,7 @@ public class JdbcTableRowFile extends AbstractFileObject
         }
         finally
         {
-            if (connection != null)
-                connection.rollback();
-            safeClose(ps);
-            safeClose(connection);
+            provider.rollbackConnection(null, null, ps, connection);
         }
     }
 
@@ -230,7 +218,7 @@ public class JdbcTableRowFile extends AbstractFileObject
         {
             throw new FileNotFolderException(this);
         }
-        Connection connection = provider.dataSource.getConnection();
+        Connection connection = provider.getConnection();
         PreparedStatement ps = null;
         ResultSet rs = null;
         try
@@ -248,9 +236,7 @@ public class JdbcTableRowFile extends AbstractFileObject
         }
         finally
         {
-            safeClose(rs);
-            safeClose(ps);
-            safeClose(connection);
+            provider.closeConnection(null, rs, ps, connection);
         }
     }
 
@@ -287,7 +273,7 @@ public class JdbcTableRowFile extends AbstractFileObject
         throws Exception
     {
         long now = System.currentTimeMillis();
-        Connection connection = provider.dataSource.getConnection();
+        Connection connection = provider.getConnection();
         PreparedStatement ps = null;
         try
         {
@@ -309,10 +295,7 @@ public class JdbcTableRowFile extends AbstractFileObject
         }
         finally
         {
-            if (connection != null)
-                connection.rollback();
-            safeClose(ps);
-            safeClose(connection);
+            provider.rollbackConnection(null, null, ps, connection);
         }
     }
 
@@ -338,7 +321,7 @@ public class JdbcTableRowFile extends AbstractFileObject
 
     private void writeDataOverwrite(long now, byte[] byteArray) throws SQLException, IOException
     {
-        Connection connection = provider.dataSource.getConnection();
+        Connection connection = provider.getConnection();
         PreparedStatement ps = null;
         ResultSet rs = null;
         try
@@ -377,26 +360,21 @@ public class JdbcTableRowFile extends AbstractFileObject
         }
         finally
         {
-            if (connection != null)
-            {
-                connection.rollback();
-            }
-            safeClose(rs);
-            safeClose(ps);
-            safeClose(connection);
+            provider.rollbackConnection(null, rs, ps, connection);
         }
     }
 
     private void writeDataUpdate(long now, byte[] byteArray) throws SQLException, IOException
     {
-        Connection connection = provider.dataSource.getConnection();
+        Connection connection = provider.getConnection();
         PreparedStatement ps = null;
         ResultSet rs = null;
         Blob blob = null;
         try
         {
             // some DB (like H2) require the PK Columns in the Result Set to be able to use updateRow()
-            ps = connection.prepareStatement("SELECT cBlob, cSize, cMarkGarbage, cLastModified, cParent, cName FROM tBlobs WHERE (cParent=? AND cName=?) FOR UPDATE", ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_UPDATABLE);
+            //ps = connection.prepareStatement("SELECT cBlob, cSize, cMarkGarbage, cLastModified, cParent, cName FROM tBlobs WHERE (cParent=? AND cName=?) FOR UPDATE", ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_UPDATABLE);
+            ps = connection.prepareStatement("SELECT cBlob, cSize, cMarkGarbage, cLastModified, cParent, cName FROM tBlobs WHERE (cParent=? AND cName=?)", ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_UPDATABLE);
             setPrimaryKey(ps, this, 0);
             rs = ps.executeQuery();
 
@@ -458,20 +436,13 @@ public class JdbcTableRowFile extends AbstractFileObject
         }
         finally
         {
-            if (connection != null)
-            {
-                connection.rollback();
-            }
-            safeFree(blob);
-            safeClose(rs);
-            safeClose(ps);
-            safeClose(connection);
+            provider.rollbackConnection(blob, rs, ps, connection);
         }
     }
 
     private void writeDataInsert(long now, byte[] byteArray) throws SQLException, IOException
     {
-        Connection connection = provider.dataSource.getConnection();
+        Connection connection = provider.getConnection();
         PreparedStatement ps = null;
         ResultSet rs = null;
         try
@@ -513,13 +484,7 @@ public class JdbcTableRowFile extends AbstractFileObject
         }
         finally
         {
-            if (connection != null)
-            {
-                connection.rollback();
-            }
-            safeClose(rs);
-            safeClose(ps);
-            safeClose(connection);
+            provider.rollbackConnection(null, rs, ps, connection);
         }
     }
 
@@ -537,7 +502,7 @@ public class JdbcTableRowFile extends AbstractFileObject
         Blob blob = null;
         try
         {
-            connection = provider.dataSource.getConnection();
+            connection = provider.getConnection();
             ps = connection.prepareStatement("SELECT cSize,cBlob FROM tBlobs WHERE cParent=? AND cName=?");
             setPrimaryKey(ps, this, 0);
             rs = ps.executeQuery();
@@ -563,7 +528,7 @@ public class JdbcTableRowFile extends AbstractFileObject
                 throw new IOException("Requesting position " + pos + " but Blob size is " + size + " for file " + getName());
             }
 
-            // Oracle might have null for empty blob, so we dont touch it at all
+            // Oracle might have null for empty blob, so we don't touch it at all
             if (size == 0)
                 bytes = new byte[0];
             else
@@ -588,10 +553,7 @@ public class JdbcTableRowFile extends AbstractFileObject
         }
         finally
         {
-            safeFree(blob);
-            safeClose(rs);
-            safeClose(ps);
-            safeClose(connection);
+            provider.closeConnection(blob, rs, ps, connection);
         }
     }
 
@@ -628,29 +590,6 @@ public class JdbcTableRowFile extends AbstractFileObject
                               file.getName().getBaseName() };
     }
 
-
-    private void safeFree(Blob blob)
-    {
-        try { blob.free(); } catch (Exception ignored) { }
-    }
-
-    private void safeClose(Connection connection)
-    {
-        if (connection == null)
-            return;
-        try { connection.close(); } catch (Exception ignored) { }
-    }
-
-    private void safeClose(PreparedStatement ps)
-    {
-        try { ps.close(); } catch (Exception ignored) { }
-    }
-
-    private void safeClose(ResultSet rs)
-    {
-        try { rs.close(); } catch (Exception ignored) { }
-
-    }
 
     DataDescription startReadData(int bufsize) throws IOException
     {

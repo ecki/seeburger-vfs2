@@ -1,8 +1,12 @@
 package com.seeburger.vfs2.provider.jdbctable;
 
 
+import java.sql.Blob;
 import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.SQLWarning;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
@@ -109,6 +113,122 @@ public class JdbcTableProvider
         try
         {
             c.close();
-        } catch (Exception ignored) { }
+        }
+        catch (Exception ignored) { }
+    }
+
+    Connection getConnection() throws SQLException
+    {
+        long start = System.nanoTime();
+        Connection c = dataSource.getConnection();
+        long duration = System.nanoTime() - start;
+        if (duration > 600*1000000)
+            System.out.printf("slow getConnection(): %.6fs%n",  (duration/1000000000.0));
+        return c;
+    }
+
+    public void closeConnection(Blob blob, ResultSet rs, PreparedStatement ps, Connection connection)
+    {
+        if (blob != null)
+        {
+            try
+            {
+                blob.free();
+            }
+            catch (AbstractMethodError ignored) { } // TODO: JTDS
+            catch (Exception ignored) { }
+        }
+
+        if (rs != null)
+        {
+            processWarnings(rs);
+            try
+            {
+                rs.close();
+            }
+            catch (Exception ignored) { }
+        }
+
+        if (ps != null)
+        {
+            processWarnings(ps);
+            try
+            {
+                ps.close();
+            }
+            catch (Exception ignored) { }
+        }
+
+        if (connection != null)
+        {
+            processWarnings(connection);
+
+            try
+            {
+                connection.close();
+            }
+            catch (Exception ignored) { }
+        }
+    }
+
+    private void processWarnings(ResultSet rs)
+    {
+        try
+        {
+            processWarnings(rs.getWarnings());
+        }
+        catch (SQLException ignored) { }
+    }
+
+    private void processWarnings(Connection connection)
+    {
+        try
+        {
+            processWarnings(connection.getWarnings());
+        }
+        catch (SQLException ignored) { }
+    }
+
+    private void processWarnings(PreparedStatement ps)
+    {
+        try
+        {
+            processWarnings(ps.getWarnings());
+        }
+        catch (SQLException ignored) { }
+    }
+
+    private void processWarnings(SQLWarning warnings)
+    {
+        if (warnings != null)
+        {
+            RuntimeException stack = new RuntimeException("Found JDBC Warnings: " + warnings);
+            stack.fillInStackTrace();
+            stack.printStackTrace(System.err);
+        }
+    }
+
+    public void rollbackConnection(Blob blob, ResultSet rs, PreparedStatement ps, Connection connection)
+    {
+        closeConnection(blob, rs, ps, null);
+
+        if (connection != null)
+        {
+            processWarnings(connection);
+
+            try
+            {
+                connection.rollback();
+            }
+            catch (SQLException e)
+            {
+                e.printStackTrace();
+            }
+            try
+            {
+                connection.close();
+            }
+            catch (Exception ignored) { }
+        }
     }
 }
