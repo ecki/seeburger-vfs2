@@ -16,7 +16,7 @@ public class SimpleDerbyTest extends SimpleTestsBase
         EmbeddedDataSource ds = new EmbeddedDataSource();
         ds.setUser("VFSTEST");
         ds.setPassword("secret");
-        ds.setCreateDatabase("true");
+        ds.setCreateDatabase("create");
         ds.setDatabaseName("target/SimpleDerbyTestDB");
 
         Flyway flyway = new Flyway();
@@ -26,7 +26,10 @@ public class SimpleDerbyTest extends SimpleTestsBase
         flyway.setCleanOnValidationError(true);
         flyway.migrate();
 
-        ds.setCreateDatabase("false");
+        ds = new EmbeddedDataSource();
+        ds.setUser("VFSTEST");
+        ds.setPassword("secret");
+        ds.setDatabaseName("target/SimpleDerbyTestDB");
 
         dataSource = ds;
     }
