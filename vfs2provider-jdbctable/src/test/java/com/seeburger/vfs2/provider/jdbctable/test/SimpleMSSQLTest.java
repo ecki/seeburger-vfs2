@@ -32,6 +32,7 @@ public class SimpleMSSQLTest extends SimpleTestsBase
         ds.setDatabaseName("VFSTEST");
         // ds.setInstance("SQLEXPRESS"); - if you set this, it will always look up the port from SQLBrowser
         ds.setAutoCommit(false);
+        ds.setMacAddress("010203040506"); // 20x speedup
         ds.setServerType(Driver.SQLSERVER);
 
         Flyway flyway = new Flyway();
