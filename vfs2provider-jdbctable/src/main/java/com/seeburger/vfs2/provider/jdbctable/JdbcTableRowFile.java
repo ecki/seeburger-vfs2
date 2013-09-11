@@ -152,15 +152,19 @@ public class JdbcTableRowFile extends AbstractFileObject
             setPrimaryKey(ps, this, 0);
             int count = ps.executeUpdate();
 
-            if (count != 0 && count != 1)
+            if (count == 0 || count == 1)
             {
-                throw new IOException("Corruption suspected, deleting different than 1 (" + count + ") records for " + getName());
+                if (count == 0)
+                {
+                    ps.clearWarnings(); // it is expected
+                }
+                connection.commit();
+                connection.close(); connection = null;
+                return;
             }
 
-            // TODO: update last modified of parent
-
-            connection.commit();
-            connection.close(); connection = null;
+            // count > 1
+            throw new IOException("Corruption suspected, deleting different than 1 (" + count + ") records for " + getName());
         }
         finally
         {
@@ -283,6 +287,12 @@ public class JdbcTableRowFile extends AbstractFileObject
             ps.setLong(3, now);
 
             int count = ps.executeUpdate();
+            if (count == 0)
+            {
+                ps.clearWarnings(); // SQL Warning for empty result set here can be ignored in #rollbackConnection()
+                throw new IOException("No file to rename to " + newfile.getName() + " from " + getName());
+            }
+
             if (count != 1)
             {
                 throw new IOException("Inconsitent result " + count +" while rename to " + newfile.getName() + " from " + getName());
