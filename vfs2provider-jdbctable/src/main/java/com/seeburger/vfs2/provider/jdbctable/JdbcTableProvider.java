@@ -44,6 +44,8 @@ public class JdbcTableProvider
         Capability.RENAME          // conditional
     }));
 
+    private static final int MS = 1000000;
+
 	DataSource dataSource;
     boolean supportsAppendBlob;
 
@@ -122,7 +124,7 @@ public class JdbcTableProvider
         long start = System.nanoTime();
         Connection c = dataSource.getConnection();
         long duration = System.nanoTime() - start;
-        if (duration > 600*1000000)
+        if (duration > 100*MS)
             System.out.printf("slow getConnection(): %.6fs%n",  (duration/1000000000.0));
         return c;
     }
