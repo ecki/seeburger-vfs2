@@ -12,11 +12,11 @@ public class SimpleDerbyTest extends SimpleTestsBase
     @BeforeClass
     public static void setupDatabase()
     {
-        System.out.println("Starting database");
+        System.out.println("Creating Derby Database");
         EmbeddedDataSource ds = new EmbeddedDataSource();
         ds.setUser("VFSTEST");
         ds.setPassword("secret");
-        ds.setCreateDatabase("create");
+        ds.setCreateDatabase("true");
         ds.setDatabaseName("target/SimpleDerbyTestDB");
 
         Flyway flyway = new Flyway();
@@ -25,6 +25,8 @@ public class SimpleDerbyTest extends SimpleTestsBase
         flyway.setValidateOnMigrate(true);
         flyway.setCleanOnValidationError(true);
         flyway.migrate();
+
+        ds.setCreateDatabase("false");
 
         dataSource = ds;
     }

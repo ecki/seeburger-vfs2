@@ -19,7 +19,7 @@ import com.googlecode.flyway.core.Flyway;
 import com.seeburger.vfs2.provider.jdbctable.JdbcTableProvider;
 
 
-public class JdbcTableProviderTestCase extends AbstractProviderTestConfig implements ProviderTestConfig
+public class DerbyProviderTestCase extends AbstractProviderTestConfig implements ProviderTestConfig
 {
     private static EmbeddedDataSource dataSource;
     private boolean inited;
@@ -73,7 +73,7 @@ public class JdbcTableProviderTestCase extends AbstractProviderTestConfig implem
         EmbeddedDataSource ds = new EmbeddedDataSource();
         ds.setUser("SEEASOWN");
         ds.setPassword("secret");
-        ds.setCreateDatabase("create");
+        ds.setCreateDatabase("true");
         ds.setDatabaseName("target/ProviderTestCaseDB");
 
         Flyway flyway = new Flyway();
@@ -81,6 +81,8 @@ public class JdbcTableProviderTestCase extends AbstractProviderTestConfig implem
         flyway.setLocations("db/migration/h2_derby");
         flyway.setCleanOnValidationError(true);
         flyway.migrate();
+
+        ds.setCreateDatabase("false");
 
         Connection c = ds.getConnection();
         PreparedStatement ps = c.prepareStatement("DELETE FROM tBlobs");
@@ -90,7 +92,7 @@ public class JdbcTableProviderTestCase extends AbstractProviderTestConfig implem
 
         dataSource = ds;
 
-        return new ProviderTestSuite(new JdbcTableProviderTestCase());
+        return new ProviderTestSuite(new DerbyProviderTestCase());
     }
 }
 
