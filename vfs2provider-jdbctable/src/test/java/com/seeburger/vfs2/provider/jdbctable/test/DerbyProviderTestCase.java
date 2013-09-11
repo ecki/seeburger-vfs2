@@ -73,7 +73,7 @@ public class DerbyProviderTestCase extends AbstractProviderTestConfig implements
         EmbeddedDataSource ds = new EmbeddedDataSource();
         ds.setUser("SEEASOWN");
         ds.setPassword("secret");
-        ds.setCreateDatabase("true");
+        ds.setCreateDatabase("create");
         ds.setDatabaseName("target/ProviderTestCaseDB");
 
         Flyway flyway = new Flyway();
@@ -82,7 +82,10 @@ public class DerbyProviderTestCase extends AbstractProviderTestConfig implements
         flyway.setCleanOnValidationError(true);
         flyway.migrate();
 
-        ds.setCreateDatabase("false");
+        ds = new EmbeddedDataSource();
+        ds.setUser("SEEASOWN");
+        ds.setPassword("secret");
+        ds.setDatabaseName("target/ProviderTestCaseDB");
 
         Connection c = ds.getConnection();
         PreparedStatement ps = c.prepareStatement("DELETE FROM tBlobs");

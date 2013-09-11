@@ -15,6 +15,7 @@ import org.apache.commons.vfs2.FileSystemException;
 import org.apache.commons.vfs2.FileSystemManager;
 import org.apache.commons.vfs2.FileType;
 import org.apache.commons.vfs2.impl.DefaultFileSystemManager;
+import org.apache.derby.jdbc.EmbeddedDataSource;
 import org.apache.derby.jdbc.EmbeddedDataSource40;
 
 import com.googlecode.flyway.core.Flyway;
@@ -106,10 +107,10 @@ public class StandaloneClient
 
     private static DataSource createDatasource() throws SQLException
     {
-        EmbeddedDataSource40 ds = new EmbeddedDataSource40();
+        EmbeddedDataSource ds = new EmbeddedDataSource();
         ds.setUser("SEEASOWN");
         ds.setPassword("secret");
-        ds.setCreateDatabase("true");
+        ds.setCreateDatabase("create");
         ds.setDatabaseName("target/SimpleDerbyTestDB");
 
         Flyway flyway = new Flyway();
@@ -119,7 +120,11 @@ public class StandaloneClient
         flyway.setCleanOnValidationError(true);
         flyway.migrate();
 
-        ds.setCreateDatabase("false");
+        ds = new EmbeddedDataSource();
+        ds.setUser("SEEASOWN");
+        ds.setPassword("secret");
+        ds.setCreateDatabase("create");
+        ds.setDatabaseName("target/SimpleDerbyTestDB");
 
         return ds;
     }
