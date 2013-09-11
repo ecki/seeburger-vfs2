@@ -109,14 +109,17 @@ public class StandaloneClient
         EmbeddedDataSource40 ds = new EmbeddedDataSource40();
         ds.setUser("SEEASOWN");
         ds.setPassword("secret");
-        ds.setCreateDatabase("create");
+        ds.setCreateDatabase("true");
         ds.setDatabaseName("target/SimpleDerbyTestDB");
 
         Flyway flyway = new Flyway();
         flyway.setDataSource(ds);
+        flyway.setLocations("db/migration/h2_derby");
         flyway.setValidateOnMigrate(true);
         flyway.setCleanOnValidationError(true);
         flyway.migrate();
+
+        ds.setCreateDatabase("false");
 
         return ds;
     }
