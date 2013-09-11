@@ -156,7 +156,8 @@ public class JdbcTableRowFile extends AbstractFileObject
             {
                 if (count == 0)
                 {
-                    ps.clearWarnings(); // it is expected
+                    // Derby generates warnings on no-match: https://issues.apache.org/jira/browse/DERBY-448
+                    ps.clearWarnings();
                 }
                 connection.commit();
                 connection.close(); connection = null;
@@ -289,7 +290,8 @@ public class JdbcTableRowFile extends AbstractFileObject
             int count = ps.executeUpdate();
             if (count == 0)
             {
-                ps.clearWarnings(); // SQL Warning for empty result set here can be ignored in #rollbackConnection()
+                // Derby generates warnings on no-match: https://issues.apache.org/jira/browse/DERBY-448
+                ps.clearWarnings();
                 throw new IOException("No file to rename to " + newfile.getName() + " from " + getName());
             }
 
