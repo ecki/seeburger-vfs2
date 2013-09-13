@@ -49,17 +49,29 @@ public class JdbcTableProvider
 	DataSource dataSource;
     boolean supportsAppendBlob;
 
+    final JdbcDialect dialect;
+
 
 	/**
      * Constructs a new provider for given DataSource.
      */
     public JdbcTableProvider(DataSource dataSource)
     {
-        super();
-        setFileNameParser(JdbcTableNameParser.getInstance());
-        this.dataSource = dataSource;
-        this.supportsAppendBlob = supportsAppendBlob(dataSource); // TODO: dialect
+        this(new JdbcDialectBase("tBlobs", dataSource));
+
     }
+
+    /**
+     * Constructs a new provider for given Dialect.
+     */
+    public JdbcTableProvider(JdbcDialect dialect)
+    {
+        super();
+        this.dialect = dialect;
+        setFileNameParser(JdbcTableNameParser.getInstance());
+    }
+
+
 
     @Override
     protected FileSystem doCreateFileSystem(final FileName name, final FileSystemOptions fileSystemOptions)
@@ -129,108 +141,4 @@ public class JdbcTableProvider
         return c;
     }
 
-    public void closeConnection(Blob blob, ResultSet rs, PreparedStatement ps, Connection connection)
-    {
-        if (blob != null)
-        {
-            try
-            {
-                blob.free();
-            }
-            catch (AbstractMethodError ignored) { } // TODO: JTDS
-            catch (Exception ignored) { }
-        }
-
-        if (rs != null)
-        {
-            processWarnings(rs);
-            try
-            {
-                rs.close();
-            }
-            catch (Exception ignored) { }
-        }
-
-        if (ps != null)
-        {
-            processWarnings(ps);
-            try
-            {
-                ps.close();
-            }
-            catch (Exception ignored) { }
-        }
-
-        if (connection != null)
-        {
-            processWarnings(connection);
-
-            try
-            {
-                connection.close();
-            }
-            catch (Exception ignored) { }
-        }
-    }
-
-    private void processWarnings(ResultSet rs)
-    {
-        try
-        {
-            processWarnings(rs.getWarnings());
-        }
-        catch (SQLException ignored) { }
-    }
-
-    private void processWarnings(Connection connection)
-    {
-        try
-        {
-            processWarnings(connection.getWarnings());
-        }
-        catch (SQLException ignored) { }
-    }
-
-    private void processWarnings(PreparedStatement ps)
-    {
-        try
-        {
-            processWarnings(ps.getWarnings());
-        }
-        catch (SQLException ignored) { }
-    }
-
-    private void processWarnings(SQLWarning warnings)
-    {
-        if (warnings != null)
-        {
-            RuntimeException stack = new RuntimeException("Found JDBC Warnings: " + warnings);
-            stack.fillInStackTrace();
-            stack.printStackTrace(System.err);
-        }
-    }
-
-    public void rollbackConnection(Blob blob, ResultSet rs, PreparedStatement ps, Connection connection)
-    {
-        closeConnection(blob, rs, ps, null);
-
-        if (connection != null)
-        {
-            processWarnings(connection);
-
-            try
-            {
-                connection.rollback();
-            }
-            catch (SQLException e)
-            {
-                e.printStackTrace();
-            }
-            try
-            {
-                connection.close();
-            }
-            catch (Exception ignored) { }
-        }
-    }
 }

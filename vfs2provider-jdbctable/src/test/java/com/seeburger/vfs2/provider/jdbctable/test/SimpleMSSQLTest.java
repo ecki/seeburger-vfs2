@@ -1,10 +1,8 @@
 package com.seeburger.vfs2.provider.jdbctable.test;
 
-import static org.junit.Assert.fail;
 
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
-import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 
@@ -15,6 +13,7 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 
 import com.googlecode.flyway.core.Flyway;
+import com.seeburger.vfs2.provider.jdbctable.JdbcDialectMSSQL;
 
 
 public class SimpleMSSQLTest extends SimpleTestsBase
@@ -51,6 +50,7 @@ public class SimpleMSSQLTest extends SimpleTestsBase
         }
         rs.close(); c.close();
 
+        SimpleTestsBase.dialect = new JdbcDialectMSSQL("tBlobs", ds);
         SimpleTestsBase.dataSource = ds;
     }
 

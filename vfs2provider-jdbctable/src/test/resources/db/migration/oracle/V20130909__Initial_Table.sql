@@ -1,4 +1,4 @@
-CREATE TABLE tBlobs (
+CREATE TABLE "tBlobs" (
     cParent VARCHAR2(255) NOT NULL,
     cName VARCHAR2(127) NOT NULL,
     cSize NUMBER(19) NOT NULL,
