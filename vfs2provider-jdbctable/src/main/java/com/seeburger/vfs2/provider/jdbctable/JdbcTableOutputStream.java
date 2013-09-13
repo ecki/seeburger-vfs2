@@ -5,8 +5,6 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 
-import org.apache.commons.vfs2.provider.AbstractFileObject;
-
 
 public class JdbcTableOutputStream extends OutputStream
 {
