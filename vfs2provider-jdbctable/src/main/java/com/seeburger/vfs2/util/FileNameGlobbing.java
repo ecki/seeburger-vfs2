@@ -14,6 +14,7 @@ import java.util.regex.Pattern;
 import org.apache.commons.vfs2.FileObject;
 import org.apache.commons.vfs2.FileSelectInfo;
 import org.apache.commons.vfs2.FileSelector;
+import org.apache.commons.vfs2.FileType;
 
 
 /**
@@ -159,6 +160,13 @@ public class FileNameGlobbing
             throws Exception
         {
             FileObject file = fileInfo.getFile();
+
+            // there is currently a problem with WebDAV provider not excluding "self" respones
+            if (file.getType() == FileType.IMAGINARY)
+            {
+                return false;
+            }
+
             String relname = fileInfo.getBaseFolder().getName().getRelativeName(file.getName());
 
             if (file.getType().hasChildren())
@@ -173,7 +181,6 @@ public class FileNameGlobbing
             throws Exception
         {
             int depth = fileInfo.getDepth();
-            String myname = fileInfo.getFile().getName().getBaseName();
 
             // do we need to step into any first level child?
             if (depth == 0)
@@ -187,11 +194,22 @@ public class FileNameGlobbing
             if (maxCheckDir != -1 && depth >= maxCheckDir)
                 return true;
 
+            FileObject file = fileInfo.getFile();
+
+            if (file.getType().hasContent() && depth-1 < exploded.length)
+            {
+                return false;
+            }
+
             if (depth <= exploded.length)
-                return matchDir(exploded[depth-1], myname + "/");
+            {
+                String basename = file.getName().getBaseName();
+                return matchDir(exploded[depth-1], ensureSuffix(basename, "/"));
+            }
 
             return false;
         }
+
 
         private String ensureSuffix(String base, String suffix)
         {
@@ -201,8 +219,10 @@ public class FileNameGlobbing
             return base;
         }
 
+
         private boolean matchDir(String pattern, String dirname)
         {
+            // TODO: do we check for wildcards here anyway?
             if (pattern.equals("*/") && dirname.endsWith("/"))
             {
                 return true;
@@ -224,8 +244,8 @@ public class FileNameGlobbing
         pattern2 = pattern2.replaceAll("\\$", "\\$");
 
         // then replace globbing syntax elements with expressions
-        pattern2 = pattern2.replaceAll("^\\*\\*/", ".*/"); // "**/" -> ".*/"
-        pattern2 = pattern2.replaceAll("/\\*\\*/", "/.*/"); //
+        pattern2 = pattern2.replaceAll("^\\*\\*/", ".+/"); // "**/" -> ".+/"
+        pattern2 = pattern2.replaceAll("/\\*\\*/", "/.+/"); //
         pattern2 = pattern2.replaceAll("/\\*\\*", "/.*[^/]");
 
         // when replacing * with "[^/]+" we need to make sure not to replace ".*"

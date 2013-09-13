@@ -286,6 +286,79 @@ public class FileNameGlobbingTest
         assertTrue(names.isEmpty());
     }
 
+    @Test
+    public void testGetSelectorOnlyFiles1() throws FileSystemException
+    {
+        FileObject dir = getTestDir();
+        FileNameGlobbing g = new FileNameGlobbing("*/read-tests/dir1/**");
+
+        // get a selector for this pattern
+        FileSelector s = g.getSelector();
+        assertNotNull(s);
+
+        // use the selector to filter
+        dir.refresh();
+        FileObject[] files = dir.findFiles(s);
+        assertNotNull(files);
+
+        // construct set of relative names
+        Set<String> names = new HashSet<String>();
+        for(FileObject file : files)
+            names.add(dir.getName().getRelativeName(file.getName()));
+
+        assertTrue(names.remove("test-data/read-tests/dir1/subdir1/file1.txt"));
+        assertTrue(names.remove("test-data/read-tests/dir1/subdir2/file1.txt"));
+        assertTrue(names.remove("test-data/read-tests/dir1/subdir3/file1.txt"));
+        assertTrue(names.remove("test-data/read-tests/dir1/subdir1/file2.txt"));
+        assertTrue(names.remove("test-data/read-tests/dir1/subdir2/file2.txt"));
+        assertTrue(names.remove("test-data/read-tests/dir1/subdir3/file2.txt"));
+        assertTrue(names.remove("test-data/read-tests/dir1/subdir1/file3.txt"));
+        assertTrue(names.remove("test-data/read-tests/dir1/subdir2/file3.txt"));
+        assertTrue(names.remove("test-data/read-tests/dir1/subdir3/file3.txt"));
+        assertTrue(names.remove("test-data/read-tests/dir1/file1.txt"));
+        assertTrue(names.remove("test-data/read-tests/dir1/file2.txt"));
+        assertTrue(names.remove("test-data/read-tests/dir1/file3.txt"));
+
+        assertTrue(names.isEmpty());
+    }
+
+    @Test
+    public void testGetSelectorOnlyFiles2() throws FileSystemException
+    {
+        FileObject dir = getTestDir();
+        FileNameGlobbing g = new FileNameGlobbing("test-data/read-tests/dir1/**");
+
+        // get a selector for this pattern
+        FileSelector s = g.getSelector();
+        assertNotNull(s);
+
+        // use the selector to filter
+        dir.refresh();
+        FileObject[] files = dir.findFiles(s);
+        assertNotNull(files);
+
+        // construct set of relative names
+        Set<String> names = new HashSet<String>();
+        for(FileObject file : files)
+            names.add(dir.getName().getRelativeName(file.getName()));
+
+        assertTrue(names.remove("test-data/read-tests/dir1/subdir1/file1.txt"));
+        assertTrue(names.remove("test-data/read-tests/dir1/subdir2/file1.txt"));
+        assertTrue(names.remove("test-data/read-tests/dir1/subdir3/file1.txt"));
+        assertTrue(names.remove("test-data/read-tests/dir1/subdir1/file2.txt"));
+        assertTrue(names.remove("test-data/read-tests/dir1/subdir2/file2.txt"));
+        assertTrue(names.remove("test-data/read-tests/dir1/subdir3/file2.txt"));
+        assertTrue(names.remove("test-data/read-tests/dir1/subdir1/file3.txt"));
+        assertTrue(names.remove("test-data/read-tests/dir1/subdir2/file3.txt"));
+        assertTrue(names.remove("test-data/read-tests/dir1/subdir3/file3.txt"));
+        assertTrue(names.remove("test-data/read-tests/dir1/file1.txt"));
+        assertTrue(names.remove("test-data/read-tests/dir1/file2.txt"));
+        assertTrue(names.remove("test-data/read-tests/dir1/file3.txt"));
+
+        assertTrue(names.isEmpty());
+    }
+
+
 
     @Test @Ignore
     public void testGetSelectorDirectory() throws FileSystemException
