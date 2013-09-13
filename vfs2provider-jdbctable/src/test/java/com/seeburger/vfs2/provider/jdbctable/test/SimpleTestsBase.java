@@ -123,7 +123,7 @@ public abstract class SimpleTestsBase
         verifyDatabase();
 
         Connection c = dataSource.getConnection();
-        PreparedStatement ps = c.prepareStatement("SELECT cName,cParent FROM tBlobs WHERE cParent=? AND cName=?");
+        PreparedStatement ps = dialect.prepareQuery(c, "SELECT cName,cParent FROM {table} WHERE cParent=? AND cName=?");
         ps.setString(1, "/key");
         ps.setString(2, "dir_"+now);
 
@@ -169,7 +169,7 @@ public abstract class SimpleTestsBase
 
         // ensure we have 2 files in DB ...
         Connection c = dataSource.getConnection();
-        PreparedStatement ps = c.prepareStatement("SELECT cName FROM tBlobs WHERE cParent=? AND cSize=0");
+        PreparedStatement ps = dialect.prepareQuery(c, "SELECT cName FROM {table} WHERE cParent=? AND cSize=0");
         ps.setString(1, "/key/dir_"+now+"/sub");
         ResultSet rs = ps.executeQuery();
         assertTrue(rs.next());
@@ -190,7 +190,7 @@ public abstract class SimpleTestsBase
         rs.close(); ps.close();
 
         // ...and one auto-created folder
-        ps = c.prepareStatement("SELECT cName FROM tBlobs WHERE cParent=? AND cSize=-2");
+        ps = dialect.prepareQuery(c, "SELECT cName FROM {table} WHERE cParent=? AND cSize=-2");
         ps.setString(1, "/key/dir_"+now);
         rs = ps.executeQuery();
         assertTrue(rs.next());
@@ -274,7 +274,7 @@ public abstract class SimpleTestsBase
         final long now = System.currentTimeMillis();
         // now VFS thinks the file exists, we delete it in SQL
         Connection c = dataSource.getConnection();
-        PreparedStatement ps = c.prepareStatement("INSERT INTO tBlobs (cParent,cName,cSize,cLastModified,cMarkGarbage) VALUES(?,?,-2,?,?)");
+        PreparedStatement ps = dialect.prepareQuery(c, "INSERT INTO {table} (cParent,cName,cSize,cLastModified,cMarkGarbage) VALUES(?,?,-2,?,?)");
         ps.setString(1, "/key");
         ps.setString(2, "newdir_"+now);
         ps.setLong(3, now);
@@ -352,7 +352,7 @@ public abstract class SimpleTestsBase
 
         // now VFS thinks the file exists, we delete it in SQL
         Connection c = dataSource.getConnection();
-        PreparedStatement ps = c.prepareStatement("DELETE FROM tBlobs WHERE cParent='/key' AND cName=?");
+        PreparedStatement ps = dialect.prepareQuery(c, "DELETE FROM {table} WHERE cParent='/key' AND cName=?");
         ps.setString(1, "missingfile_" + now);
         int count = ps.executeUpdate();
         assertEquals(1, count); // proof the file existed
@@ -551,7 +551,7 @@ public abstract class SimpleTestsBase
 
         // now VFS thinks the file exists, we delete it in SQL
         Connection c = dataSource.getConnection();
-        PreparedStatement ps = c.prepareStatement("DELETE FROM tBlobs WHERE cParent='/key' and cName=?");
+        PreparedStatement ps = dialect.prepareQuery(c, "DELETE FROM {table} WHERE cParent='/key' and cName=?");
         ps.setString(1, "readfile_" + now);
         int count = ps.executeUpdate();
         assertEquals(1, count); // proof the file existed

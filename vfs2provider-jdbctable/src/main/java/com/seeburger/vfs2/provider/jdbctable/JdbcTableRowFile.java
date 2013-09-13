@@ -690,6 +690,7 @@ public class JdbcTableRowFile extends AbstractFileObject
         {
             processWarnings(rs.getWarnings());
         }
+        catch (NullPointerException ignored) { } // Oracle Driver Problem
         catch (SQLException ignored) { }
     }
 
