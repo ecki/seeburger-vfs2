@@ -287,6 +287,33 @@ public class FileNameGlobbingTest
     }
 
 
+    @Test @Ignore
+    public void testGetSelectorDirectory() throws FileSystemException
+    {
+        FileObject dir = getTestDir();
+        FileNameGlobbing g = new FileNameGlobbing("*/");
+
+        // get a selector for this pattern
+        FileSelector s = g.getSelector();
+        assertNotNull(s);
+
+        // use the selector to filter
+        dir.refresh();
+        FileObject[] files = dir.findFiles(s);
+        assertNotNull(files);
+
+        // construct set of relative names
+        Set<String> names = new HashSet<String>();
+        for(FileObject file : files)
+            names.add(dir.getName().getRelativeName(file.getName()));
+
+        assertTrue(names.remove("test-data"));
+        assertTrue(names.remove("db"));
+        assertFalse("TODO: fix self dir match", names.remove("."));
+
+        assertTrue(names.isEmpty());
+    }
+
 
 
     private FileObject getTestDir() throws FileSystemException

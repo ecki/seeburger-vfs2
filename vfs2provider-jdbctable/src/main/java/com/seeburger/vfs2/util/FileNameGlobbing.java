@@ -143,43 +143,30 @@ public class FileNameGlobbing
 
         FileSelectorImpl()
         {
-            System.out.println("Created new selector " + pattern);
             exploded = getExplodedPattern();
             for(int i=0;i<exploded.length;i++)
             {
                 if (exploded[i].equals("**") || exploded[i].equals("**/"))
                 {
-                    maxCheckDir = i; System.out.println("maxCheck " + maxCheckDir);
+                    maxCheckDir = i;
                     break;
                 }
             }
             matcher = getPatternMatcher();
-            System.out.println("Created new selector " + matcher.pattern());
         }
 
         public boolean includeFile(FileSelectInfo fileInfo)
             throws Exception
         {
             FileObject file = fileInfo.getFile();
-
-            if (!file.getType().hasContent())
-            {
-                System.out.println("notmatch " + file);
-                return false;
-            }
-
             String relname = fileInfo.getBaseFolder().getName().getRelativeName(file.getName());
 
+            if (file.getType().hasChildren())
+            {
+                relname = ensureSuffix(relname, "/");
+            }
 
-
-            boolean match = matcher.matcher(relname).matches();
-
-            if(match)
-                System.out.println("+++ match " + relname + " as in " + fileInfo.getFile());
-            else
-                System.out.println("  - match " + relname + " as in " + fileInfo.getFile());
-
-            return match;
+            return matcher.matcher(relname).matches();
         }
 
         public boolean traverseDescendents(FileSelectInfo fileInfo)
@@ -206,12 +193,20 @@ public class FileNameGlobbing
             return false;
         }
 
+        private String ensureSuffix(String base, String suffix)
+        {
+            if (base == null || base.endsWith(suffix))
+                return base;
+            base += suffix;
+            return base;
+        }
+
         private boolean matchDir(String pattern, String dirname)
         {
-            System.out.println("matching " + pattern + " against " + dirname);
-
             if (pattern.equals("*/") && dirname.endsWith("/"))
+            {
                 return true;
+            }
 
             return pattern.equals(dirname);
         }
