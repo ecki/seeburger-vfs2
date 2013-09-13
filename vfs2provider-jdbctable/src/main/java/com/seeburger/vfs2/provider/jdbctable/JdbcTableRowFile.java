@@ -8,6 +8,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.SQLWarning;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -40,26 +41,26 @@ public class JdbcTableRowFile extends AbstractFileObject
         long pos;
     }
 
-    JdbcTableProvider provider;
     long lastModified = -1;
     long contentSize = VIRTUAL_SIZE;
+    JdbcDialect dialect;
 
     public JdbcTableRowFile(AbstractFileName name, JdbcTableFileSystem fs)
     {
         super(name, fs);
-        provider = fs.provider;
+        dialect = fs.provider.dialect;
     }
 
     @Override
     protected void doAttach() throws Exception
     {
-        Connection connection = provider.getConnection();
+        Connection con = getConnection("doAttach");
         PreparedStatement ps = null;
         ResultSet rs = null;
         Blob blob = null;
         try
         {
-            ps = connection.prepareStatement("SELECT cSize,cLastModified,cBlob FROM tBlobs WHERE (cParent=? AND cName=?)");
+            ps = dialect.prepareQuery(con, "SELECT cSize,cLastModified,cBlob FROM {table} WHERE (cParent=? AND cName=?)");
             setPrimaryKey(ps, this, 0);
             rs = ps.executeQuery();
             if (!rs.next())
@@ -95,7 +96,7 @@ public class JdbcTableRowFile extends AbstractFileObject
         }
         finally
         {
-            provider.closeConnection(blob, rs, ps, connection);
+            closeConnection(blob, rs, ps, con);
         }
     }
 
@@ -104,12 +105,12 @@ public class JdbcTableRowFile extends AbstractFileObject
         throws Exception
     {
         long now = System.currentTimeMillis(); // TODO: DB side?
-        Connection connection = provider.getConnection();
+        Connection con = getConnection("doCreateFolder");
         PreparedStatement ps = null;
         ResultSet rs = null;
         try
         {
-            ps = connection.prepareStatement("INSERT INTO tBlobs (cParent,cName,cSize,cLastModified,cMarkGarbage) VALUES (?,?,?,?,?)");
+            ps = dialect.prepareQuery(con, "INSERT INTO {table} (cParent,cName,cSize,cLastModified,cMarkGarbage) VALUES (?,?,?,?,?)");
             setPrimaryKey(ps, this, 0);
             ps.setLong(3, FOLDER_SIZE);
             ps.setLong(4, now);
@@ -123,15 +124,15 @@ public class JdbcTableRowFile extends AbstractFileObject
 
             // TODO: update last modified of parent
 
-            connection.commit();
-            connection.close(); connection = null;
+            con.commit();
+            con.close(); con = null;
 
             lastModified = now;
             contentSize = -1;
         }
         finally
         {
-            provider.rollbackConnection(null, rs, ps, connection);
+            rollbackConnection(null, rs, ps, con);
         }
     }
 
@@ -144,11 +145,11 @@ public class JdbcTableRowFile extends AbstractFileObject
     protected void doDelete()
         throws Exception
     {
-        Connection connection = provider.getConnection();
+        Connection con = getConnection("doDelete");
         PreparedStatement ps = null;
         try
         {
-            ps = connection.prepareStatement("DELETE FROM tBlobs WHERE cParent=? AND cName=?"); // TODO: ensure no children?
+            ps = dialect.prepareQuery(con, "DELETE FROM {table} WHERE cParent=? AND cName=?"); // TODO: ensure no children?
             setPrimaryKey(ps, this, 0);
             int count = ps.executeUpdate();
 
@@ -159,8 +160,8 @@ public class JdbcTableRowFile extends AbstractFileObject
                     // Derby generates warnings on no-match: https://issues.apache.org/jira/browse/DERBY-448
                     ps.clearWarnings();
                 }
-                connection.commit();
-                connection.close(); connection = null;
+                con.commit();
+                con.close(); con = null;
                 return;
             }
 
@@ -169,7 +170,7 @@ public class JdbcTableRowFile extends AbstractFileObject
         }
         finally
         {
-            provider.rollbackConnection(null, null, ps, connection);
+            rollbackConnection(null, null, ps, con);
         }
     }
 
@@ -223,13 +224,13 @@ public class JdbcTableRowFile extends AbstractFileObject
         {
             throw new FileNotFolderException(this);
         }
-        Connection connection = provider.getConnection();
+        Connection con = getConnection("doListChildren");
         PreparedStatement ps = null;
         ResultSet rs = null;
         try
         {
             List<String> children = new ArrayList<String>(32);
-            ps = connection.prepareStatement("SELECT cName FROM tBlobs WHERE cParent=?");
+            ps = dialect.prepareQuery(con, "SELECT cName FROM {table} WHERE cParent=?");
             ps.setString(1, getName().getPathDecoded());
             rs = ps.executeQuery();
             while(rs.next())
@@ -241,7 +242,7 @@ public class JdbcTableRowFile extends AbstractFileObject
         }
         finally
         {
-            provider.closeConnection(null, rs, ps, connection);
+            closeConnection(null, rs, ps, con);
         }
     }
 
@@ -277,12 +278,12 @@ public class JdbcTableRowFile extends AbstractFileObject
     protected void doRename(FileObject newfile)
         throws Exception
     {
+        Connection con = getConnection("doRename");
         long now = System.currentTimeMillis();
-        Connection connection = provider.getConnection();
         PreparedStatement ps = null;
         try
         {
-            ps = connection.prepareStatement("UPDATE tBlobs SET cParent=?,cName=?,cLastModified=? WHERE cParent=? AND cName=?");
+            ps = dialect.prepareQuery(con, "UPDATE {table} SET cParent=?,cName=?,cLastModified=? WHERE cParent=? AND cName=?");
             setPrimaryKey(ps, this, 3);
             setPrimaryKey(ps, (JdbcTableRowFile)newfile, 0);
             ps.setLong(3, now);
@@ -302,12 +303,12 @@ public class JdbcTableRowFile extends AbstractFileObject
 
             // TODO: update parent lastModified
 
-            connection.commit();
-            connection.close(); connection = null;
+            con.commit();
+            con.close(); con = null;
         }
         finally
         {
-            provider.rollbackConnection(null, null, ps, connection);
+            rollbackConnection(null, null, ps, con);
         }
     }
 
@@ -333,12 +334,12 @@ public class JdbcTableRowFile extends AbstractFileObject
 
     private void writeDataOverwrite(long now, byte[] byteArray) throws SQLException, IOException
     {
-        Connection connection = provider.getConnection();
+        Connection con = getConnection("writeDataOverwrite");
         PreparedStatement ps = null;
         ResultSet rs = null;
         try
         {
-            ps = connection.prepareStatement("UPDATE tBlobs SET cSize=?, cLastModified=?, cMarkGarbage=?, cBlob=? WHERE (cParent=? AND cName=?)");
+            ps = dialect.prepareQuery(con, "UPDATE {table} SET cSize=?, cLastModified=?, cMarkGarbage=?, cBlob=? WHERE (cParent=? AND cName=?)");
             setPrimaryKey(ps, this, 4);
             ps.setLong(1, byteArray.length);
             ps.setLong(2, now);
@@ -351,8 +352,8 @@ public class JdbcTableRowFile extends AbstractFileObject
                 throw new IOException("Updating different than 1 (" + count + ") records for " + getName());
             }
 
-            connection.commit(); // TODO: move behind endOutput?
-            connection.close(); connection = null;
+            con.commit(); // TODO: move behind endOutput?
+            con.close(); con = null;
 
             lastModified = now;
             contentSize = byteArray.length;
@@ -372,21 +373,21 @@ public class JdbcTableRowFile extends AbstractFileObject
         }
         finally
         {
-            provider.rollbackConnection(null, rs, ps, connection);
+            rollbackConnection(null, rs, ps, con);
         }
     }
 
     private void writeDataUpdate(long now, byte[] byteArray) throws SQLException, IOException
     {
-        Connection connection = provider.getConnection();
+        Connection con = getConnection("writeDataUpdate");
         PreparedStatement ps = null;
         ResultSet rs = null;
         Blob blob = null;
         try
         {
             // some DB (like H2) require the PK Columns in the Result Set to be able to use updateRow()
-            //ps = connection.prepareStatement("SELECT cBlob, cSize, cMarkGarbage, cLastModified, cParent, cName FROM tBlobs WHERE (cParent=? AND cName=?) FOR UPDATE", ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_UPDATABLE);
-            ps = connection.prepareStatement("SELECT cBlob, cSize, cMarkGarbage, cLastModified, cParent, cName FROM tBlobs WHERE (cParent=? AND cName=?)", ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_UPDATABLE);
+            //ps = dialect.prepareUpdateable(con, "SELECT cBlob, cSize, cMarkGarbage, cLastModified, cParent, cName FROM {table} WHERE (cParent=? AND cName=?) FOR UPDATE");
+            ps = dialect.prepareUpdateable(con, "SELECT cBlob, cSize, cMarkGarbage, cLastModified, cParent, cName FROM {table} WHERE (cParent=? AND cName=?) {FOR UPDATE}");
             setPrimaryKey(ps, this, 0);
             rs = ps.executeQuery();
 
@@ -402,7 +403,7 @@ public class JdbcTableRowFile extends AbstractFileObject
             }
 
             final long newLength = blob.length() + byteArray.length;
-            if (provider.supportsAppendBlob())
+            if (dialect.supportsAppendBlob())
             {
                 blob.setBytes(blob.length() + 1 , byteArray);
             }
@@ -427,8 +428,8 @@ public class JdbcTableRowFile extends AbstractFileObject
                 throw new IOException("More than one match for " + getName());
             }
 
-            connection.commit();
-            connection.close(); connection = null;
+            con.commit();
+            con.close(); con = null;
 
             lastModified = now;
             contentSize = newLength;
@@ -448,18 +449,18 @@ public class JdbcTableRowFile extends AbstractFileObject
         }
         finally
         {
-            provider.rollbackConnection(blob, rs, ps, connection);
+            rollbackConnection(blob, rs, ps, con);
         }
     }
 
     private void writeDataInsert(long now, byte[] byteArray) throws SQLException, IOException
     {
-        Connection connection = provider.getConnection();
+        Connection con = getConnection("writeDataInsert");
         PreparedStatement ps = null;
         ResultSet rs = null;
         try
         {
-            ps = connection.prepareStatement("INSERT INTO tBlobs (cParent,cName,cSize,cLastModified,cMarkGarbage,cBlob) VALUES (?,?,?,?,?,?)");
+            ps = dialect.prepareQuery(con, "INSERT INTO {table} (cParent,cName,cSize,cLastModified,cMarkGarbage,cBlob) VALUES (?,?,?,?,?,?)");
             setPrimaryKey(ps, this, 0);
             ps.setLong(3, byteArray.length);
             ps.setLong(4, now);
@@ -472,8 +473,8 @@ public class JdbcTableRowFile extends AbstractFileObject
                 throw new IOException("Inserting different than 1 (" + count + ") records for " + getName());
             }
 
-            connection.commit();
-            connection.close(); connection = null;
+            con.commit();
+            con.close(); con = null;
 
             lastModified = now;
             contentSize = byteArray.length;
@@ -496,7 +497,7 @@ public class JdbcTableRowFile extends AbstractFileObject
         }
         finally
         {
-            provider.rollbackConnection(null, rs, ps, connection);
+            rollbackConnection(null, rs, ps, con);
         }
     }
 
@@ -508,14 +509,14 @@ public class JdbcTableRowFile extends AbstractFileObject
      */
     byte[] readData(long pos, int len) throws IOException
     {
-        Connection connection = null;
+        Connection con = null;
         PreparedStatement ps = null;
         ResultSet rs = null;
         Blob blob = null;
         try
         {
-            connection = provider.getConnection();
-            ps = connection.prepareStatement("SELECT cSize,cBlob FROM tBlobs WHERE cParent=? AND cName=?");
+            con = getConnection("readData"); // inside try because rethrown as IOException
+            ps = dialect.prepareQuery(con, "SELECT cSize,cBlob FROM {table} WHERE cParent=? AND cName=?");
             setPrimaryKey(ps, this, 0);
             rs = ps.executeQuery();
 
@@ -565,7 +566,7 @@ public class JdbcTableRowFile extends AbstractFileObject
         }
         finally
         {
-            provider.closeConnection(blob, rs, ps, connection);
+            closeConnection(blob, rs, ps, con);
         }
     }
 
@@ -632,6 +633,116 @@ public class JdbcTableRowFile extends AbstractFileObject
         desc.buffer = readData(desc.pos, len);
 
         return;
+    }
+
+    private Connection getConnection(String where) throws SQLException
+    {
+        return dialect.getConnection();
+    }
+
+    public void closeConnection(Blob blob, ResultSet rs, PreparedStatement ps, Connection connection)
+    {
+        if (blob != null)
+        {
+            try
+            {
+                blob.free();
+            }
+            catch (AbstractMethodError ignored) { } // TODO: JTDS
+            catch (Exception ignored) { }
+        }
+
+        if (rs != null)
+        {
+            processWarnings(rs);
+            try
+            {
+                rs.close();
+            }
+            catch (Exception ignored) { }
+        }
+
+        if (ps != null)
+        {
+            processWarnings(ps);
+            try
+            {
+                ps.close();
+            }
+            catch (Exception ignored) { }
+        }
+
+        if (connection != null)
+        {
+            processWarnings(connection);
+
+            try
+            {
+                connection.close();
+            }
+            catch (Exception ignored) { }
+        }
+    }
+
+    private void processWarnings(ResultSet rs)
+    {
+        try
+        {
+            processWarnings(rs.getWarnings());
+        }
+        catch (SQLException ignored) { }
+    }
+
+    private void processWarnings(Connection connection)
+    {
+        try
+        {
+            processWarnings(connection.getWarnings());
+        }
+        catch (SQLException ignored) { }
+    }
+
+    private void processWarnings(PreparedStatement ps)
+    {
+        try
+        {
+            processWarnings(ps.getWarnings());
+        }
+        catch (SQLException ignored) { }
+    }
+
+    private void processWarnings(SQLWarning warnings)
+    {
+        if (warnings != null)
+        {
+            RuntimeException stack = new RuntimeException("Found JDBC Warnings: " + warnings);
+            stack.fillInStackTrace();
+            stack.printStackTrace(System.err);
+        }
+    }
+
+    public void rollbackConnection(Blob blob, ResultSet rs, PreparedStatement ps, Connection connection)
+    {
+        closeConnection(blob, rs, ps, null);
+
+        if (connection != null)
+        {
+            processWarnings(connection);
+
+            try
+            {
+                connection.rollback();
+            }
+            catch (SQLException e)
+            {
+                e.printStackTrace();
+            }
+            try
+            {
+                connection.close();
+            }
+            catch (Exception ignored) { }
+        }
     }
 
 }

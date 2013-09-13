@@ -25,6 +25,7 @@ import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
 
+import com.seeburger.vfs2.provider.jdbctable.JdbcDialect;
 import com.seeburger.vfs2.provider.jdbctable.JdbcTableProvider;
 
 
@@ -32,12 +33,16 @@ public abstract class SimpleTestsBase
 {
     static DataSource dataSource;
     DefaultFileSystemManager manager;
+    static JdbcDialect dialect;
 
     @Before
     public void setUp() throws FileSystemException
     {
         manager = new DefaultFileSystemManager();
-        manager.addProvider("seejt", new JdbcTableProvider(dataSource));
+        if (dialect != null)
+            manager.addProvider("seejt", new JdbcTableProvider(dialect));
+        else
+            manager.addProvider("seejt", new JdbcTableProvider(dataSource));
         manager.addProvider("file", new DefaultLocalFileProvider());
         manager.setCacheStrategy(CacheStrategy.ON_RESOLVE);
         manager.init();

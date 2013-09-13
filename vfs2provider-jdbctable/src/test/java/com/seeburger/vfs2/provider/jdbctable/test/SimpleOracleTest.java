@@ -13,6 +13,7 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 
 import com.googlecode.flyway.core.Flyway;
+import com.seeburger.vfs2.provider.jdbctable.JdbcDialectOracle;
 
 
 public class SimpleOracleTest extends SimpleTestsBase
@@ -47,6 +48,7 @@ public class SimpleOracleTest extends SimpleTestsBase
         }
         rs.close(); c.close();
 
+        SimpleTestsBase.dialect = new JdbcDialectOracle(ds);
         SimpleTestsBase.dataSource = ds;
     }
 
