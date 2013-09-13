@@ -1,10 +1,8 @@
 package com.seeburger.vfs2.provider.jdbctable.test;
 
-import static org.junit.Assert.fail;
 
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
-import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 
