@@ -1,10 +1,14 @@
 package com.seeburger.vfs2.provider.jdbctable.test;
 
+
 import java.io.File;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 
+import javax.sql.DataSource;
+
 import junit.framework.Test;
+import net.sourceforge.jtds.jdbcx.JtdsDataSource;
 
 import org.apache.commons.vfs2.AllFileSelector;
 import org.apache.commons.vfs2.FileObject;
@@ -13,16 +17,15 @@ import org.apache.commons.vfs2.impl.DefaultFileSystemManager;
 import org.apache.commons.vfs2.test.AbstractProviderTestConfig;
 import org.apache.commons.vfs2.test.ProviderTestConfig;
 import org.apache.commons.vfs2.test.ProviderTestSuite;
-import org.apache.derby.jdbc.EmbeddedDataSource;
 
 import com.googlecode.flyway.core.Flyway;
+import com.seeburger.vfs2.provider.jdbctable.JdbcDialectMSSQL;
 import com.seeburger.vfs2.provider.jdbctable.JdbcTableProvider;
-import com.seeburger.vfs2.util.TreePrinter;
 
 
-public class DerbyProviderTestCase extends AbstractProviderTestConfig implements ProviderTestConfig
+public class MSSQLProviderTestCase extends AbstractProviderTestConfig implements ProviderTestConfig
 {
-    private static EmbeddedDataSource dataSource;
+    private static DataSource dataSource;
     private boolean inited;
 
 
@@ -32,7 +35,7 @@ public class DerbyProviderTestCase extends AbstractProviderTestConfig implements
     {
         if (!manager.hasProvider("seejt"))
         {
-            manager.addProvider("seejt", new JdbcTableProvider(dataSource));
+            manager.addProvider("seejt", new JdbcTableProvider(new JdbcDialectMSSQL(dataSource)));
         } else {
             System.out.println("Already has provider seejt");
         }
@@ -58,8 +61,6 @@ public class DerbyProviderTestCase extends AbstractProviderTestConfig implements
             fo.copyFrom(from, new AllFileSelector());
 
             inited=true;
-
-            TreePrinter.printTree(base, "| ", System.out);
         }
 
         return manager.resolveFile("seejt:/key/test-data");
@@ -71,22 +72,19 @@ public class DerbyProviderTestCase extends AbstractProviderTestConfig implements
      */
     public static Test suite() throws Exception
     {
-        EmbeddedDataSource ds = new EmbeddedDataSource();
-        ds.setUser("SEEASOWN");
+        JtdsDataSource ds = new JtdsDataSource();
+        ds.setUser("VFSTEST");
         ds.setPassword("secret");
-        ds.setCreateDatabase("create");
-        ds.setDatabaseName("target/ProviderTestCaseDB");
+        ds.setServerName("127.0.0.1"); ds.setPortNumber(49762);
+        ds.setDatabaseName("VFSTEST");
+        ds.setAutoCommit(false);
+        ds.setMacAddress("010203040506"); // 20x speedup
 
         Flyway flyway = new Flyway();
         flyway.setDataSource(ds);
-        flyway.setLocations("db/migration/h2_derby");
+        flyway.setLocations("db/migration/mssql");
         flyway.setCleanOnValidationError(true);
         flyway.migrate();
-
-        ds = new EmbeddedDataSource();
-        ds.setUser("SEEASOWN");
-        ds.setPassword("secret");
-        ds.setDatabaseName("target/ProviderTestCaseDB");
 
         Connection c = ds.getConnection();
         PreparedStatement ps = c.prepareStatement("DELETE FROM tBlobs");
@@ -96,7 +94,7 @@ public class DerbyProviderTestCase extends AbstractProviderTestConfig implements
 
         dataSource = ds;
 
-        return new ProviderTestSuite(new DerbyProviderTestCase());
+        return new ProviderTestSuite(new MSSQLProviderTestCase());
     }
 }
 

@@ -61,7 +61,7 @@ public class H2ProviderTestCase extends AbstractProviderTestConfig implements Pr
 
             inited=true;
 
-            StandaloneClient.listFiles("|", base);
+            // TreePrinter.printTree(base, "| ", System.out);
         }
 
         return manager.resolveFile("seejt:/key/test-data");
