@@ -1,5 +1,6 @@
 package com.seeburger.vfs2.provider.jdbctable.test;
 
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -16,7 +17,6 @@ import org.apache.commons.vfs2.FileSystemManager;
 import org.apache.commons.vfs2.FileType;
 import org.apache.commons.vfs2.impl.DefaultFileSystemManager;
 import org.apache.derby.jdbc.EmbeddedDataSource;
-import org.apache.derby.jdbc.EmbeddedDataSource40;
 
 import com.googlecode.flyway.core.Flyway;
 import com.seeburger.vfs2.provider.jdbctable.JdbcTableProvider;

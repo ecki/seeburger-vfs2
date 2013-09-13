@@ -1,7 +1,5 @@
 package com.seeburger.vfs2.provider.jdbctable;
 
-import javax.sql.DataSource;
-
 import org.apache.commons.vfs2.FileSystem;
 import org.apache.commons.vfs2.FileSystemConfigBuilder;
 import org.apache.commons.vfs2.FileSystemOptions;

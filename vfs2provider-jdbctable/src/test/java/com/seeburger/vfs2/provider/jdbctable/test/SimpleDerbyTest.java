@@ -6,7 +6,6 @@ import org.junit.BeforeClass;
 
 import com.googlecode.flyway.core.Flyway;
 import com.seeburger.vfs2.provider.jdbctable.JdbcDialectBase;
-import com.seeburger.vfs2.provider.jdbctable.JdbcDialectMSSQL;
 
 
 public class SimpleDerbyTest extends SimpleTestsBase
