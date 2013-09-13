@@ -20,6 +20,7 @@ import org.apache.commons.vfs2.FileSystemException;
 import org.apache.commons.vfs2.cache.DefaultFilesCache;
 import org.apache.commons.vfs2.impl.DefaultFileSystemManager;
 import org.apache.commons.vfs2.provider.local.DefaultLocalFileProvider;
+import org.junit.Ignore;
 import org.junit.Test;
 
 
@@ -126,6 +127,80 @@ public class FileNameGlobbingTest
         assertTrue(names.remove("test-data/test.tar"));
         assertTrue(names.isEmpty());
     }
+
+    @Test @Ignore
+    public void testGetSelectorDotStar() throws FileSystemException
+    {
+        FileObject dir = getTestDir();
+        assertTrue("Test directory broken", dir.getChild("test-data").getChild("test-hash-#test.txt").exists());
+
+        FileNameGlobbing g = new FileNameGlobbing("test-data/test.*");
+
+
+        // get a selector for this pattern
+        FileSelector s = g.getSelector();
+        assertNotNull(s);
+
+        // use the selector to filter
+        dir.refresh();
+        FileObject[] files = dir.findFiles(s);
+        assertNotNull(files);
+
+        // construct set of relative names
+        Set<String> names = new HashSet<String>();
+        for(FileObject file : files)
+            names.add(dir.getName().getRelativeName(file.getName()));
+
+        assertTrue(names.remove("test-data/test.mf"));
+        assertTrue(names.remove("test-data/test.policy"));
+        assertFalse("TODO: fix .* escape", names.remove("test-data/test-hash-#test.txt"));
+        // will also match test-hash.txt if .* is escaped wrong
+        assertTrue(names.isEmpty());
+    }
+
+    @Test
+    public void testGetSelectorWithHash() throws FileSystemException
+    {
+        FileObject dir = getTestDir();
+        FileNameGlobbing g = new FileNameGlobbing("test-data/test-hash-#*");
+
+        // get a selector for this pattern
+        FileSelector s = g.getSelector();
+        assertNotNull(s);
+
+        // use the selector to filter
+        dir.refresh();
+        FileObject[] files = dir.findFiles(s);
+        assertNotNull(files);
+
+        // construct set of relative names
+        Set<String> names = new HashSet<String>();
+        for(FileObject file : files)
+            names.add(dir.getName().getRelativeName(file.getName()));
+
+        assertTrue(names.remove("test-data/test-hash-#test.txt"));
+        assertTrue(names.isEmpty());
+
+        g = new FileNameGlobbing("test-data/test-hash*");
+
+        // get a selector for this pattern
+        s = g.getSelector();
+        assertNotNull(s);
+
+        // use the selector to filter
+        dir.refresh();
+        files = dir.findFiles(s);
+        assertNotNull(files);
+
+        // construct set of relative names
+        names = new HashSet<String>();
+        for(FileObject file : files)
+            names.add(dir.getName().getRelativeName(file.getName()));
+
+        assertTrue(names.remove("test-data/test-hash-#test.txt"));
+        assertTrue(names.isEmpty());
+    }
+
 
     @Test
     public void testGetSelectorAllWildAtStart() throws FileSystemException

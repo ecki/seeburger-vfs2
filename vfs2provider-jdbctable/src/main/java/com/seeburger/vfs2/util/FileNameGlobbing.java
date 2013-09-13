@@ -1,38 +1,54 @@
 /*
  * FileNameGlobbing.java
  *
- * created at 12.09.2013 by Eckenfel <YOURMAILADDRESS>
+ * created at 2013-09-12 by Bernd Eckenfels <b.eckenfels@seeburger.de>
  *
- * Copyright (c) SEEBURGER AG, Germany. All Rights Reserved.
+ * Copyright (c) SEEBURGER AG, Germany. All Rights Reserved. TODO
  */
 package com.seeburger.vfs2.util;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.apache.commons.vfs2.FileObject;
 import org.apache.commons.vfs2.FileSelectInfo;
 import org.apache.commons.vfs2.FileSelector;
-import org.apache.commons.vfs2.Selectors;
 
 
+/**
+ * Brings unix-style file-name globbing to the VFS word.
+ */
 public class FileNameGlobbing
 {
     private final String pattern;
 
     private String[] explodedPattern;
 
+
+    /**
+     * Constructs a globbing Object with given expression.
+     * <P>
+     * See {@link FileNameGlobbing} class for syntax definition.
+     *
+     * @param pattern the '/' terminated file path pattern
+     * @throws IllegalArgumentException if pattern is not valid
+     */
     public FileNameGlobbing(String pattern)
     {
         if (pattern == null || pattern.isEmpty())
+        {
             throw new IllegalArgumentException("FileNameGlobbing with empty patter is not possible");
+        }
 
         this.pattern = pattern;
     }
 
-    /** Returns all fixed path components. */
+    /**
+     * Returns all fixed path components.
+     * <P>
+     * This returns the part of the pattern which does not contain wildcards.
+     */
     public String getBase()
     {
         String[] exploded = getExplodedPattern();
@@ -46,19 +62,6 @@ public class FileNameGlobbing
         return createPath(exploded, 0, pos);
     }
 
-    /** True if it contains any (unescaped) globbing patterns. */
-    private boolean containsWildcard(String string)
-    {
-        // TODO: escaping
-        if (string.contains("*"))
-            return true;
-
-        if (string.contains("?"))
-            return true;
-
-        return false;
-    }
-
     public String[] getExplodedPattern()
     {
         if (explodedPattern == null)
@@ -68,8 +71,26 @@ public class FileNameGlobbing
         return explodedPattern;
     }
 
+    public FileSelector getSelector()
+    {
+        return new FileSelectorImpl();
+    }
+
+    /** True if it contains any (unescaped) globbing patterns. */
+    static boolean containsWildcard(String string)
+    {
+        // TODO: escaping
+        if (string.contains("*")) // also captures **
+            return true;
+
+        if (string.contains("?"))
+            return true;
+
+        return false;
+    }
+
     /**
-     * Separate path by /, make sure each component ends with /.
+     * Split path by /, make sure each component ends with /.
      *
      * @param patternArg relative file path, potentially containing patterns
      * @return array with separated path components, first component starts with / if absolute, last component ends with / if dir.
@@ -112,11 +133,6 @@ public class FileNameGlobbing
             return builder.toString();
         else
             return "";
-    }
-
-    public FileSelector getSelector()
-    {
-        return new FileSelectorImpl();
     }
 
     class FileSelectorImpl implements FileSelector
@@ -201,8 +217,10 @@ public class FileNameGlobbing
         }
     }
 
+    /** Return the pattern as a compiled regular expression. */
     public Pattern getPatternMatcher()
     {
+        // first escape all RE syntax elements
         String pattern2 = pattern.replaceAll("\\\\", "\\\\");
         pattern2 = pattern2.replaceAll("\\[", "\\[");
         pattern2 = pattern2.replaceAll("\\]", "\\]");
@@ -210,10 +228,16 @@ public class FileNameGlobbing
         pattern2 = pattern2.replaceAll("\\^", "\\^");
         pattern2 = pattern2.replaceAll("\\$", "\\$");
 
-        pattern2 = pattern2.replaceAll("^\\*\\*/", ".*/");
-        pattern2 = pattern2.replaceAll("/\\*\\*/", "/.*/");
+        // then replace globbing syntax elements with expressions
+        pattern2 = pattern2.replaceAll("^\\*\\*/", ".*/"); // "**/" -> ".*/"
+        pattern2 = pattern2.replaceAll("/\\*\\*/", "/.*/"); //
+        pattern2 = pattern2.replaceAll("/\\*\\*", "/.*[^/]");
+
+        // when replacing * with "[^/]+" we need to make sure not to replace ".*"
+        // TODO: this does not works for file.* (aka file\\.*)
         pattern2 = pattern2.replaceAll("^\\*", "[^/]+");
         pattern2 = pattern2.replaceAll("([^.])\\*", "$1[^/]+");
+
         pattern2 = pattern2.replaceAll("\\?", "[^/]");
 
         return Pattern.compile("^" + pattern2 + "$");
