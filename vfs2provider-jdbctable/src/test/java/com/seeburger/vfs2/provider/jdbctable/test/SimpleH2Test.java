@@ -13,6 +13,7 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 
 import com.googlecode.flyway.core.Flyway;
+import com.seeburger.vfs2.provider.jdbctable.JdbcDialectBase;
 
 
 public class SimpleH2Test extends SimpleTestsBase
@@ -45,6 +46,7 @@ public class SimpleH2Test extends SimpleTestsBase
         }
         rs.close(); c.close();
 
+        SimpleTestsBase.dialect = new JdbcDialectBase("tBlobs", ds);
         SimpleTestsBase.dataSource = ds;
     }
 

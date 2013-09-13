@@ -5,6 +5,8 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 
 import com.googlecode.flyway.core.Flyway;
+import com.seeburger.vfs2.provider.jdbctable.JdbcDialectBase;
+import com.seeburger.vfs2.provider.jdbctable.JdbcDialectMSSQL;
 
 
 public class SimpleDerbyTest extends SimpleTestsBase
@@ -31,7 +33,8 @@ public class SimpleDerbyTest extends SimpleTestsBase
         ds.setPassword("secret");
         ds.setDatabaseName("target/SimpleDerbyTestDB");
 
-        dataSource = ds;
+        SimpleTestsBase.dialect = new JdbcDialectBase("tBlobs", ds);
+        SimpleTestsBase.dataSource = ds;
     }
 
     @AfterClass
