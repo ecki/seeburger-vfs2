@@ -1,68 +1,104 @@
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
-  <modelVersion>4.0.0</modelVersion>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
 
-  <groupId>com.seeburger.vfs2</groupId>
-  <artifactId>seeburger-vfs2-parent</artifactId>
-  <version>0.0.1-SNAPSHOT</version>
-  <packaging>pom</packaging>
+    <groupId>com.seeburger.vfs2</groupId>
+    <artifactId>seeburger-vfs2-parent</artifactId>
+    <version>0.0.1-SNAPSHOT</version>
+    <packaging>pom</packaging>
 
-  <name>SEEBURGER VFS2 Parent</name>
-  <description>Modules for the apache-commons VFS2 project.</description>
+    <name>SEEBURGER VFS2 Parent</name>
+    <description>Modules for the apache-commons VFS2 project.</description>
 
-  <properties>
-    <maven.build.timestamp.format>yyyyMMdd-HHmm</maven.build.timestamp.format>
-    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-  </properties>
+    <properties>
+        <maven.build.timestamp.format>yyyyMMdd-HHmm</maven.build.timestamp.format>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    </properties>
 
-  <modules>
-  	<module>vfs2provider-jdbctable</module>
-  	<module>vfs2provider-digestarc</module>
- </modules>
+    <modules>
+        <module>vfs2provider-jdbctable</module>
+        <module>vfs2provider-digestarc</module>
+    </modules>
 
-  <dependencies>
 
-  	<dependency>
-  		<groupId>org.apache.commons</groupId>
-  		<artifactId>commons-vfs2</artifactId>
-  		<version>2.0</version>
-  		<exclusions>
-  			<exclusion>
-  				<artifactId>maven-scm-api</artifactId>
-  				<groupId>org.apache.maven.scm</groupId>
-  			</exclusion>
-  			<exclusion>
-  				<artifactId>maven-scm-provider-svnexe</artifactId>
-  				<groupId>org.apache.maven.scm</groupId>
-  			</exclusion>
-  			<exclusion>
-  			    <artifactId>regexp</artifactId>
-  			    <groupId>regexp</groupId>
-  			</exclusion>
-  		</exclusions>
-  	</dependency>
+    <build>
+        <plugins>
+            <plugin>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.0</version>
+                <inherited>true</inherited>
+                <configuration>
+                    <compilerArgument>-Xlint:all</compilerArgument>
+                    <showWarnings>true</showWarnings>
+                    <showDeprecation>true</showDeprecation>
+                    <compilerVersion>1.6</compilerVersion>
+                    <source>1.6</source>
+                    <target>1.6</target>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
 
-  	<dependency>
-  		<groupId>org.apache.commons</groupId>
-  		<artifactId>commons-vfs2</artifactId>
-  		<version>2.0</version>
-  		<scope>test</scope>
-  		<classifier>tests</classifier>
-        <exclusions>
-            <exclusion>
-                <artifactId>regexp</artifactId>
-                <groupId>regexp</groupId>
-            </exclusion>
-        </exclusions>
-	</dependency>
 
-    <dependency>
-      <groupId>junit</groupId>
-      <artifactId>junit</artifactId>
-      <version>4.11</version>
-      <scope>test</scope>
-    </dependency>
+    <dependencies>
 
-  </dependencies>
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-vfs2</artifactId>
+            <version>2.0</version>
+            <exclusions>
+                <exclusion>
+                    <artifactId>maven-scm-api</artifactId>
+                    <groupId>org.apache.maven.scm</groupId>
+                </exclusion>
+                <exclusion>
+                    <artifactId>maven-scm-provider-svnexe</artifactId>
+                    <groupId>org.apache.maven.scm</groupId>
+                </exclusion>
+                <exclusion>
+                    <artifactId>regexp</artifactId>
+                    <groupId>regexp</groupId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-vfs2</artifactId>
+            <version>2.0</version>
+            <scope>test</scope>
+            <classifier>tests</classifier>
+            <exclusions>
+                <exclusion>
+                    <artifactId>regexp</artifactId>
+                    <groupId>regexp</groupId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>4.11</version>
+            <scope>test</scope>
+        </dependency>
+
+    </dependencies>
+
+    <licenses>
+        <license>
+            <name>Apache License 2.0</name>
+            <url>http://www.spdx.org/licenses/Apache-2.0</url>
+            <comments>Licensor: SEEBURGER AG, Germany.</comments>
+        </license>
+    </licenses>
+
+    <inceptionYear>2013</inceptionYear>
+
+    <organization>
+        <name>SEEBURGER AG, Germany.</name>
+        <url>http://www.seeburger.com</url>
+    </organization>
 
     <distributionManagement>
         <repository>
