@@ -61,6 +61,10 @@ public class DarcTree
         for(int i=1;i<parts.length;i++)
         {
             Entry child = me.getChild(parts[i], provider); // throws if File is reached or child missing
+            if (child == null)
+            {
+                throw new IOException("Cannot resolve " + parts[i] + "(" + i + ") of " + name);
+            }
             me = child;
         }
 
@@ -181,7 +185,7 @@ public class DarcTree
         Entry getChild(String name, BlobStorageProvider provider) throws IOException
         {
             materializeContent(provider);
-            return content.get(name);
+            return content.get(name); // might be null
         }
 
         private void materializeContent(BlobStorageProvider provider) throws IOException

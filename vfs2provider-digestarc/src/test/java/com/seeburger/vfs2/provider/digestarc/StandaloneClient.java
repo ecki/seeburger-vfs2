@@ -13,12 +13,9 @@ import java.util.Map;
 
 import org.apache.commons.vfs2.CacheStrategy;
 import org.apache.commons.vfs2.FileObject;
-import org.apache.commons.vfs2.FileSystemException;
-import org.apache.commons.vfs2.FileType;
 import org.apache.commons.vfs2.impl.DefaultFileSystemManager;
 import org.apache.commons.vfs2.provider.local.DefaultLocalFileProvider;
 
-import com.seeburger.vfs2.provider.digestarc.DarcFileProvider;
 import com.seeburger.vfs2.provider.digestarc.DarcTree.Directory;
 import com.seeburger.vfs2.provider.digestarc.DarcTree.Entry;
 import com.seeburger.vfs2.util.TreePrinter;
@@ -50,16 +47,19 @@ public class StandaloneClient
 		TreePrinter.printTree(root, "| ", System.out);
 
 		FileObject testFile = dir1.resolveFile("file2");
+
 System.out.println("opened file: " + testFile);
 System.out.println("       size: " + testFile.getContent().getSize());
+
         InputStream is = testFile.getContent().getInputStream();
         int c;
         while((c = is.read()) != -1)
         {
-            System.out.println(" " + String.valueOf((char)c));
+            System.out.print(" " + String.valueOf((char)c));
         }
-        is.close();
+        System.out.println();
 
+        is.close();
 	}
 
     private static void populateTestdir(File base) throws IOException, NoSuchAlgorithmException

@@ -6,7 +6,6 @@ import java.io.InputStream;
 import java.util.Collection;
 
 import org.apache.commons.vfs2.Capability;
-import org.apache.commons.vfs2.FileName;
 import org.apache.commons.vfs2.FileObject;
 import org.apache.commons.vfs2.FileSystemException;
 import org.apache.commons.vfs2.FileSystemOptions;
@@ -18,11 +17,11 @@ import com.seeburger.vfs2.provider.digestarc.DarcTree.Entry;
 
 
 /**
- * Implements the Digest Archive file system which can be
+ * Implements the virtual Digest Archive file system which can be
  * layered on top of another VFS2 file-system to provide
  * a Git-like versioned directory.
  * <P>
- * The parent file needs to point to a DarfTree Object
+ * The parent file needs to point to a {@link DarcTree} Object
  * containing the root of the filesystem. This is
  * an immutable file with hashed name.
  */
@@ -83,7 +82,7 @@ System.out.println("Setting up BlobStorage at " + rootFile + " and asuming root 
 		finally
 		{
 		    try { if (is != null) is.close(); } catch (Exception ignored) { }
-			closeCommunicationLink();
+			closeCommunicationLink(); // TODO: why?
 		}
 	}
 
@@ -94,9 +93,6 @@ System.out.println("Setting up BlobStorage at " + rootFile + " and asuming root 
 		// Release what?
 	}
 
-	/**
-	 * Returns the capabilities of this darcFile system.
-	 */
 	@Override
 	protected void addCapabilities(final Collection<Capability> caps)
 	{
@@ -118,7 +114,8 @@ System.out.println("Setting up BlobStorage at " + rootFile + " and asuming root 
 	    return new DarcFileObject(name, this, entry);
 	}
 
-    public BlobStorageProvider getBlobProvider()
+	/** Used to propagate the current blob provider to freshly created {@link DarcFileObject}s. */
+	protected BlobStorageProvider getBlobProvider()
     {
         return provider;
     }
