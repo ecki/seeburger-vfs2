@@ -58,6 +58,8 @@ public class DarcFileProvider extends AbstractLayeredFileProvider implements Fil
     /**
      * Creates a layered file system.  This method is called if the file system
      * is not cached.
+     * <P>
+     * Logger, Context (and manager) are set afterwards.
      *
      * @param scheme The URI scheme.
      * @param file   The file to create the file system on top of.
@@ -69,7 +71,7 @@ public class DarcFileProvider extends AbstractLayeredFileProvider implements Fil
                                             final FileSystemOptions fileSystemOptions)
         throws FileSystemException
     {
-        final AbstractFileName rootName =
+        final LayeredFileName rootName =
             new LayeredFileName(scheme, file.getName(), FileName.ROOT_PATH, FileType.FOLDER);
         return new DarcFileSystem(rootName, file, fileSystemOptions);
     }

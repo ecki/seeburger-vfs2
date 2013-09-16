@@ -1,5 +1,7 @@
 package com.seeburger.vfs2.provider.digestarc;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.Collection;
 
 import org.apache.commons.vfs2.Capability;
@@ -7,36 +9,29 @@ import org.apache.commons.vfs2.FileName;
 import org.apache.commons.vfs2.FileObject;
 import org.apache.commons.vfs2.FileSystemException;
 import org.apache.commons.vfs2.FileSystemOptions;
-import org.apache.commons.vfs2.FileType;
 import org.apache.commons.vfs2.provider.AbstractFileName;
 import org.apache.commons.vfs2.provider.AbstractFileSystem;
-import org.apache.commons.vfs2.provider.DelegateFileObject;
+import org.apache.commons.vfs2.provider.LayeredFileName;
 
-import com.seeburger.vfs2.provider.digestarc.DarcFile.File;
+import com.seeburger.vfs2.provider.digestarc.DarcTree.Entry;
 
 public class DarcFileSystem extends AbstractFileSystem
 {
-	DarcFile tree;
-	private String blobStore;
+	DarcTree tree;
+	private BlobStorageProvider provider;
+	String rootHash;
 
-	public DarcFileSystem(final AbstractFileName rootName,
+	public DarcFileSystem(final LayeredFileName rootName,
 			final FileObject parentLayer,
 			final FileSystemOptions fileSystemOptions)
 					throws FileSystemException
 	{
 		super(rootName, parentLayer, fileSystemOptions);
-		blobStore = "file:///C:/temp/objects";
-
-		// Make a local copy of the darcFile
-		//File darcFile = parentLayer.getFileSystem().replicateFile(parentLayer, Selectors.SELECT_SELF);
-
-		// Open the Zip darcFile
-		/*if (!darcFile.exists())
-		{
-			// Don't need to do anything
-			return;
-		}*/
-		// zipFile = createZipFile(this.file);
+		// the filesystem is layered on top of the root tree, blobs are relative to ../.. there
+		FileName pool = rootName.getOuterName().getParent().getParent();
+		String refName = pool.getRelativeName(rootName.getOuterName());
+		rootHash = refName.replaceFirst("/", "");
+		provider = new BlobStorageProvider(this, pool);
 	}
 
 	@Override
@@ -44,13 +39,23 @@ public class DarcFileSystem extends AbstractFileSystem
 	{
 		super.init();
 
-
+		InputStream is = null;
 		try
 		{
-			tree = new DarcFile();
+		    FileObject refFile = provider.resolveFileHash(rootHash);
+		    is = refFile.getContent().getInputStream();
+			try
+            {
+                tree = new DarcTree(is, rootHash);
+            }
+            catch (IOException e)
+            {
+                throw new FileSystemException(e);
+            }
 		}
 		finally
 		{
+		    try { if (is != null) is.close(); } catch (Exception ignored) { }
 			closeCommunicationLink();
 		}
 	}
@@ -73,19 +78,18 @@ public class DarcFileSystem extends AbstractFileSystem
 
 	/**
 	 * Creates a darcFile object.
+	 * @throws IOException
 	 */
 	@Override
-	protected FileObject createFile(final AbstractFileName name) throws FileSystemException
+	protected FileObject createFile(final AbstractFileName name) throws IOException
 	{
-		DarcFile.Entry entry = tree.resolveName(name.getPath());
-		if (entry instanceof DarcFile.Directory)
-		{
-			return new DarcFileObject(name, this, entry);
-		}
-		if (entry instanceof DarcFile.File)
-		{
-			return new DarcFileObjectDelegate(name, this, (File)entry);
-		}
-		throw new FileSystemException("file not found", name);
+	    System.out.println("creating " + name.getPathDecoded());
+	    Entry entry = tree.resolveName(name.getPathDecoded(), provider);
+	    return new DarcFileObject(name, this, entry);
 	}
+
+    public BlobStorageProvider getBlobProvider()
+    {
+        return provider;
+    }
 }

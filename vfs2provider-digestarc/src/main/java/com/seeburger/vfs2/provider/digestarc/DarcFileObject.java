@@ -1,53 +1,41 @@
 package com.seeburger.vfs2.provider.digestarc;
 
 import java.io.InputStream;
+import java.lang.ref.WeakReference;
+import java.util.HashMap;
+import java.util.Map;
 
+import org.apache.commons.vfs2.FileChangeEvent;
+import org.apache.commons.vfs2.FileListener;
+import org.apache.commons.vfs2.FileObject;
 import org.apache.commons.vfs2.FileSystemException;
 import org.apache.commons.vfs2.FileType;
 import org.apache.commons.vfs2.provider.AbstractFileName;
 import org.apache.commons.vfs2.provider.AbstractFileObject;
+import org.apache.commons.vfs2.util.WeakRefFileListener;
 
-import com.seeburger.vfs2.provider.digestarc.DarcFile.Directory;
-import com.seeburger.vfs2.provider.digestarc.DarcFile.Entry;
-import com.seeburger.vfs2.provider.digestarc.DarcFile.File;
+import com.seeburger.vfs2.provider.digestarc.DarcTree.Directory;
+import com.seeburger.vfs2.provider.digestarc.DarcTree.Entry;
+import com.seeburger.vfs2.provider.digestarc.DarcTree.File;
 
-public class DarcFileObject extends AbstractFileObject
+public class DarcFileObject extends AbstractFileObject implements FileListener
 {
-    private FileType type = FileType.IMAGINARY;
+    private final DarcTree.Entry entry;
+    private final BlobStorageProvider provider;
 
-    private DarcFile.Directory darcDirectory;
-	private DarcFile.File darcFile;
+    private FileType type = FileType.IMAGINARY;
+    private WeakReference<FileObject> targetRef;
+
+    private boolean ignoreEvent;
 
     protected DarcFileObject(final AbstractFileName name, final DarcFileSystem fs, Entry entry)
     		throws FileSystemException
     {
         super(name, fs);
-        if (entry instanceof Directory)
-        {
-        	darcFile = null;
-        	darcDirectory = (Directory)entry;
-        	type = FileType.FOLDER;
-        } else {
-        	darcFile = (File)entry;
-        	darcDirectory = null;
-        	type = FileType.FILE;
-        }
+        this.entry = entry;
+        this.provider = fs.getBlobProvider();
     }
 
-
-
-    /**
-     * Attaches a child.
-     * <p/>
-     * TODO: Shouldn't this method have package-only visibility?
-     * Cannot change this without breaking binary compatibility.
-     *
-     * @param childName The name of the child.
-     */
-    /*public void attachChild(final FileName childName)
-    {
-        children.add(childName.getBaseName());
-    }*/
 
     /**
      * Determines if this file can be written to.
@@ -60,6 +48,7 @@ public class DarcFileObject extends AbstractFileObject
     {
         return false;
     }
+
 
     /**
      * Returns the file's type.
@@ -76,26 +65,15 @@ public class DarcFileObject extends AbstractFileObject
     @Override
     protected String[] doListChildren()
     {
-        try
-        {
-            if (!getType().hasChildren())
-            {
-                return null;
-            }
-        }
-        catch (final FileSystemException e)
-        {
-            // should not happen as the type has already been cached.
-            throw new RuntimeException(e);
-        }
-
-    	return darcDirectory.getChildrenNames();
+        Directory dir = (Directory)entry;
+    	return dir.getChildrenNames();
     }
 
     @Override
     protected long doGetContentSize()
     {
-        return darcFile.getSize();
+        File file = (File)entry;
+        return file.getSize();
     }
 
     /**
@@ -104,7 +82,7 @@ public class DarcFileObject extends AbstractFileObject
     @Override
     protected long doGetLastModifiedTime() throws Exception
     {
-        return darcFile.getTime();
+        return entry.getTime();
     }
 
     /**
@@ -116,30 +94,110 @@ public class DarcFileObject extends AbstractFileObject
     @Override
     protected InputStream doGetInputStream() throws Exception
     {
-        // VFS-210: zip allows to gather an input stream even from a directory and will
-        // return -1 on the first read. getType should not be expensive and keeps the tests
-        // running
         if (!getType().hasContent())
         {
             throw new FileSystemException("vfs.provider/read-not-file.error", getName());
         }
 
-        return null;
+        FileObject delegatedFile = provider.resolveFileHash(entry.getHash());
+        return new DarcFileInputStream(delegatedFile, entry.getHash());
     }
 
 
 	@Override
 	protected void doAttach() throws Exception
 	{
-//System.out.println("attached " + getName() + " " + getName().getPath());
+        if (entry instanceof Directory)
+        {
+            type = FileType.FOLDER;
+        }
+        else if (entry instanceof File)
+        {
+            type = FileType.FILE;
+        }
+
+System.out.println("attached " + getName() + " " + getName().getPath() + " " + type);
 	}
 
 
 	@Override
 	protected void doDetach() throws Exception
 	{
-		darcDirectory = null;
-		darcFile = null;
 		type = FileType.IMAGINARY;
+System.out.println("detached " + getName());
 	}
+
+    /**
+     * Returns the attributes of this file.
+     */
+    @Override
+    protected Map<String, Object> doGetAttributes()
+        throws Exception
+    {
+        String hash = entry.getHash();
+        HashMap<String, Object> ht = new HashMap<String, Object>();
+        if (hash != null)
+            ht.put("githash", hash);
+        return ht;
+    }
+
+    public FileObject getDelegateFile() throws FileSystemException
+    {
+        // TODO: make sure the weak reference is still valid or needs to re-resolve (different root)
+        WeakReference<FileObject> ref = targetRef;
+        FileObject target = null;
+        if (ref != null)
+            target = ref.get();
+
+        if (target != null)
+            return target;
+
+        return resolveHash();
+    }
+
+    private FileObject resolveHash() throws FileSystemException
+    {
+        String hash = entry.getHash();
+
+        // maybe this needs to be done down repeatingly
+        FileObject targetFile = provider.resolveFileHash(hash);
+        if (targetFile != null)
+        {
+            this.targetRef = new WeakReference<FileObject>(targetFile);
+            WeakRefFileListener.installListener(targetFile, this);
+            return targetFile;
+        }
+
+        throw new FileSystemException("Expected file blob with hash=" + hash + " cannot be resolved"); // TODO
+    }
+
+
+    public void fileCreated(FileChangeEvent event)
+        throws Exception
+    {
+        if (!ignoreEvent)
+        {
+            targetRef.clear(); // force re-resolve
+        }
+    }
+
+
+    public void fileDeleted(FileChangeEvent event)
+        throws Exception
+    {
+        if (!ignoreEvent)
+        {
+            targetRef.clear(); // force re-resolve
+        }
+    }
+
+
+    public void fileChanged(FileChangeEvent event)
+        throws Exception
+    {
+        if (!ignoreEvent)
+        {
+            targetRef.clear(); // force re-resolve
+        }
+    }
 }
