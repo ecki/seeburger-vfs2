@@ -215,8 +215,7 @@ public class FileNameGlobbing
         {
             if (base == null || base.endsWith(suffix))
                 return base;
-            base += suffix;
-            return base;
+            return base + suffix;
         }
 
 
