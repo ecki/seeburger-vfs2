@@ -33,49 +33,37 @@ public class DarcTree
 
     DarcTree.Directory root;
 
-    Map<String, Entry> entries;
-
     public DarcTree()
     {
-        entries = new HashMap<String, Entry>();
-        entries.put("file2", new DarcTree.File(0, "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"));
-        Directory dir = new DarcTree.Directory(entries);
-
-        entries = new HashMap<String, Entry>();
-        entries.put("dir1", dir);
-        entries.put("file1", new DarcTree.File(0, "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"));
-        root = new DarcTree.Directory(entries);
+        root = null;
     }
 
     public DarcTree(Map<String, Entry> entries)
     {
-        this.entries = entries;
+        this.root = new Directory(entries);
     }
-
 
     /** Read the root directory of this tree from InputStream. */
     public DarcTree(InputStream is, String expectedHash) throws IOException
     {
         root = new Directory(new DataInputStream(is), expectedHash);
-System.out.println("read root from stream " + ((Directory)root).content);
     }
+
 
     public Entry resolveName(String name, BlobStorageProvider provider) throws IOException
     {
         if (name.equals("/"))
             return root;
 
-        String[] parts = name.split("/"); // TODO
+        String[] parts = name.split("/");
 
-        System.out.println("split " + name + " into " + parts.length + " parts ");
         Entry me = root;
-
         for(int i=1;i<parts.length;i++)
         {
-            System.out.println(" finding " + i + " " + parts[i] + " in " + me);
-            Entry child = me.getChild(parts[i], provider);
+            Entry child = me.getChild(parts[i], provider); // throws if File is reached or child missing
             me = child;
         }
+
         return me;
     }
 
@@ -146,14 +134,14 @@ System.out.println("read root from stream " + ((Directory)root).content);
         @Override
         String getHash()
         {
-            // TODO Auto-generated method stub
             return hash;
         }
 
         @Override
-        Entry getChild(String string, BlobStorageProvider provider) throws IOException
+        Entry getChild(String name, BlobStorageProvider provider) throws IOException
         {
-            throw new RuntimeException("cannot traverse files");
+            //throw new FileNotFolderException(name); // TODO: not sure if name arg works as it is relative
+            throw new IOException("This Entry is no Folder. name=" + name);
         }
 
         @Override
@@ -262,8 +250,8 @@ System.out.println("read root from stream " + ((Directory)root).content);
         private long readHeader(InputStream in, String header) throws IOException
         {
             int sigLen = header.length() + 1;
-            byte[] buf = new byte[sigLen + 20]; // len+1+19(long)+1
-            in.read(buf, 0, sigLen); // "tree "
+            byte[] buf = new byte[sigLen + 19 + 1]; // "tree <long digits>\0"
+            in.read(buf, 0, sigLen);
             int i;
             for(i=sigLen;i<buf.length;i++)
             {

@@ -1,5 +1,6 @@
 package com.seeburger.vfs2.provider.digestarc;
 
+
 import java.io.InputStream;
 import java.lang.ref.WeakReference;
 import java.util.HashMap;
@@ -18,6 +19,10 @@ import com.seeburger.vfs2.provider.digestarc.DarcTree.Directory;
 import com.seeburger.vfs2.provider.digestarc.DarcTree.Entry;
 import com.seeburger.vfs2.provider.digestarc.DarcTree.File;
 
+
+/**
+ * Represents Darc File Entries in a virtual tree.
+ */
 public class DarcFileObject extends AbstractFileObject implements FileListener
 {
     private final DarcTree.Entry entry;
@@ -26,7 +31,8 @@ public class DarcFileObject extends AbstractFileObject implements FileListener
     private FileType type = FileType.IMAGINARY;
     private WeakReference<FileObject> targetRef;
 
-    private boolean ignoreEvent;
+    private boolean ignoreEvent; // TODO: currently not needed as it is RO
+
 
     protected DarcFileObject(final AbstractFileName name, final DarcFileSystem fs, Entry entry)
     		throws FileSystemException
@@ -48,7 +54,6 @@ public class DarcFileObject extends AbstractFileObject implements FileListener
     {
         return false;
     }
-
 
     /**
      * Returns the file's type.
@@ -103,7 +108,6 @@ public class DarcFileObject extends AbstractFileObject implements FileListener
         return new DarcFileInputStream(delegatedFile, entry.getHash());
     }
 
-
 	@Override
 	protected void doAttach() throws Exception
 	{
@@ -116,15 +120,14 @@ public class DarcFileObject extends AbstractFileObject implements FileListener
             type = FileType.FILE;
         }
 
-System.out.println("attached " + getName() + " " + getName().getPath() + " " + type);
+//System.out.println("attached " + getName() + " " + getName().getPath() + " " + type);
 	}
-
 
 	@Override
 	protected void doDetach() throws Exception
 	{
 		type = FileType.IMAGINARY;
-System.out.println("detached " + getName());
+//System.out.println("detached " + getName());
 	}
 
     /**
@@ -137,7 +140,7 @@ System.out.println("detached " + getName());
         String hash = entry.getHash();
         HashMap<String, Object> ht = new HashMap<String, Object>();
         if (hash != null)
-            ht.put("githash", hash);
+            ht.put("githash", hash); // TODO constant
         return ht;
     }
 

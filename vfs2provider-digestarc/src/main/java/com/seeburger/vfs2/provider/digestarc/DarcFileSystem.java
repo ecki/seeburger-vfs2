@@ -1,5 +1,6 @@
 package com.seeburger.vfs2.provider.digestarc;
 
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Collection;
@@ -15,26 +16,52 @@ import org.apache.commons.vfs2.provider.LayeredFileName;
 
 import com.seeburger.vfs2.provider.digestarc.DarcTree.Entry;
 
+
+/**
+ * Implements the Digest Archive file system which can be
+ * layered on top of another VFS2 file-system to provide
+ * a Git-like versioned directory.
+ * <P>
+ * The parent file needs to point to a DarfTree Object
+ * containing the root of the filesystem. This is
+ * an immutable file with hashed name.
+ */
 public class DarcFileSystem extends AbstractFileSystem
 {
-	DarcTree tree;
-	private BlobStorageProvider provider;
-	String rootHash;
+    /** In memory structure of this graph. */
+    DarcTree tree;
+    /** The provider responsible for looking up hashed names. */
+    private BlobStorageProvider provider;
+    /** The hash of the initial root Tree object. */
+    String rootHash;
 
-	public DarcFileSystem(final LayeredFileName rootName,
+
+    /**
+     * Construct this new filesystem instance.
+     * <P>
+     * Used by DarcFileProvider#doCreateFileSystem.
+     *
+     * @param rootName the URI to the base file as a layered name.
+     * @param parentLayer the root file object (tree node)
+     * @param fileSystemOptions any additional options (currently none supported)
+     * @throws FileSystemException
+     */
+    public DarcFileSystem(final LayeredFileName rootName,
 			final FileObject parentLayer,
 			final FileSystemOptions fileSystemOptions)
 					throws FileSystemException
 	{
 		super(rootName, parentLayer, fileSystemOptions);
+		FileObject rootFile = parentLayer.getParent().getParent();
 		// the filesystem is layered on top of the root tree, blobs are relative to ../.. there
-		FileName pool = rootName.getOuterName().getParent().getParent();
-		String refName = pool.getRelativeName(rootName.getOuterName());
+		String refName = rootFile.getName().getRelativeName(rootName.getOuterName());
 		rootHash = refName.replaceFirst("/", "");
-		provider = new BlobStorageProvider(this, pool);
+System.out.println("Setting up BlobStorage at " + rootFile + " and asuming root index at " + refName);
+		provider = new BlobStorageProvider(rootFile);
 	}
 
-	@Override
+
+    @Override
 	public void init() throws FileSystemException
 	{
 		super.init();
@@ -64,7 +91,7 @@ public class DarcFileSystem extends AbstractFileSystem
 	@Override
 	protected void doCloseCommunicationLink()
 	{
-		// Release the zip darcFile
+		// Release what?
 	}
 
 	/**
@@ -78,13 +105,16 @@ public class DarcFileSystem extends AbstractFileSystem
 
 	/**
 	 * Creates a darcFile object.
+	 *
 	 * @throws IOException
 	 */
 	@Override
 	protected FileObject createFile(final AbstractFileName name) throws IOException
 	{
-	    System.out.println("creating " + name.getPathDecoded());
-	    Entry entry = tree.resolveName(name.getPathDecoded(), provider);
+	    String path = name.getPathDecoded();
+//System.out.println("createFile called for " + path);
+	    Entry entry = tree.resolveName(path, provider); // throws IOException if not Folder or not Exists
+	    // TODO: IMAGINARY?
 	    return new DarcFileObject(name, this, entry);
 	}
 

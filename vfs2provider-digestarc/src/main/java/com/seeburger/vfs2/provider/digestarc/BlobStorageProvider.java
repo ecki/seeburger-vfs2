@@ -8,7 +8,6 @@
 package com.seeburger.vfs2.provider.digestarc;
 
 
-import org.apache.commons.vfs2.FileName;
 import org.apache.commons.vfs2.FileObject;
 import org.apache.commons.vfs2.FileSystemException;
 
@@ -21,36 +20,19 @@ import org.apache.commons.vfs2.FileSystemException;
  */
 public class BlobStorageProvider
 {
-    private final DarcFileSystem filesystem;
-    private final FileName rootName;
+    private final FileObject rootFile;
 
-    private FileObject rootFile;
-
-    // TODO: use FileObject instead of fs/rootName
-    public BlobStorageProvider(DarcFileSystem fs, FileName rootName) throws FileSystemException
+    /** BlobStorageProvider looks up relative hash names. */
+    public BlobStorageProvider(FileObject blobRoot) throws FileSystemException
     {
-        // filesystem manager gets injected to Filesystem after doCreate, so we only store it
-        // but not request the manager from it, here.
-        this.filesystem = fs;
-        this.rootName = rootName;
+        this.rootFile = blobRoot;
     }
 
     /** @return the FileObject matching the specified blob hash. */
     public FileObject resolveFileHash(String hash) throws FileSystemException
     {
         String relPath = hashToPath(hash); // make this specific for each root
-        return getBlobRoot().resolveFile(relPath);
-    }
-
-    /** @return the FileObject from which blobs can be loaded. */
-    private FileObject getBlobRoot() throws FileSystemException
-    {
-        if (rootFile != null)
-        {
-            return rootFile;
-        }
-        rootFile = filesystem.getFileSystemManager().resolveFile(rootName.getURI());
-        return rootFile;
+        return rootFile.resolveFile(relPath);
     }
 
     /** Produce a relative path of the given hash (separate first two characters). */
