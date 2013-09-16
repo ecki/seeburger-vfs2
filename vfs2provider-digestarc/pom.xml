@@ -8,7 +8,7 @@
   </parent>
 
   <artifactId>vfs2provider-digestarc</artifactId>
-  <name>SEEBURGER VFS2 Digest Archive Provider </name>
+  <name>SEEBURGER VFS2 Digest Archive Provider</name>
 
   <dependencies>
       <dependency>

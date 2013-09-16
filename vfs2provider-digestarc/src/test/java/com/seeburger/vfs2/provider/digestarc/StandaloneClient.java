@@ -103,7 +103,7 @@ System.out.println("       size: " + testFile.getContent().getSize());
         OutputStream fos = new FileOutputStream(temp);
         byte[] hash = f.writeBlob(fos, b.length, source);
         fos.close();
-        String hashString = DarcFileInputStream.asHex(hash);
+        String hashString = DarcTree.asHex(hash);
         BlobStorageProvider provider = new BlobStorageProvider(null, null);
         String path = provider.hashToPath(hashString);
         File target = new File(base, path);
