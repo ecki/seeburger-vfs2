@@ -47,7 +47,7 @@ public class TreePrinter
             try { type += " size=" + content.getSize();  }catch (Exception ig) { }
             try { type += " att=" + content.getAttributes();  }catch (Exception ig) { }
         }
-
+        String fileName = file.getName().getPathDecoded();
 
         if (file.getType().hasChildren())
         {
@@ -55,11 +55,11 @@ public class TreePrinter
             try
             {
                 children = file.getChildren();
-                out.println(prefix + file + " (d" + type);
+                out.println(prefix + fileName + " (d" + type);
             }
             catch (FileSystemException ignored)
             {
-                out.println(prefix + file + " (d"+type + " (" + ignored + ")");
+                out.println(prefix + fileName + " (d"+type + " (" + ignored + ")");
             }
             if (children != null)
             {
@@ -71,11 +71,11 @@ public class TreePrinter
         }
         else if (file.getType() == FileType.FILE)
         {
-            out.println(prefix + file + " (." + type);
+            out.println(prefix + fileName + " (." + type);
         }
         else
         {
-            out.println(prefix + file + " (-" + type);
+            out.println(prefix + fileName + " (-" + type);
         }
     }
 
