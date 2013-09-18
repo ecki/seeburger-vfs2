@@ -1,22 +1,27 @@
 package com.seeburger.vfs2.provider.digestarc;
 
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.lang.ref.WeakReference;
 import java.util.HashMap;
 import java.util.Map;
 
 import org.apache.commons.vfs2.FileChangeEvent;
 import org.apache.commons.vfs2.FileListener;
+import org.apache.commons.vfs2.FileName;
 import org.apache.commons.vfs2.FileObject;
 import org.apache.commons.vfs2.FileSystemException;
 import org.apache.commons.vfs2.FileType;
 import org.apache.commons.vfs2.provider.AbstractFileName;
 import org.apache.commons.vfs2.provider.AbstractFileObject;
+import org.apache.commons.vfs2.provider.ftp.FtpClient;
+import org.apache.commons.vfs2.util.MonitorOutputStream;
 import org.apache.commons.vfs2.util.WeakRefFileListener;
 
 import com.seeburger.vfs2.provider.digestarc.DarcTree.Directory;
-import com.seeburger.vfs2.provider.digestarc.DarcTree.Entry;
 import com.seeburger.vfs2.provider.digestarc.DarcTree.File;
 
 
@@ -25,20 +30,22 @@ import com.seeburger.vfs2.provider.digestarc.DarcTree.File;
  */
 public class DarcFileObject extends AbstractFileObject implements FileListener
 {
-    private final DarcTree.Entry entry;
+    private final DarcTree tree;
     private final BlobStorageProvider provider;
 
+    private DarcTree.Entry entry;
     private FileType type = FileType.IMAGINARY;
     private WeakReference<FileObject> targetRef;
 
     private boolean ignoreEvent; // TODO: currently not needed as it is RO
+    private ByteArrayOutputStream dataOut;
 
 
-    protected DarcFileObject(final AbstractFileName name, final DarcFileSystem fs, Entry entry)
+    protected DarcFileObject(final AbstractFileName name, final DarcFileSystem fs, DarcTree tree)
     		throws FileSystemException
     {
         super(name, fs);
-        this.entry = entry;
+        this.tree = tree;
         this.provider = fs.getBlobProvider();
     }
 
@@ -66,12 +73,13 @@ public class DarcFileObject extends AbstractFileObject implements FileListener
 
     /**
      * Lists the children of the file.
+     * @throws IOException
      */
     @Override
-    protected String[] doListChildren()
+    protected String[] doListChildren() throws IOException
     {
         Directory dir = (Directory)entry;
-    	return dir.getChildrenNames();
+    	return dir.getChildrenNames(provider);
     }
 
     @Override
@@ -111,6 +119,7 @@ public class DarcFileObject extends AbstractFileObject implements FileListener
 	@Override
 	protected void doAttach() throws Exception
 	{
+	    entry = tree.resolveName(getName().getPathDecoded(), provider);
         if (entry instanceof Directory)
         {
             type = FileType.FOLDER;
@@ -161,8 +170,6 @@ public class DarcFileObject extends AbstractFileObject implements FileListener
     private FileObject resolveHash() throws FileSystemException
     {
         String hash = entry.getHash();
-
-        // maybe this needs to be done down repeatingly
         FileObject targetFile = provider.resolveFileHash(hash);
         if (targetFile != null)
         {
@@ -170,8 +177,63 @@ public class DarcFileObject extends AbstractFileObject implements FileListener
             WeakRefFileListener.installListener(targetFile, this);
             return targetFile;
         }
-
         throw new FileSystemException("Expected file blob with hash=" + hash + " cannot be resolved"); // TODO
+    }
+
+
+    @Override
+    protected OutputStream doGetOutputStream(boolean bAppend)
+        throws Exception
+    {
+        dataOut = new ByteArrayOutputStream();
+        return dataOut;
+    }
+
+    @Override
+    protected void doDelete()
+        throws Exception
+    {
+        tree.delete(getName().getPathDecoded(), provider);
+    }
+
+    @Override
+    protected void doCreateFolder()
+        throws Exception
+    {
+        tree.createFolder(getName().getPathDecoded(), provider);
+    }
+
+    @Override
+    protected void onChange()
+        throws Exception
+    {
+        // super.onChange(); does nothing
+System.out.println("Change received " + getName());
+    }
+
+    @Override
+    protected void onChildrenChanged(FileName child, FileType newType)
+        throws Exception
+    {
+        // super.onChildrenChanged(child, newType); is empty
+System.out.println("children of " + getName().getPath() + " changed: " + child.getBaseName() + " " + newType);
+    }
+
+    @Override
+    protected void endOutput()
+        throws Exception
+    {
+        // TODO this is the naive in-memory implementation
+        ByteArrayOutputStream  baos = this.dataOut; this.dataOut = null;
+        byte[] content = baos.toByteArray(); baos = null;
+        long len = content.length;
+        OutputStream os = provider.getTempStream();
+        ObjectStorage storage = new ObjectStorage();
+        byte[] digest = storage.writeBytes(os, content, "blob"); // closes stream
+        content = null; // free early
+        String hash = provider.storeTempBlob(os, DarcTree.asHex(digest));
+        os = null; // free early
+        tree.addFile(getName().getPathDecoded(), hash, len, provider);
     }
 
 

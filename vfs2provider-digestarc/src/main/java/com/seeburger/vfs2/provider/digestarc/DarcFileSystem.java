@@ -90,7 +90,8 @@ System.out.println("Setting up BlobStorage at " + rootFile + " and asuming root 
 	@Override
 	protected void doCloseCommunicationLink()
 	{
-		// Release what?
+System.out.println("close link " + this);
+	    // Release what?
 	}
 
 	@Override
@@ -107,11 +108,9 @@ System.out.println("Setting up BlobStorage at " + rootFile + " and asuming root 
 	@Override
 	protected FileObject createFile(final AbstractFileName name) throws IOException
 	{
-	    String path = name.getPathDecoded();
-//System.out.println("createFile called for " + path);
-	    Entry entry = tree.resolveName(path, provider); // throws IOException if not Folder or not Exists
+//System.out.println("createFile called for " + name.getPathDecoded());
 	    // TODO: IMAGINARY?
-	    return new DarcFileObject(name, this, entry);
+	    return new DarcFileObject(name, this, tree);
 	}
 
 	/** Used to propagate the current blob provider to freshly created {@link DarcFileObject}s. */
@@ -119,4 +118,9 @@ System.out.println("Setting up BlobStorage at " + rootFile + " and asuming root 
     {
         return provider;
     }
+
+	public String commitChanges() throws IOException
+	{
+	    return tree.commitChanges(provider);
+	}
 }

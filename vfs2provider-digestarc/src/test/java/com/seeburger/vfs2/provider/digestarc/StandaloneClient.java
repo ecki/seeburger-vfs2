@@ -13,6 +13,7 @@ import java.util.Map;
 
 import org.apache.commons.vfs2.CacheStrategy;
 import org.apache.commons.vfs2.FileObject;
+import org.apache.commons.vfs2.FileSystem;
 import org.apache.commons.vfs2.impl.DefaultFileSystemManager;
 import org.apache.commons.vfs2.provider.local.DefaultLocalFileProvider;
 
@@ -58,8 +59,28 @@ System.out.println("       size: " + testFile.getContent().getSize());
             System.out.print(" " + String.valueOf((char)c));
         }
         System.out.println();
-
         is.close();
+
+        System.out.println("now creating new files and folders");
+
+        dir1.resolveFile("newtestfile1").createFile();
+        dir1.resolveFile("folder").createFolder();
+        dir1.resolveFile("folder/newtestfile2").createFile();
+        dir1.resolveFile("file1").delete();
+
+        TreePrinter.printTree(root, "+| ", System.out);
+
+        DarcFileSystem fs = (DarcFileSystem)dir1.getFileSystem();
+        String newHash = fs.commitChanges();
+        System.out.println("commited changes: " + newHash);
+
+        base = manager.resolveFile(testDir, new BlobStorageProvider(null).hashToPath(newHash));
+        FileObject dir2 = manager.createFileSystem("seearc", base);
+        TreePrinter.printTree(dir2, "== ", System.out);
+
+        FileObject dir3 = dir2.getChild("folder");
+        dir3.getChildren();
+
 	}
 
     private static void populateTestdir(File base) throws IOException, NoSuchAlgorithmException
@@ -87,26 +108,36 @@ System.out.println("       size: " + testFile.getContent().getSize());
         BlobStorageProvider provider = new BlobStorageProvider(null);
         String path = provider.hashToPath(hash);
         File target = new File(base, path);
+        if (target.exists())
+        {
+            temp.delete();
+        }
+
         File parent = target.getParentFile();
         parent.mkdir();
         temp.renameTo(target);
-        System.out.println("Dir hash " + target);
     }
 
     private static String createBlob(File base, String string) throws IOException, NoSuchAlgorithmException
     {
         File temp = File.createTempFile("newblob", ".tmp", base);
-        DarcTree df = new DarcTree();
-        DarcTree.File f = df.new File(0, "");
         byte[] b = string.getBytes(ASCII);
-        ByteArrayInputStream source = new ByteArrayInputStream(b);
         OutputStream fos = new FileOutputStream(temp);
-        byte[] hash = f.writeBlob(fos, b.length, source);
+        ObjectStorage store = new ObjectStorage();
+        byte[] hash = store.writeBytes(fos, b, "blob");
         fos.close();
         String hashString = DarcTree.asHex(hash);
+
         BlobStorageProvider provider = new BlobStorageProvider(null);
         String path = provider.hashToPath(hashString);
         File target = new File(base, path);
+
+        if (target.exists())
+        {
+            temp.delete();
+            return hashString;
+        }
+
         File parent = target.getParentFile();
         parent.mkdir();
         temp.renameTo(target);

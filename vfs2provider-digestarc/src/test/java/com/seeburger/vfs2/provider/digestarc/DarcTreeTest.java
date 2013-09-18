@@ -31,19 +31,16 @@ public class DarcTreeTest
     @Test
     public void testDarcFileWriteBlob16() throws NoSuchAlgorithmException, IOException
     {
-        DarcTree df = new DarcTree();
-        File f = df.new File(0, "");
-
         byte[] testBytes = "what is up, doc?".getBytes("ASCII");
         ByteArrayOutputStream destination = new ByteArrayOutputStream();
-        ByteArrayInputStream source = new ByteArrayInputStream(testBytes);
-        byte[] digest = f.writeBlob(destination, testBytes.length, source);
+        ObjectStorage store = new ObjectStorage();
+        byte[] digest = store.writeBytes(destination, testBytes, "blob");
         assertEquals("bd9dbf5aae1a3862dd1526723246b20206e5fc37", new BigInteger(1, digest).toString(16)); // testvector: http://git-scm.com/book/ch9-2.html
 
         testBytes = "test content\n".getBytes("ASCII");
         destination = new ByteArrayOutputStream();
-        source = new ByteArrayInputStream(testBytes);
-        digest = f.writeBlob(destination, testBytes.length, source);
+        ByteArrayInputStream source = new ByteArrayInputStream(testBytes);
+        digest = store.writeStream(destination, source, testBytes.length, "blob");
         assertEquals("d670460b4b4aece5915caf5c68d12f560a9fe3e4", new BigInteger(1, digest).toString(16)); // testvector: http://git-scm.com/book/en/Git-Internals-Git-Objects
     }
 
@@ -51,13 +48,12 @@ public class DarcTreeTest
     public void testDarcFileWriteBlob0() throws NoSuchAlgorithmException, IOException
     {
         byte[] testBytes = new byte[0];
-        DarcTree df = new DarcTree();
-        File f = df.new File(0, "");
+        ObjectStorage store = new ObjectStorage();
 
         ByteArrayOutputStream destination = new ByteArrayOutputStream();
         ByteArrayInputStream source = new ByteArrayInputStream(testBytes);
 
-        byte[] digest = f.writeBlob(destination, testBytes.length, source);
+        byte[] digest = store.writeStream(destination, source, testBytes.length, "blob");
         assertEquals("e69de29bb2d1d6434b8b29ae775ad8c2e48c5391", new BigInteger(1, digest).toString(16)); // well known emtpy file
     }
 
@@ -65,13 +61,12 @@ public class DarcTreeTest
     public void testDarcFileWriteBlob1M() throws NoSuchAlgorithmException, IOException
     {
         byte[] testBytes = new byte[1 * 1024 * 1024];
-        DarcTree df = new DarcTree();
-        File f = df.new File(0, "");
+        ObjectStorage store = new ObjectStorage();
 
         ByteArrayOutputStream destination = new ByteArrayOutputStream();
         ByteArrayInputStream source = new ByteArrayInputStream(testBytes);
 
-        byte[] digest = f.writeBlob(destination, testBytes.length, source);
+        byte[] digest = store.writeStream(destination, source, testBytes.length, "blob");
         assertEquals("9e0f96a2a253b173cb45b41868209a5d043e1437", new BigInteger(1, digest).toString(16));
     }
 
@@ -81,11 +76,11 @@ public class DarcTreeTest
         fail("Not yet implemented");
     }
 
-    @Test(expected=IOException.class)
+    @Test
     public void testResolveFileNotFound() throws IOException
     {
         DarcTree tree = buildDefaultTestTree();
-        tree.resolveName("/notfound", null);
+        assertNull(tree.resolveName("/notfound", null));
     }
 
     @Test
@@ -112,28 +107,34 @@ public class DarcTreeTest
         assertNotNull(result);
     }
 
-    @Test(expected=IOException.class)
+    @Test
     public void testResolveDirectoryNotFound() throws IOException
     {
         DarcTree tree = buildDefaultTestTree();
         Entry result = tree.resolveName("/dir2/test", null);
-        assertNotNull(result);
+        assertNull(result);
     }
 
     /** this constructs a small entirely self defined directory tree. */
     private DarcTree buildDefaultTestTree()
     {
-        DarcTree df = new DarcTree();
-        File file = df.new File(0, "abc");
+        DarcTree dt = new DarcTree();
+
+        File file = dt.new File(0, "abc");
+
         Map<String, DarcTree.Entry> content = new HashMap<String, DarcTree.Entry>();
         content.put("dir1file3", file);
-        Directory dir = df.new Directory(content);
+        Directory dir = dt.new Directory(content);
 
         content = new HashMap<String, DarcTree.Entry>();
         content.put("file1", file);
         content.put("file2", file);
         content.put("dir1", dir);
-        return new DarcTree(content);
+        dir = dt.new Directory(content);
+
+        dt.root = dir;
+
+        return dt;
     }
 
 }

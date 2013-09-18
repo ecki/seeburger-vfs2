@@ -24,6 +24,7 @@ import java.util.zip.InflaterInputStream;
 
 import org.apache.commons.vfs2.FileContent;
 import org.apache.commons.vfs2.FileObject;
+import org.apache.commons.vfs2.FileSystemException;
 
 public class DarcTree
 {
@@ -35,17 +36,13 @@ public class DarcTree
 
     public DarcTree()
     {
-        root = null;
-    }
-
-    public DarcTree(Map<String, Entry> entries)
-    {
-        this.root = new Directory(entries);
+        this.root = new Directory(new HashMap<String, Entry>());
     }
 
     /** Read the root directory of this tree from InputStream. */
     public DarcTree(InputStream is, String expectedHash) throws IOException
     {
+System.out.println("Initiating DarcTree from hash " + expectedHash);
         root = new Directory(new DataInputStream(is), expectedHash);
     }
 
@@ -60,28 +57,109 @@ public class DarcTree
         Entry me = root;
         for(int i=1;i<parts.length;i++)
         {
-            Entry child = me.getChild(parts[i], provider); // throws if File is reached or child missing
+            Entry child = me.getChild(parts[i], provider);
             if (child == null)
             {
-                throw new IOException("Cannot resolve " + parts[i] + "(" + i + ") of " + name);
+                return null; // if file or parent does not exist
             }
             me = child;
         }
-
         return me;
+    }
+
+
+    /** Adds a mutable parent, and adds this path to it.
+     * @throws IOException */
+    public void createFolder(String name, BlobStorageProvider provider) throws IOException
+    {
+        String[] parts = name.split("/");
+        Entry me = root;
+        for(int i=1;i<parts.length;i++)
+        {
+            Entry child = me.getChild(parts[i], provider);
+            if (child == null)
+            {
+                // me is the last existing entry
+                if (me instanceof File)
+                    throw new IOException("File " + me + " is not a folder to create " + name); // TODO: me.toString()
+                Directory parentDir = (Directory)me;
+                Directory newChild = null;
+                for(int j=i;j<parts.length;j++)
+                {
+                    newChild = new Directory(new HashMap<String, Entry>());
+                    parentDir.addDirectory(parts[j], newChild);
+                    parentDir = newChild;
+                }
+                return;
+            }
+            me = child;
+        }
+    }
+
+
+    public void addFile(String name, String hash, long length, BlobStorageProvider provider) throws IOException
+    {
+        if (name.equals("/"))
+            throw new RuntimeException("Cannot overwrite root.");
+
+        String[] parts = name.split("/");
+        Entry me = root;
+        Entry child = root;
+        for(int i=1;i<parts.length-1;i++)
+        {
+            me = child;
+            child = me.getChild(parts[i], provider);
+System.out.println("addFile " + name + " me=" + me + " child=" + child + " i=" + i);
+            if (child == null)
+            {
+                // me is the last existing entry
+                if (me instanceof File)
+                    throw new IOException("File " + me + " is not a folder to create " + name); // TODO: me.toString()
+                Directory parentDir = (Directory)me;
+                Directory newChild = null;
+                for(int j=i;j<parts.length-1;j++)
+                {
+                    newChild = new Directory(new HashMap<String, Entry>());
+                    parentDir.addDirectory(parts[j], newChild);
+                    parentDir = newChild;
+                }
+                return;
+            }
+        }
+        // me is the parent of the file
+        ((Directory)child).addFile(parts[parts.length-1], length, hash);
+    }
+
+    public void delete(String name, BlobStorageProvider provider) throws IOException
+    {
+        if (name.equals("/"))
+            throw new RuntimeException("Cannot delete root.");
+
+        String[] parts = name.split("/");
+
+        Entry me = null;
+        Entry child = root;
+        for(int i=1;i<parts.length;i++)
+        {
+            me = child;
+            child = me.getChild(parts[i], provider);
+            if (child == null)
+            {
+                throw new RuntimeException("Not found " + name);
+            }
+        }
+        ((Directory)me).removeChild(parts[parts.length-1]);
     }
 
 
     abstract class Entry
     {
-        byte[] hash;
+        String hash;
         long size;
 
         abstract Entry getChild(String string, BlobStorageProvider provider) throws IOException;
 
         abstract String getHash();
-
-        abstract long getSize();
 
         abstract long getTime();
     }
@@ -97,44 +175,6 @@ public class DarcTree
             this.hash = string;
         }
 
-        /**
-         * Write length and data to target stream in Git Blob format.
-         *
-         * @return the hash of the uncompressed data
-         * @throws IOException if reading or writing had a problem
-         * @throws NoSuchAlgorithmException if the SHA1 MD is unknown
-         */
-        byte[] writeBlob(OutputStream destination, long size, InputStream source) throws IOException, NoSuchAlgorithmException
-        {
-            OutputStream zipped = new DeflaterOutputStream(destination);
-            DigestOutputStream digester = new DigestOutputStream(zipped, getDigester());
-
-            // the following code ensures the compressor has >32k bytes at the first write, but
-            // we also read 32k aligned from source without the need for a BufferedOutputStream
-            byte[] buf = new byte[32 * 1025]; // 32k + 32
-            System.arraycopy(BLOB_HEADER, 0, buf, 0, 5/*BLOB_HEADER.length*/);
-
-            byte[] lenbytes = String.valueOf(size).getBytes(ASCII);
-            System.arraycopy(lenbytes, 0, buf, BLOB_HEADER.length, lenbytes.length);
-
-            int pos = BLOB_HEADER.length + lenbytes.length + 1; // skip one byte, will be '\0'
-
-            int len;
-            while((len = source.read(buf, pos, 32*1024)) != -1)
-            {
-                digester.write(buf, 0, len + pos);
-                pos = 0; // next round no offset
-            }
-
-            if (pos != 0) // when reading 0 bytes
-            {
-                digester.write(buf, 0, pos);
-            }
-
-            digester.close();
-            return digester.getMessageDigest().digest();
-        }
-
         @Override
         String getHash()
         {
@@ -148,7 +188,6 @@ public class DarcTree
             throw new IOException("This Entry is no Folder. name=" + name);
         }
 
-        @Override
         long getSize()
         {
             return size;
@@ -168,18 +207,62 @@ public class DarcTree
         private static final byte DIRECTORY_MARKER = 'D';
         private static final byte FILE_MARKER = 'F';
 
-        String hash;
         Map<String, Entry> content;
+        boolean modified = true;
 
         Directory(String hash)
         {
             this.hash = hash;
-            this.content = null;
+            this.modified = false;
+        }
+
+        Directory(DataInputStream dis, String expectedHash) throws IOException
+        {
+            this.content = readFromStream(dis, expectedHash);
+            this.hash = expectedHash;
         }
 
         Directory(Map<String, Entry> content)
         {
+            this.hash = null;
             this.content = content;
+            this.modified = true;
+        }
+
+        public String[] getChildrenNames(BlobStorageProvider provider) throws IOException
+        {
+            materializeContent(provider);
+            Set<String> keys = content.keySet();
+            return keys.toArray(new String[keys.size()]);
+        }
+
+        public void addFile(String name, long length, String hash)
+        {
+            // TODO: materializeContent(provider);
+            Entry file = new File(length,  hash);
+            content.put(name, file);
+            modified = true;
+        }
+
+        public void removeChild(String name)
+        {
+            // TODO: materializeContent(provider);
+            Entry entry = content.remove(name);
+            if (entry != null)
+                modified = true;
+        }
+
+        public void addDirectory(String name, Directory newChild)
+        {
+            // TODO: materializeContent(provider);
+            modified = true;
+            content.put(name, newChild);
+        }
+
+        public long getTime()
+        {
+            // TODO Auto-generated method stub
+            return 0;
         }
 
         Entry getChild(String name, BlobStorageProvider provider) throws IOException
@@ -188,16 +271,67 @@ public class DarcTree
             return content.get(name); // might be null
         }
 
+        String writeToStream(OutputStream target) throws IOException
+        {
+            // First we create a in-memory buffer
+            ByteArrayOutputStream bos = new ByteArrayOutputStream(content.size() * 30);
+            DataOutputStream out = new DataOutputStream(bos);
+            ArrayList<String> names = new ArrayList<String>(content.keySet());
+            Collections.sort(names);
+
+            for(String name : names)
+            {
+                Entry e = content.get(name);
+                if (e instanceof Directory)
+                {
+                    out.writeByte(DIRECTORY_MARKER);
+                    out.writeByte(1); // record format version (1=plain)
+                    out.writeUTF(name);
+                    out.writeUTF(e.getHash());
+                }
+                else if (e instanceof File)
+                {
+                    File f = (File)e;
+                    out.writeByte(FILE_MARKER);
+                    out.writeByte(1);
+                    out.writeUTF(name);
+                    out.writeLong(f.getSize());
+                    out.writeUTF(f.getHash());
+                }
+            }
+            out.close();
+            byte[] buf = bos.toByteArray(); bos = null;
+
+            OutputStream cout = new DeflaterOutputStream(target);
+            DigestOutputStream digester = new DigestOutputStream(cout, getDigester());
+            // then we write it all to a compressed stream
+            DataOutputStream dout = new DataOutputStream(digester);
+            dout.writeBytes("seetree ");
+            String size = String.valueOf(buf.length);
+            dout.writeBytes(size);
+            dout.writeByte(0);
+            dout.write(buf);
+            dout.close();
+            return asHex(digester.getMessageDigest().digest());
+        }
+
+        @Override
+        String getHash()
+        {
+            return hash;
+        }
+
         private void materializeContent(BlobStorageProvider provider) throws IOException
         {
             if (content != null)
                 return;
+
             FileObject dir = provider.resolveFileHash(hash);
             try
             {
                 FileContent fileContent = dir.getContent();
                 InputStream is = fileContent.getInputStream();
-                readFromStream(is, hash);
+                content = readFromStream(is, hash);
             } finally {
                 dir.close();
             }
@@ -205,7 +339,7 @@ public class DarcTree
 
         /** Read directory from stream and compare the hash.
          * @throws IOException */
-        private void readFromStream(InputStream is, String expectedHash) throws IOException
+        private Map<String, Entry> readFromStream(InputStream is, String expectedHash) throws IOException
         {
             InflaterInputStream inflated = new InflaterInputStream(is);
             DigestInputStream digester = new DigestInputStream(inflated, getDigester());
@@ -246,7 +380,7 @@ public class DarcTree
             String digest = asHex(digester.getMessageDigest().digest());
             if (!expectedHash.equals(digest))
                 throw new IOException("While readig file with expected hash=" + expectedHash + " we read corrupted data with hash=" + digest);
-            content = newContent;
+            return newContent;
         }
 
         /** Read and verify the tree header
@@ -279,81 +413,6 @@ public class DarcTree
 
             return Long.parseLong(signature.substring(sigLen));
         }
-
-        public long getTime()
-        {
-            // TODO Auto-generated method stub
-            return 0;
-        }
-
-        Directory(DataInputStream dis, String expectedHash) throws IOException
-        {
-            readFromStream(dis, expectedHash);
-        }
-
-        String writeToStream(OutputStream target) throws IOException
-        {
-            // First we create a in-memory buffer
-            ByteArrayOutputStream bos = new ByteArrayOutputStream(content.size() * 30);
-            DataOutputStream out = new DataOutputStream(bos);
-            ArrayList<String> names = new ArrayList<String>(content.keySet());
-            Collections.sort(names);
-
-            for(String name : names)
-            {
-                Entry e = content.get(name);
-                if (e instanceof Directory)
-                {
-                    out.writeByte(DIRECTORY_MARKER);
-                    out.writeByte(1); // record format version (1=plain)
-                    out.writeUTF(name);
-                    out.writeUTF(e.getHash());
-                }
-                else if (e instanceof File)
-                {
-                    out.writeByte(FILE_MARKER);
-                    out.writeByte(1);
-                    out.writeUTF(name);
-                    out.writeLong(e.getSize());
-                    out.writeUTF(e.getHash());
-                }
-            }
-            out.close();
-            byte[] buf = bos.toByteArray(); bos = null;
-
-            OutputStream cout = new DeflaterOutputStream(target);
-            DigestOutputStream digester = new DigestOutputStream(cout, getDigester());
-            // then we write it all to a compressed stream
-            DataOutputStream dout = new DataOutputStream(digester);
-            dout.writeBytes("seetree ");
-            String size = String.valueOf(buf.length);
-            dout.writeBytes(size);
-            dout.writeByte(0);
-            dout.write(buf);
-            dout.close();
-            return asHex(digester.getMessageDigest().digest());
-        }
-
-
-        public String[] getChildrenNames()
-        {
-            Set<String> keys = content.keySet();
-            return keys.toArray(new String[keys.size()]);
-        }
-
-        @Override
-        String getHash()
-        {
-            // TODO Auto-generated method stub
-            return null;
-        }
-
-        @Override
-        long getSize()
-        {
-            // TODO Auto-generated method stub
-            return 0;
-        }
     }
 
     public MessageDigest getDigester()
@@ -378,5 +437,47 @@ public class DarcTree
             result[j*2 + 1] = hexArray[i & 0xf];
         }
         return new String(result);
+    }
+
+    public String commitChanges(BlobStorageProvider provider) throws IOException
+    {
+        // depth-first search to write out all dirty directories
+        return writeChange(root, provider);
+    }
+
+    private String writeChange(Directory dir, BlobStorageProvider provider) throws IOException
+    {
+        Set<java.util.Map.Entry<String, Entry>> childrens = dir.content.entrySet();
+        for(java.util.Map.Entry<String, Entry> e : childrens)
+        {
+            Entry ent = e.getValue();
+            // traverse all directories (not only dirty ones as they might have dirty childs)
+            if (ent instanceof Directory)
+            {
+                Directory dir2 = (Directory)ent;
+                String oldHash = dir2.getHash();
+                String hash = writeChange(dir2, provider);
+                // if hash is recalculated we see if if affects current dir
+                if (hash != null)
+                {
+                    if (oldHash == null || !oldHash.equals(hash))
+                    {
+                        dir.modified = true; // write out this parent as well as child hash changed
+                    }
+                }
+            }
+        }
+
+        if (dir.modified)
+        {
+            OutputStream os = provider.getTempStream();
+            String hash = dir.writeToStream(os);
+            os.close(); // TODO: close always or never
+            provider.storeTempBlob(os, hash);
+            dir.hash = hash;
+            dir.modified = false;
+            return hash;
+        }
+        return null;
     }
 }
