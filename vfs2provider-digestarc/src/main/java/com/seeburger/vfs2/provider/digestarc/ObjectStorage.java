@@ -168,7 +168,7 @@ public class ObjectStorage
 
     protected OutputStream decorateWithDeflater(OutputStream out) throws IOException
     {
-        return new DeflaterOutputStream(out, false);
+        return new DeflaterOutputStream(out);
     }
 
 
