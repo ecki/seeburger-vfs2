@@ -21,8 +21,6 @@ import com.seeburger.vfs2.provider.jdbctable.JdbcDialectBase;
  */
 public class JdbcDialectMSSQL extends JdbcDialectBase implements JdbcDialect
 {
-    private static final String TABLE_NAME = "tBlobs";
-
     /** Cached quoted identifier, possibly containing schema name. */
     private String quotedTable;
 

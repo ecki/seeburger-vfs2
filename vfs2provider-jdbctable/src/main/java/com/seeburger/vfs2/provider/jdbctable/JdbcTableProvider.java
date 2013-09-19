@@ -53,7 +53,8 @@ public class JdbcTableProvider
      */
     public JdbcTableProvider(DataSource dataSource)
     {
-        this(new JdbcDialectBase("tBlobs", dataSource));
+        // TODO: automatic detection via JdbcDialectBase#getDialect(DataSource)
+        this(new JdbcDialectBase(dataSource));
 
     }
 
@@ -66,8 +67,6 @@ public class JdbcTableProvider
         this.dialect = dialect;
         setFileNameParser(JdbcTableNameParser.getInstance());
     }
-
-
 
     @Override
     protected FileSystem doCreateFileSystem(final FileName name, final FileSystemOptions fileSystemOptions)
@@ -94,6 +93,7 @@ public class JdbcTableProvider
         return supportsAppendBlob;
     }
 
+    // TODO: move this to the dialect
     public boolean supportsAppendBlob(DataSource ds)
     {
         Connection c = null;
@@ -118,15 +118,8 @@ public class JdbcTableProvider
         }
     }
 
-    private void safeClose(Connection c)
-    {
-        try
-        {
-            c.close();
-        }
-        catch (Exception ignored) { }
-    }
 
+    // TODO: move this to dialect
     Connection getConnection() throws SQLException
     {
         long start = System.nanoTime();
@@ -135,6 +128,15 @@ public class JdbcTableProvider
         if (duration > 100*MS)
             System.out.printf("slow getConnection(): %.6fs%n",  (duration/1000000000.0));
         return c;
+    }
+
+    private void safeClose(Connection c)
+    {
+        try
+        {
+            c.close();
+        }
+        catch (Exception ignored) { }
     }
 
 }

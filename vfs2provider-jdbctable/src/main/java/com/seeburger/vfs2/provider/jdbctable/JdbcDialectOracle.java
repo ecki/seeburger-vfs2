@@ -18,8 +18,6 @@ import javax.sql.DataSource;
  */
 public class JdbcDialectOracle extends JdbcDialectBase implements JdbcDialect
 {
-    private static final String TABLE_NAME = "tBlobs";
-
     private String quotedTable;
 
 

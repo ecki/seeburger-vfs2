@@ -30,6 +30,7 @@ import javax.sql.DataSource;
  */
 public class JdbcDialectBase implements JdbcDialect
 {
+    static final String TABLE_NAME = "tBlobs";
     static final int MS = 1000000;
 
     final protected String tableName;
@@ -42,6 +43,11 @@ public class JdbcDialectBase implements JdbcDialect
     {
         this.tableName = tableName;
         this.dataSource = dataSource;
+    }
+
+    public JdbcDialectBase(DataSource dataSource)
+    {
+        this(TABLE_NAME, dataSource);
     }
 
     /** borrow a new connection from pool (or create one). */

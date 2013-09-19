@@ -11,6 +11,7 @@ public class JdbcTableOutputStream extends OutputStream
     protected JdbcTableRowFile file;
     protected byte[] buffer1 = new byte[1];
     protected boolean closed = false;
+
     private IOException exc;
     private ByteArrayOutputStream bufferStream = new ByteArrayOutputStream();
     private boolean append;
