@@ -6,6 +6,7 @@ import java.io.InputStream;
 import java.util.Collection;
 
 import org.apache.commons.vfs2.Capability;
+import org.apache.commons.vfs2.FileName;
 import org.apache.commons.vfs2.FileObject;
 import org.apache.commons.vfs2.FileSystemException;
 import org.apache.commons.vfs2.FileSystemOptions;
@@ -51,12 +52,26 @@ public class DarcFileSystem extends AbstractFileSystem
 					throws FileSystemException
 	{
 		super(rootName, parentLayer, fileSystemOptions);
-		FileObject rootFile = parentLayer.getParent().getParent();
-		// the filesystem is layered on top of the root tree, blobs are relative to ../.. there
-		String refName = rootFile.getName().getRelativeName(rootName.getOuterName());
-		rootHash = refName.replaceFirst("/", "");
-System.out.println("Setting up BlobStorage at " + rootFile + " and asuming root index at " + refName);
-		provider = new BlobStorageProvider(rootFile);
+		FileObject rootFile;
+        // if this is a folder then this is the Blob base and we dont have a rootHash
+		if (parentLayer.getType().hasChildren())
+		{
+		    rootHash = null;
+		    rootFile = parentLayer;
+		}
+		else if (parentLayer.getType().hasContent()) {
+	        rootFile = parentLayer.getParent().getParent();
+	        String refName = rootFile.getName().getRelativeName(rootName.getOuterName());
+	        rootHash = refName.replaceFirst("/", "");
+		}
+		else
+		{
+		    throw new FileSystemException("Cannot produce layered digest archive filesystem, missing root node " + parentLayer);
+		}
+
+// System.out.println("Setting up BlobStorage at " + rootFile + " and asuming root index at " + rootHash);
+
+        provider = new BlobStorageProvider(rootFile);
 	}
 
 
@@ -65,18 +80,25 @@ System.out.println("Setting up BlobStorage at " + rootFile + " and asuming root 
 	{
 		super.init();
 
-		InputStream is = null;
-		try
-		{
-		    FileObject refFile = provider.resolveFileHash(rootHash);
-		    is = refFile.getContent().getInputStream();
-			try
+        InputStream is = null;
+        try
+        {
+            if (rootHash == null)
             {
-                tree = new DarcTree(is, rootHash);
+                tree = new DarcTree();
             }
-            catch (IOException e)
+            else
             {
-                throw new FileSystemException(e);
+                FileObject refFile = provider.resolveFileHash(rootHash);
+                is = refFile.getContent().getInputStream();
+                try
+                {
+                    tree = new DarcTree(is, rootHash);
+                }
+                catch (IOException e)
+                {
+                    throw new FileSystemException(e);
+                }
             }
 		}
 		finally
@@ -90,7 +112,7 @@ System.out.println("Setting up BlobStorage at " + rootFile + " and asuming root 
 	@Override
 	protected void doCloseCommunicationLink()
 	{
-System.out.println("close link " + this);
+//System.out.println("close link " + this);
 	    // Release what?
 	}
 

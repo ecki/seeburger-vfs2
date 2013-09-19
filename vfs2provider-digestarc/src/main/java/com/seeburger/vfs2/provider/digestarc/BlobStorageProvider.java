@@ -42,7 +42,7 @@ public class BlobStorageProvider
     }
 
     /** Produce a relative path of the given hash (separate first two characters). */
-    public String hashToPath(String hash)
+    public static String hashToPath(String hash)
     {
         return hash.substring(0, 2) + "/" + hash.substring(2);
     }

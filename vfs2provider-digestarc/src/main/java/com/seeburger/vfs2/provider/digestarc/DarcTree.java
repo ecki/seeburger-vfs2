@@ -42,7 +42,7 @@ public class DarcTree
     /** Read the root directory of this tree from InputStream. */
     public DarcTree(InputStream is, String expectedHash) throws IOException
     {
-System.out.println("Initiating DarcTree from hash " + expectedHash);
+//System.out.println("Initiating DarcTree from hash " + expectedHash);
         root = new Directory(new DataInputStream(is), expectedHash);
     }
 
@@ -109,7 +109,7 @@ System.out.println("Initiating DarcTree from hash " + expectedHash);
         {
             me = child;
             child = me.getChild(parts[i], provider);
-System.out.println("addFile " + name + " me=" + me + " child=" + child + " i=" + i);
+//System.out.println("addFile " + name + " me=" + me + " child=" + child + " i=" + i);
             if (child == null)
             {
                 // me is the last existing entry

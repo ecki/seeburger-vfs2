@@ -208,7 +208,7 @@ public class DarcFileObject extends AbstractFileObject implements FileListener
         throws Exception
     {
         // super.onChange(); does nothing
-System.out.println("Change received " + getName());
+// System.out.println("Change received " + getName());
     }
 
     @Override
@@ -216,7 +216,7 @@ System.out.println("Change received " + getName());
         throws Exception
     {
         // super.onChildrenChanged(child, newType); is empty
-System.out.println("children of " + getName().getPath() + " changed: " + child.getBaseName() + " " + newType);
+// System.out.println("children of " + getName().getPath() + " changed: " + child.getBaseName() + " " + newType);
     }
 
     @Override
