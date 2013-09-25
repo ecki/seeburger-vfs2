@@ -30,6 +30,8 @@ import com.seeburger.vfs2.provider.digestarc.DarcTree.File;
  */
 public class DarcFileObject extends AbstractFileObject implements FileListener
 {
+    public static final String ATTRIBUTE_GITHASH = "githash";
+
     private final DarcTree tree;
     private final BlobStorageProvider provider;
 
@@ -149,7 +151,7 @@ public class DarcFileObject extends AbstractFileObject implements FileListener
         String hash = entry.getHash();
         HashMap<String, Object> ht = new HashMap<String, Object>();
         if (hash != null)
-            ht.put("githash", hash); // TODO constant
+            ht.put(ATTRRIBUTE_GITHASH, hash); // TODO constant
         return ht;
     }
 
