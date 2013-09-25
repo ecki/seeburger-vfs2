@@ -151,7 +151,7 @@ public class DarcFileObject extends AbstractFileObject implements FileListener
         String hash = entry.getHash();
         HashMap<String, Object> ht = new HashMap<String, Object>();
         if (hash != null)
-            ht.put(ATTRRIBUTE_GITHASH, hash); // TODO constant
+            ht.put(ATTRIBUTE_GITHASH, hash); // TODO constant
         return ht;
     }
 
