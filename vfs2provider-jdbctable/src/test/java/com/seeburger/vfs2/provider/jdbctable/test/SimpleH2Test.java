@@ -68,7 +68,7 @@ public class SimpleH2Test extends SimpleTestsBase
         ResultSet rs = null;
         try
         {
-            c = dataSource.getConnection();
+            c = dialect.getConnection();
             ps = c.prepareStatement("SELECT * FROM INFORMATION_SCHEMA.SESSIONS");
             rs = ps.executeQuery();
             int count = 0;
@@ -101,6 +101,7 @@ public class SimpleH2Test extends SimpleTestsBase
         try { rs.close(); } catch (Exception ignored) { }
         try { ps.close(); } catch (Exception ignored) { }
         try { c.close(); } catch (Exception ignored) { }
+        dialect.returnConnection(c);
     }
 }
 

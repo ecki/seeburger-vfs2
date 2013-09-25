@@ -107,5 +107,11 @@ public class JdbcDialectMSSQL extends JdbcDialectBase implements JdbcDialect
             return created;
         }
     }
+
+    @Override
+    public JdbcDialect getDialectForTable(String tableName)
+    {
+        return new JdbcDialectMSSQL(tableName, dataSource);
+    }
 }
 

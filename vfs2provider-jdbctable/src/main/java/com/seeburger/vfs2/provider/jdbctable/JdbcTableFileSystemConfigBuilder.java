@@ -1,11 +1,19 @@
 package com.seeburger.vfs2.provider.jdbctable;
 
+
 import org.apache.commons.vfs2.FileSystem;
 import org.apache.commons.vfs2.FileSystemConfigBuilder;
 import org.apache.commons.vfs2.FileSystemOptions;
 
+
 /**
  * Configuration options for SEEBURGER Jdbc Table.
+ * <P>
+ * For the JDBC Table file system you can configure the name of the table to use
+ * or if you want to use it read-only or read-write.
+ *
+ * @see #setTablename(FileSystemOptions, String)
+ * @see #setWriteMode(FileSystemOptions, boolean)
  */
 public class JdbcTableFileSystemConfigBuilder extends FileSystemConfigBuilder
 {
@@ -33,7 +41,17 @@ public class JdbcTableFileSystemConfigBuilder extends FileSystemConfigBuilder
 
     public String getTablename(final FileSystemOptions opts)
     {
-        return getString(opts, "table", "tFilesystem");
+        return getString(opts, "table", "tBlobs");
+    }
+
+    public void setWriteMode(final FileSystemOptions opts, final boolean write)
+    {
+        setParam(opts, "write", Boolean.valueOf(write));
+    }
+
+    public boolean getWriteMode(final FileSystemOptions opts)
+    {
+        return getBoolean(opts, "write", true);
     }
 
     @Override

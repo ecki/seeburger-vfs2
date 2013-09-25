@@ -48,7 +48,7 @@ public class JdbcTableRowFile extends AbstractFileObject
     public JdbcTableRowFile(AbstractFileName name, JdbcTableFileSystem fs)
     {
         super(name, fs);
-        dialect = fs.provider.dialect;
+        dialect = fs.getDialect();
     }
 
     @Override

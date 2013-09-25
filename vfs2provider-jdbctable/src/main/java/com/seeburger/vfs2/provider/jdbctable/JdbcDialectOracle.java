@@ -66,6 +66,12 @@ public class JdbcDialectOracle extends JdbcDialectBase implements JdbcDialect
         return true;
     }
 
+    @Override
+    public JdbcDialect getDialectForTable(String tableName)
+    {
+        return new JdbcDialectOracle(tableName, dataSource);
+    }
+
     // public String expandSQL(String sql) -- default works for Oracle (using FOR UPDATE)
 }
 
