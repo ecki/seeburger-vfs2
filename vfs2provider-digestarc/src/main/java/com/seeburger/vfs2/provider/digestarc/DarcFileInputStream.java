@@ -8,6 +8,7 @@
 package com.seeburger.vfs2.provider.digestarc;
 
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.Charset;
@@ -31,12 +32,14 @@ public class DarcFileInputStream extends InflaterInputStream
 {
     private static final Charset ASCII = Charset.forName("ASCII");
 
-    private final MessageDigest digester;
     private final String expectedHash;
+    private final String expectedType;
     private final long streamLength; // TODO: use this information
 
+    private MessageDigest digester;
+
     /** Wrap a given input stream, will also check the expected hash at the end. */
-    public DarcFileInputStream(InputStream in, String expectedHash) throws IOException
+    public DarcFileInputStream(InputStream in, String expectedHash, String expectedType) throws IOException
     {
         super(in);
         try
@@ -48,21 +51,38 @@ public class DarcFileInputStream extends InflaterInputStream
             throw new IOException("Cannot create InputStream because SHA1 digester cannot be loaded.", e);
         }
         this.expectedHash = expectedHash;
+        this.expectedType = expectedType;
+
+        // TODO: lasy on first read(), must be AFTER exepcted* fields are set.
         this.streamLength = readHeaderLength();
+
     }
 
-    public DarcFileInputStream(FileObject delegatedFile, String hash) throws FileSystemException, IOException
+    public DarcFileInputStream(FileObject file, String hash) throws FileSystemException, IOException
     {
-        this(delegatedFile.getContent().getInputStream(), hash);
+        this(file.getContent().getInputStream(), hash, "blob");
+    }
+
+    public DarcFileInputStream(FileObject file, String hash, String type) throws FileSystemException, IOException
+    {
+        this(file.getContent().getInputStream(), hash, type);
+    }
+
+    public DarcFileInputStream(InputStream stream, String hash) throws FileSystemException, IOException
+    {
+        this(stream, hash, "blob");
     }
 
     /** Read the Git blob header and return the specified size. */
     private long readHeaderLength() throws IOException
     {
-        byte[] buf = new byte[25]; // 5 + 19 +1 1
-        read(buf, 0, 5); // "blob "
+        final String expectedHeader = expectedType + " ";
+        final int typeLen = expectedHeader.length();
+
+        byte[] buf = new byte[20 + typeLen]; // 5 + 19 +1 1
+        read(buf, 0, typeLen); // "blob "
         int i;
-        for(i=5; i < buf.length; i++)
+        for(i=typeLen; i < buf.length; i++)
         {
             int c = read();
             if (c == -1)
@@ -83,12 +103,12 @@ public class DarcFileInputStream extends InflaterInputStream
         }
 
         String header = new String(buf, 0, i, ASCII);
-        if (!header.startsWith("blob "))
+        if (!header.startsWith(expectedHeader))
         {
-            throw new IOException("Malformed blob file header, does start with unexpected signature=" + header);
+            throw new IOException("Malformed file header. Expecting=" + expectedType + " found=" + header); // TODO: hex
         }
 
-        String sizeString = header.substring(5);
+        String sizeString = header.substring(typeLen);
         try
         {
             return Long.parseLong(sizeString);
@@ -110,6 +130,9 @@ public class DarcFileInputStream extends InflaterInputStream
     public int read(byte[] b, int off, int len)
         throws IOException
     {
+        if (digester == null)
+            return -1;
+
         int c = super.read(b, off, len);
 
         if (c < 0)
@@ -135,10 +158,18 @@ public class DarcFileInputStream extends InflaterInputStream
     private void finishDigest() throws IOException
     {
         String streamDigest = asHex(digester.digest());
+        digester = null;
 
-        if (!streamDigest.equals(expectedHash))
+        if (expectedHash == null)
         {
-            throw new IOException("Data Corruption, the hashes mismatch. expected=" + expectedHash + " actual=" + streamDigest);
+            System.out.println(" read hash=" + streamDigest);
+        }
+        else
+        {
+            if (!streamDigest.equals(expectedHash))
+            {
+                throw new IOException("Data Corruption, the hashes mismatch. expected=" + expectedHash + " actual=" + streamDigest + " stream=" + in);
+            }
         }
     }
 
@@ -153,6 +184,21 @@ public class DarcFileInputStream extends InflaterInputStream
             result[j*2 + 1] = hexArray[i & 0xf];
         }
         return new String(result);
+    }
+
+    public void readAll() throws IOException
+    {
+        byte[] workBuffer = new byte[1024];
+
+        long size = 0;
+        int count = 0;
+
+        int len;
+        while((len = read(workBuffer)) != -1){
+            size += len;
+            count++;
+        }
+        System.out.println("After " + count + " reads we have " + size + " bytes.");
     }
 
     // TODO: available/mark/reset
