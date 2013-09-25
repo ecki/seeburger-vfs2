@@ -9,6 +9,7 @@ import java.lang.ref.WeakReference;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.apache.commons.vfs2.Capability;
 import org.apache.commons.vfs2.FileChangeEvent;
 import org.apache.commons.vfs2.FileListener;
 import org.apache.commons.vfs2.FileName;
@@ -17,8 +18,6 @@ import org.apache.commons.vfs2.FileSystemException;
 import org.apache.commons.vfs2.FileType;
 import org.apache.commons.vfs2.provider.AbstractFileName;
 import org.apache.commons.vfs2.provider.AbstractFileObject;
-import org.apache.commons.vfs2.provider.ftp.FtpClient;
-import org.apache.commons.vfs2.util.MonitorOutputStream;
 import org.apache.commons.vfs2.util.WeakRefFileListener;
 
 import com.seeburger.vfs2.provider.digestarc.DarcTree.Directory;
@@ -61,7 +60,7 @@ public class DarcFileObject extends AbstractFileObject implements FileListener
     @Override
     public boolean isWriteable() throws FileSystemException
     {
-        return false;
+        return false; // TODO
     }
 
     /**
@@ -187,6 +186,10 @@ public class DarcFileObject extends AbstractFileObject implements FileListener
     protected OutputStream doGetOutputStream(boolean bAppend)
         throws Exception
     {
+        if (!getFileSystem().hasCapability(Capability.WRITE_CONTENT))
+        {
+            throw new FileSystemException("No change session specified, cannot modify file");
+        }
         dataOut = new ByteArrayOutputStream();
         return dataOut;
     }
@@ -195,6 +198,10 @@ public class DarcFileObject extends AbstractFileObject implements FileListener
     protected void doDelete()
         throws Exception
     {
+        if (!getFileSystem().hasCapability(Capability.DELETE))
+        {
+            throw new FileSystemException("No change session specified, cannot delete file");
+        }
         tree.delete(getName().getPathDecoded(), provider);
     }
 
@@ -202,6 +209,10 @@ public class DarcFileObject extends AbstractFileObject implements FileListener
     protected void doCreateFolder()
         throws Exception
     {
+        if (!getFileSystem().hasCapability(Capability.CREATE))
+        {
+            throw new FileSystemException("No change session specified, cannot create folder");
+        }
         tree.createFolder(getName().getPathDecoded(), provider);
     }
 

@@ -14,6 +14,7 @@ import java.util.Map;
 import org.apache.commons.vfs2.CacheStrategy;
 import org.apache.commons.vfs2.FileObject;
 import org.apache.commons.vfs2.FileSystem;
+import org.apache.commons.vfs2.FileSystemOptions;
 import org.apache.commons.vfs2.impl.DefaultFileSystemManager;
 import org.apache.commons.vfs2.provider.local.DefaultLocalFileProvider;
 
@@ -41,9 +42,15 @@ public class StandaloneClient
 		manager.setCacheStrategy(CacheStrategy.ON_RESOLVE);
 		manager.init();
 
+		FileSystemOptions opts = new FileSystemOptions();
+		DarcFileConfigBuilder config = DarcFileConfigBuilder.getInstance();
+		config.setChangeSession(opts, "2");
+
 		FileObject base = manager.resolveFile(testDir, "a3/6af8df2216a8357967276438ea608fe1a2c0e1");
-		final FileObject dir1 = manager.createFileSystem("seearc", base);
-		final FileObject root = dir1.getFileSystem().getRoot();
+		String uri = "seearc:" + base.getName().getURI() + "!/";
+		final FileObject dir1 = manager.resolveFile(uri, opts);
+        DarcFileSystem fs = (DarcFileSystem)dir1.getFileSystem();
+		final FileObject root = fs.getRoot();
 
 		TreePrinter.printTree(root, "| ", System.out);
 
@@ -70,7 +77,26 @@ System.out.println("       size: " + testFile.getContent().getSize());
 
         TreePrinter.printTree(root, "+| ", System.out);
 
-        DarcFileSystem fs = (DarcFileSystem)dir1.getFileSystem();
+        System.out.println("Listing the fs outside session");
+        opts = new FileSystemOptions();
+        config.setChangeSession(opts, "3");
+
+        final FileObject dir3 = manager.resolveFile(uri, opts);
+        final FileObject root3 = dir3.getFileSystem().getRoot();
+
+        TreePrinter.printTree(root3, "<< ", System.out);
+
+        System.out.println("Listing the fs inside session");
+        opts = new FileSystemOptions();
+        config.setChangeSession(opts, "2");
+
+        final FileObject dir5 = manager.resolveFile(uri, opts);
+        final FileObject root5 = dir5.getFileSystem().getRoot();
+
+        TreePrinter.printTree(root5, ">> ", System.out);
+
+
+        fs = (DarcFileSystem)dir1.getFileSystem();
         String newHash = fs.commitChanges();
         System.out.println("commited changes: " + newHash);
 
@@ -78,8 +104,8 @@ System.out.println("       size: " + testFile.getContent().getSize());
         FileObject dir2 = manager.createFileSystem("seearc", base);
         TreePrinter.printTree(dir2, "== ", System.out);
 
-        FileObject dir3 = dir2.getChild("folder");
-        dir3.getChildren();
+        FileObject dir4 = dir2.getChild("folder");
+        dir4.getChildren();
 
 	}
 

@@ -9,6 +9,7 @@ import org.apache.commons.vfs2.Capability;
 import org.apache.commons.vfs2.FileName;
 import org.apache.commons.vfs2.FileObject;
 import org.apache.commons.vfs2.FileSystem;
+import org.apache.commons.vfs2.FileSystemConfigBuilder;
 import org.apache.commons.vfs2.FileSystemException;
 import org.apache.commons.vfs2.FileSystemOptions;
 import org.apache.commons.vfs2.FileType;
@@ -32,8 +33,24 @@ public class DarcFileProvider extends AbstractLayeredFileProvider implements Fil
             Capability.READ_CONTENT,
             Capability.URI,
             Capability.COMPRESS,
-            Capability.VIRTUAL
-            // TODO: write
+            Capability.VIRTUAL,
+
+            Capability.APPEND_CONTENT,
+            Capability.CREATE,
+            Capability.DELETE,
+            Capability.RENAME,
+            Capability.WRITE_CONTENT
+        }));
+
+    /** The list of capabilities this provider supports */
+    protected static final Collection<Capability> writeCapabilities =
+        Collections.unmodifiableCollection(Arrays.asList(new Capability[]
+        {
+             Capability.APPEND_CONTENT,
+             Capability.CREATE,
+             Capability.DELETE,
+             Capability.RENAME,
+             Capability.WRITE_CONTENT,
         }));
 
     public DarcFileProvider()
@@ -62,8 +79,35 @@ public class DarcFileProvider extends AbstractLayeredFileProvider implements Fil
         return new DarcFileSystem(rootName, file, fileSystemOptions);
     }
 
+    @Override
+    public FileSystemConfigBuilder getConfigBuilder()
+    {
+        return DarcFileConfigBuilder.getInstance();
+    }
+
     public Collection<Capability> getCapabilities()
     {
         return capabilities;
     }
+
+    @Override
+    public synchronized FileObject createFileSystem(final String scheme,
+                                                    final FileObject file,
+                                                    final FileSystemOptions fileSystemOptions)
+        throws FileSystemException
+    {
+        // Check if cached
+        final FileName rootName = file.getName();
+        // super implementation does not pass options and therefore does not cache?
+        FileSystem fs = findFileSystem(rootName, fileSystemOptions);
+        if (fs == null)
+        {
+            // Create the file system
+            fs = doCreateFileSystem(scheme, file, fileSystemOptions);
+            System.out.println("created " + fs.hashCode());
+            addFileSystem(rootName, fs);
+        }
+        return fs.getRoot();
+    }
+
 }
