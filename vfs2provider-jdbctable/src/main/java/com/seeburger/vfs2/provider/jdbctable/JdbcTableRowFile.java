@@ -598,8 +598,18 @@ public class JdbcTableRowFile extends AbstractFileObject
      */
     private String[] getKeys(FileObject file) throws FileSystemException
     {
+        FileName parent = file.getName().getParent();
+        String parentName;
+        if (parent == null)
+        {
+            parentName="//";
+        }
+        else
+        {
+            parentName = parent.getPathDecoded();
+        }
         return new String[] {
-                              file.getName().getParent().getPathDecoded(),
+                              parentName,
                               file.getName().getBaseName() };
     }
 

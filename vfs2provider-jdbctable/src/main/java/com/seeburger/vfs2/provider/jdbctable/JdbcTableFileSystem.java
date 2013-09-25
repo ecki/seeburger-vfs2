@@ -57,19 +57,7 @@ public class JdbcTableFileSystem extends AbstractFileSystem
     protected FileObject createFile(final AbstractFileName name)
                     throws Exception
     {
-        String path = name.getPath();
-        //System.out.println("new file " + name + " (" + name.getPath() + ")");
-
-        if ("/".equals(path))
-            return new JdbcTableSpecialFile(name, this);
-
-        if ("/key".equals(path))
-            return new JdbcTableSpecialFile(name, this);
-
-        if (path.startsWith("/key/"))
-            return new JdbcTableRowFile(name, this);
-
-        throw new FileNotFoundException(name);
+        return new JdbcTableRowFile(name, this);
     }
 
     public JdbcDialect getDialect()
