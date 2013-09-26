@@ -1,5 +1,9 @@
 package com.seeburger.vfs2.provider.jdbctable.test;
 
+import static org.junit.Assert.fail;
+
+import java.sql.SQLException;
+
 import org.apache.derby.jdbc.EmbeddedDataSource;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -32,8 +36,16 @@ public class SimpleDerbyTest extends SimpleTestsBase
         ds.setPassword("secret");
         ds.setDatabaseName("target/SimpleDerbyTestDB");
 
-        SimpleTestsBase.dialect = new JdbcDialectBase("tBlobs", ds);
         SimpleTestsBase.dataSource = ds;
+
+        try
+        {
+            SimpleTestsBase.dialect = JdbcDialectBase.getDialect(dataSource);
+        }
+        catch (SQLException e)
+        {
+            fail("Exception while determining database dialect:" + e.getMessage());
+        }
     }
 
     @AfterClass

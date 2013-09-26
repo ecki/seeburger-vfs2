@@ -1,6 +1,8 @@
 package com.seeburger.vfs2.provider.jdbctable.test;
 
 
+import static org.junit.Assert.fail;
+
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
 import java.sql.ResultSet;
@@ -13,6 +15,7 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 
 import com.googlecode.flyway.core.Flyway;
+import com.seeburger.vfs2.provider.jdbctable.JdbcDialectBase;
 import com.seeburger.vfs2.provider.jdbctable.JdbcDialectMSSQL;
 
 
@@ -50,8 +53,16 @@ public class SimpleMSSQLTest extends SimpleTestsBase
         }
         rs.close(); c.close();
 
-        SimpleTestsBase.dialect = new JdbcDialectMSSQL("tBlobs", ds);
         SimpleTestsBase.dataSource = ds;
+
+        try
+        {
+            SimpleTestsBase.dialect = JdbcDialectBase.getDialect(dataSource);
+        }
+        catch (SQLException e)
+        {
+            fail("Exception while determining database dialect:" + e.getMessage());
+        }
     }
 
     @AfterClass

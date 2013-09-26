@@ -1,5 +1,7 @@
 package com.seeburger.vfs2.provider.jdbctable.test;
 
+import static org.junit.Assert.fail;
+
 import java.lang.reflect.InvocationTargetException;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
@@ -13,6 +15,7 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 
 import com.googlecode.flyway.core.Flyway;
+import com.seeburger.vfs2.provider.jdbctable.JdbcDialectBase;
 import com.seeburger.vfs2.provider.jdbctable.JdbcDialectOracle;
 
 
@@ -48,8 +51,15 @@ public class SimpleOracleTest extends SimpleTestsBase
         }
         rs.close(); c.close();
 
-        SimpleTestsBase.dialect = new JdbcDialectOracle(ds);
         SimpleTestsBase.dataSource = ds;
+        try
+        {
+            SimpleTestsBase.dialect = JdbcDialectBase.getDialect(dataSource);
+        }
+        catch (SQLException e)
+        {
+            fail("Exception while determining database dialect:" + e.getMessage());
+        }
     }
 
     @AfterClass

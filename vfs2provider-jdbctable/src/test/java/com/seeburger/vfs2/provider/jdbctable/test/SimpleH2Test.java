@@ -46,8 +46,16 @@ public class SimpleH2Test extends SimpleTestsBase
         }
         rs.close(); c.close();
 
-        SimpleTestsBase.dialect = new JdbcDialectBase("tBlobs", ds);
         SimpleTestsBase.dataSource = ds;
+
+        try
+        {
+            SimpleTestsBase.dialect = JdbcDialectBase.getDialect(dataSource);
+        }
+        catch (SQLException e)
+        {
+            fail("Exception while determining database dialect:" + e.getMessage());
+        }
     }
 
     @AfterClass

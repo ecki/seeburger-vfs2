@@ -53,23 +53,34 @@ public class JdbcDialectBase
         throws SQLException
     {
         JdbcDialect result = null;
-        Connection con = ds.getConnection();
-        DatabaseMetaData md = con.getMetaData();
-        String provider = md.getDatabaseProductName().toLowerCase();
-        if (provider.contains(MSSQL_DIALECT) || provider.contains(MSSQL_DIALECT$))
+        Connection con = null;
+        try
         {
-            result = new JdbcDialectMSSQL(ds);
-        }
-        else if (provider.contains(ORACLE_DIALECT))
-        {
-            result = new JdbcDialectOracle(ds);
-        }
-        else
-        {
-            result = new JdbcDialectBase(ds);
-        }
+            con = ds.getConnection();
+            DatabaseMetaData md = con.getMetaData();
+            String provider = md.getDatabaseProductName().toLowerCase();
+            if (provider.contains(MSSQL_DIALECT) || provider.contains(MSSQL_DIALECT$))
+            {
+                result = new JdbcDialectMSSQL(ds);
+            }
+            else if (provider.contains(ORACLE_DIALECT))
+            {
+                result = new JdbcDialectOracle(ds);
+            }
+            else
+            {
+                result = new JdbcDialectBase(ds);
+            }
 
-        return result;
+            return result;
+        }
+        finally
+        {
+            if (con != null)
+            {
+                con.close();
+            }
+        }
     }
 
 
