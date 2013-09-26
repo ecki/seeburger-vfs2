@@ -2,18 +2,15 @@ package com.seeburger.vfs2.provider.digestarc;
 
 import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
-import java.io.DataOutput;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.security.DigestInputStream;
 import java.security.DigestOutputStream;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.security.Signature;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -24,7 +21,6 @@ import java.util.zip.InflaterInputStream;
 
 import org.apache.commons.vfs2.FileContent;
 import org.apache.commons.vfs2.FileObject;
-import org.apache.commons.vfs2.FileSystemException;
 
 public class DarcTree
 {
@@ -356,7 +352,7 @@ public class DarcTree
                     case DIRECTORY_MARKER:
                         byte ver = dis.readByte();
                         if (ver != 1)
-                            throw new IOException("Directory Entry with version " + String.valueOf((int)ver)+" is unknown");
+                            throw new IOException("Directory Entry with version " + (int)ver +" is unknown");
                         String name = dis.readUTF();
                         String hash = dis.readUTF();
                         Entry entry = new Directory(hash);
@@ -365,7 +361,7 @@ public class DarcTree
                     case FILE_MARKER:
                         ver = dis.readByte();
                         if (ver != 1)
-                            throw new IOException("File Entry with version " + String.valueOf((int)ver)+" is unknown");
+                            throw new IOException("File Entry with version " + (int)ver +" is unknown");
                         name = dis.readUTF();
                         size = dis.readLong();
                         hash = dis.readUTF();
@@ -373,7 +369,7 @@ public class DarcTree
                         newContent.put(name,  entry);
                         break;
                     default:
-                        throw new IOException("Unknown record identifier " + String.valueOf((int)type));
+                        throw new IOException("Unknown record identifier " + type);
                 }
             } // end while
             dis.close();
