@@ -162,9 +162,6 @@ public class DarcTree
 
     class File extends Entry
     {
-        long size;
-        String hash;
-
         File(long size, String string)
         {
             this.size = size;
@@ -204,10 +201,11 @@ public class DarcTree
         private static final byte FILE_MARKER = 'F';
 
         Map<String, Entry> content;
-        boolean modified = true;
+        boolean modified;
 
         Directory(String hash)
         {
+            this.content = null;
             this.hash = hash;
             this.modified = false;
         }
@@ -216,12 +214,13 @@ public class DarcTree
         {
             this.content = readFromStream(dis, expectedHash);
             this.hash = expectedHash;
+            this.modified = false;
         }
 
         Directory(Map<String, Entry> content)
         {
-            this.hash = null;
             this.content = content;
+            this.hash = null;
             this.modified = true;
         }
 
@@ -374,8 +373,15 @@ public class DarcTree
             } // end while
             dis.close();
             String digest = asHex(digester.getMessageDigest().digest());
-            if (!expectedHash.equals(digest))
-                throw new IOException("While readig file with expected hash=" + expectedHash + " we read corrupted data with hash=" + digest);
+            if (expectedHash == null)
+            {
+                System.out.println("seetree hash=" + digest);
+            }
+            else
+            {
+                if (!expectedHash.equals(digest))
+                    throw new IOException("While readig file with expected hash=" + expectedHash + " we read corrupted data with hash=" + digest);
+            }
             return newContent;
         }
 
@@ -408,6 +414,12 @@ public class DarcTree
             }
 
             return Long.parseLong(signature.substring(sigLen));
+        }
+
+        @Override
+        public String toString()
+        {
+            return "Directory@" + hashCode() + "[mod=" + modified + ",hash=" + hash + ",\ncont=" + content + "]";
         }
     }
 
@@ -443,7 +455,10 @@ public class DarcTree
 
     private String writeChange(Directory dir, BlobStorageProvider provider) throws IOException
     {
-        Set<java.util.Map.Entry<String, Entry>> childrens = dir.content.entrySet();
+        Map<String, Entry> content = dir.content;
+        if (content == null)
+            content = Collections.EMPTY_MAP;
+        Set<java.util.Map.Entry<String, Entry>> childrens = content.entrySet();
         for(java.util.Map.Entry<String, Entry> e : childrens)
         {
             Entry ent = e.getValue();
@@ -475,5 +490,11 @@ public class DarcTree
             return hash;
         }
         return null;
+    }
+
+    @Override
+    public String toString()
+    {
+        return super.toString() + "{" + root + "}";
     }
 }

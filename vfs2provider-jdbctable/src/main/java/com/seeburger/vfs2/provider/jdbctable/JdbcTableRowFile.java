@@ -48,7 +48,7 @@ public class JdbcTableRowFile extends AbstractFileObject
     public JdbcTableRowFile(AbstractFileName name, JdbcTableFileSystem fs)
     {
         super(name, fs);
-        dialect = fs.provider.dialect;
+        dialect = fs.getDialect();
     }
 
     @Override
@@ -598,9 +598,23 @@ public class JdbcTableRowFile extends AbstractFileObject
      */
     private String[] getKeys(FileObject file) throws FileSystemException
     {
-        return new String[] {
-                              file.getName().getParent().getPathDecoded(),
-                              file.getName().getBaseName() };
+        FileName parent = file.getName().getParent();
+        String parentName;
+        String baseName;
+
+        // Oracle does not like Null name/parent, so we insert // for root-dir
+        if (parent == null)
+        {
+            parentName="//";
+            baseName = "//";
+        }
+        else
+        {
+            parentName = parent.getPathDecoded();
+            baseName = file.getName().getBaseName();
+        }
+
+        return new String[] { parentName, baseName };
     }
 
 

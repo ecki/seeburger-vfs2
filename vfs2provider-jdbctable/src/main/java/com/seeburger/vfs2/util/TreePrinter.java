@@ -48,6 +48,10 @@ public class TreePrinter
             try { type += " att=" + content.getAttributes();  }catch (Exception ig) { }
         }
         String fileName = file.getName().getPathDecoded();
+        if (prefix.length() + fileName.length() < 60)
+        {
+            fileName = (fileName + "                                                            ").substring(0, 60 - prefix.length());
+        }
 
         if (file.getType().hasChildren())
         {

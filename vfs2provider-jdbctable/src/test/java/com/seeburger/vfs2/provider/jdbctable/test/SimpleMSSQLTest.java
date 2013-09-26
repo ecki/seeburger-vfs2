@@ -26,7 +26,7 @@ public class SimpleMSSQLTest extends SimpleTestsBase
     @BeforeClass
     public static void setupDatabase() throws SQLException
     {
-        System.out.println("Starting MSSQL database");
+        System.out.println("Connecting to MSSQL database");
         JtdsDataSource ds = new JtdsDataSource();
         ds.setUser("VFSTEST");
         ds.setPassword("secret");

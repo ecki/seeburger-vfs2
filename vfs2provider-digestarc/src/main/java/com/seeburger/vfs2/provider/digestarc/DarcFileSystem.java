@@ -6,15 +6,12 @@ import java.io.InputStream;
 import java.util.Collection;
 
 import org.apache.commons.vfs2.Capability;
-import org.apache.commons.vfs2.FileName;
 import org.apache.commons.vfs2.FileObject;
 import org.apache.commons.vfs2.FileSystemException;
 import org.apache.commons.vfs2.FileSystemOptions;
 import org.apache.commons.vfs2.provider.AbstractFileName;
 import org.apache.commons.vfs2.provider.AbstractFileSystem;
 import org.apache.commons.vfs2.provider.LayeredFileName;
-
-import com.seeburger.vfs2.provider.digestarc.DarcTree.Entry;
 
 
 /**
@@ -28,12 +25,15 @@ import com.seeburger.vfs2.provider.digestarc.DarcTree.Entry;
  */
 public class DarcFileSystem extends AbstractFileSystem
 {
+    /** The provider responsible for looking up hashed names. */
+    final private BlobStorageProvider provider;
+    /** The hash of the initial root Tree object. */
+    final String rootHash;
+    /** change session identifier, null means read only. */
+    final private String changeSession;
+
     /** In memory structure of this graph. */
     DarcTree tree;
-    /** The provider responsible for looking up hashed names. */
-    private BlobStorageProvider provider;
-    /** The hash of the initial root Tree object. */
-    String rootHash;
 
 
     /**
@@ -70,8 +70,10 @@ public class DarcFileSystem extends AbstractFileSystem
 		}
 
 // System.out.println("Setting up BlobStorage at " + rootFile + " and asuming root index at " + rootHash);
-
         provider = new BlobStorageProvider(rootFile);
+
+        DarcFileConfigBuilder config = DarcFileConfigBuilder.getInstance();
+        changeSession = config.getChangeSession(fileSystemOptions);
 	}
 
 
@@ -120,6 +122,10 @@ public class DarcFileSystem extends AbstractFileSystem
 	protected void addCapabilities(final Collection<Capability> caps)
 	{
 		caps.addAll(DarcFileProvider.capabilities);
+		if (changeSession == null)
+		{
+		    caps.removeAll(DarcFileProvider.writeCapabilities);
+		}
 	}
 
 	/**

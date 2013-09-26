@@ -50,4 +50,6 @@ public interface JdbcDialect
     PreparedStatement prepareUpdateable(Connection con, String sql) throws SQLException;
 
     boolean supportsAppendBlob();
+
+    JdbcDialect getDialectForTable(String tableName);
 }

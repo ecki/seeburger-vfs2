@@ -94,6 +94,18 @@ public class DarcFileInputStreamTest
         stream.close();
     }
 
+    @Test
+    public void testReadAfterEnd() throws IOException, NoSuchAlgorithmException
+    {
+        InputStream stream = emptyBlobStream();
+        assertEquals(-1, stream.read());
+        assertEquals(0, stream.available());
+        assertEquals(-1, stream.read());
+        assertEquals(0, stream.available());
+        stream.close();
+    }
+
+
 
     private static byte[] getHex(String hexString)
     {

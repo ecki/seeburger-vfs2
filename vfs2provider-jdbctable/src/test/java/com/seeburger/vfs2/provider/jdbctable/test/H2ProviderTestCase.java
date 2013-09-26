@@ -12,6 +12,7 @@ import junit.framework.Test;
 import org.apache.commons.vfs2.AllFileSelector;
 import org.apache.commons.vfs2.FileObject;
 import org.apache.commons.vfs2.FileSystemManager;
+import org.apache.commons.vfs2.FileSystemOptions;
 import org.apache.commons.vfs2.impl.DefaultFileSystemManager;
 import org.apache.commons.vfs2.test.AbstractProviderTestConfig;
 import org.apache.commons.vfs2.test.ProviderTestConfig;
@@ -19,12 +20,15 @@ import org.apache.commons.vfs2.test.ProviderTestSuite;
 import org.h2.jdbcx.JdbcDataSource;
 
 import com.googlecode.flyway.core.Flyway;
+import com.seeburger.vfs2.provider.jdbctable.JdbcTableFileSystemConfigBuilder;
 import com.seeburger.vfs2.provider.jdbctable.JdbcTableProvider;
 
 
 public class H2ProviderTestCase extends AbstractProviderTestConfig implements ProviderTestConfig
 {
+    private static final String TABLE_NAME = "tBlobs";
     private static DataSource dataSource;
+    private FileSystemOptions opts;
     private boolean inited;
 
 
@@ -49,13 +53,19 @@ public class H2ProviderTestCase extends AbstractProviderTestConfig implements Pr
     {
         if (!inited)
         {
+            opts = new FileSystemOptions();
+            final JdbcTableFileSystemConfigBuilder builder = JdbcTableFileSystemConfigBuilder.getInstance();
+            builder.setWriteMode(opts, true); // this is the default
+            builder.setTablename(opts, TABLE_NAME);
+
             // Import the test tree
-            FileObject base = manager.resolveFile("seejt:/key/test-data");
+            FileObject base = manager.resolveFile("seejt:/key/test-data", opts);
 
             // fs.importTree(getTestDirectory());
             FileObject from = manager.resolveFile(new File("."), getTestDirectory());
             base.copyFrom(from, new AllFileSelector());
-            FileObject fo = manager.resolveFile("seejt:/key/test-data/code");
+
+            FileObject fo = manager.resolveFile("seejt:/key/test-data/code", opts);
             from = manager.resolveFile(new File("."), "target/test-classes/code");
             fo.copyFrom(from, new AllFileSelector());
 
@@ -64,7 +74,7 @@ public class H2ProviderTestCase extends AbstractProviderTestConfig implements Pr
             // TreePrinter.printTree(base, "| ", System.out);
         }
 
-        return manager.resolveFile("seejt:/key/test-data");
+        return manager.resolveFile("seejt:/key/test-data", opts);
     }
 
 
@@ -87,7 +97,7 @@ public class H2ProviderTestCase extends AbstractProviderTestConfig implements Pr
         flyway.migrate();
 
         Connection c = ds.getConnection();
-        PreparedStatement ps = c.prepareStatement("DELETE FROM tBlobs");
+        PreparedStatement ps = c.prepareStatement("DELETE FROM " + TABLE_NAME);
         ps.executeUpdate();
         c.commit();
         c.close();

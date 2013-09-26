@@ -1,7 +1,6 @@
 package com.seeburger.vfs2.provider.jdbctable;
 
 
-import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.Collection;
@@ -23,30 +22,39 @@ public class JdbcTableProvider
 {
     static final Collection<Capability> capabilities = Collections.unmodifiableCollection(Arrays.asList(new Capability[]
     {
-        Capability.CREATE,
         Capability.GET_TYPE,
         Capability.READ_CONTENT,
-        Capability.WRITE_CONTENT,
         Capability.LAST_MODIFIED,
         Capability.FS_ATTRIBUTES,
         Capability.URI,
         Capability.GET_LAST_MODIFIED,
         Capability.ATTRIBUTES,
         //Capability.RANDOM_ACCESS_READ,
-        //Capability.RANDOM_ACCESS_WRITE,
         Capability.LIST_CHILDREN,
-        Capability.APPEND_CONTENT, // conditional
-        Capability.DELETE,         // conditional
-        Capability.RENAME          // conditional
+
+        Capability.CREATE,
+        Capability.WRITE_CONTENT,
+        //Capability.RANDOM_ACCESS_WRITE,
+        Capability.APPEND_CONTENT,
+        Capability.DELETE,
+        Capability.RENAME
     }));
 
-    private static final int MS = 1000000;
+    static final Collection<Capability> writeCapabilities = Collections.unmodifiableCollection(Arrays.asList(new Capability[]
+    {
+        Capability.CREATE,
+        Capability.WRITE_CONTENT,
+        Capability.RANDOM_ACCESS_WRITE,
+        Capability.APPEND_CONTENT,
+        Capability.DELETE,
+        Capability.RENAME
+    }));
 
-	DataSource dataSource;
-    boolean supportsAppendBlob;
+    static final int MS = 1000000;
 
     final JdbcDialect dialect;
 
+    // TODO: this needs a JdbcTableProvider(FileSystemManager manager) constructor for file config
 
 	/**
      * Constructs a new provider for given DataSource.
@@ -97,55 +105,10 @@ public class JdbcTableProvider
         return capabilities;
     }
 
-    public boolean supportsAppendBlob()
+    /** Return a new Dialect instance and configure it for the given table name. */
+    public JdbcDialect getDialectForTable(String tablename)
     {
-        return supportsAppendBlob;
-    }
-
-    // TODO: move this to the dialect
-    public boolean supportsAppendBlob(DataSource ds)
-    {
-        Connection c = null;
-        try
-        {
-            c = ds.getConnection();
-            String product = c.getMetaData().getDatabaseProductName();
-            if (product.contains("H2"))
-                return false;
-            else
-                return true;
-        }
-        catch (SQLException e)
-        {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
-            return true;
-        }
-        finally
-        {
-            safeClose(c);
-        }
-    }
-
-
-    // TODO: move this to dialect
-    Connection getConnection() throws SQLException
-    {
-        long start = System.nanoTime();
-        Connection c = dataSource.getConnection();
-        long duration = System.nanoTime() - start;
-        if (duration > 100*MS)
-            System.out.printf("slow getConnection(): %.6fs%n",  (duration/1000000000.0));
-        return c;
-    }
-
-    private void safeClose(Connection c)
-    {
-        try
-        {
-            c.close();
-        }
-        catch (Exception ignored) { }
+        return dialect.getDialectForTable(tablename);
     }
 
 }

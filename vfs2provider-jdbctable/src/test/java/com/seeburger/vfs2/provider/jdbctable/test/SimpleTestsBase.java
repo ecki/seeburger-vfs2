@@ -32,8 +32,9 @@ import com.seeburger.vfs2.provider.jdbctable.JdbcTableProvider;
 public abstract class SimpleTestsBase
 {
     static DataSource dataSource;
-    DefaultFileSystemManager manager;
     static JdbcDialect dialect;
+
+    DefaultFileSystemManager manager;
 
     @Before
     public void setUp() throws FileSystemException
@@ -122,7 +123,7 @@ public abstract class SimpleTestsBase
 
         verifyDatabase();
 
-        Connection c = dataSource.getConnection();
+        Connection c = dialect.getConnection();
         PreparedStatement ps = dialect.prepareQuery(c, "SELECT cName,cParent FROM {table} WHERE cParent=? AND cName=?");
         ps.setString(1, "/key");
         ps.setString(2, "dir_"+now);
@@ -131,7 +132,7 @@ public abstract class SimpleTestsBase
         assertTrue(rs.next());
         final String name = rs.getString(1);
         final String folder = rs.getString(2);
-        rs.close(); ps.close(); c.close();
+        rs.close(); ps.close(); c.close(); dialect.returnConnection(c);
 
         assertEquals("dir_"+now, name);
         assertEquals("/key", folder);
@@ -168,7 +169,7 @@ public abstract class SimpleTestsBase
         assertEquals(FileType.FOLDER, testFolder.getType());
 
         // ensure we have 2 files in DB ...
-        Connection c = dataSource.getConnection();
+        Connection c = dialect.getConnection();
         PreparedStatement ps = dialect.prepareQuery(c, "SELECT cName FROM {table} WHERE cParent=? AND cSize=0");
         ps.setString(1, "/key/dir_"+now+"/sub");
         ResultSet rs = ps.executeQuery();
@@ -198,7 +199,7 @@ public abstract class SimpleTestsBase
         assertEquals("sub", name);
         assertFalse(rs.next());
         rs.close(); ps.close();
-        c.close();
+        c.close(); dialect.returnConnection(c);
 
         verifyDatabase();
     }
@@ -273,7 +274,7 @@ public abstract class SimpleTestsBase
     {
         final long now = System.currentTimeMillis();
         // now VFS thinks the file exists, we delete it in SQL
-        Connection c = dataSource.getConnection();
+        Connection c = dialect.getConnection();
         PreparedStatement ps = dialect.prepareQuery(c, "INSERT INTO {table} (cParent,cName,cSize,cLastModified,cMarkGarbage) VALUES(?,?,-2,?,?)");
         ps.setString(1, "/key");
         ps.setString(2, "newdir_"+now);
@@ -351,7 +352,7 @@ public abstract class SimpleTestsBase
         assertEquals(FileType.FILE, testFile.getType());
 
         // now VFS thinks the file exists, we delete it in SQL
-        Connection c = dataSource.getConnection();
+        Connection c = dialect.getConnection();
         PreparedStatement ps = dialect.prepareQuery(c, "DELETE FROM {table} WHERE cParent='/key' AND cName=?");
         ps.setString(1, "missingfile_" + now);
         int count = ps.executeUpdate();
@@ -455,8 +456,8 @@ public abstract class SimpleTestsBase
         assertEquals(true,  testFile.exists());
         assertEquals(FileType.FILE, testFile.getType());
 
-        assertEquals(false, targetFile.exists());
         assertEquals(FileType.IMAGINARY, targetFile.getType());
+        assertEquals(false, targetFile.exists());
         targetFile.createFile();
         assertEquals(true,  targetFile.exists());
         assertEquals(FileType.FILE, targetFile.getType());
@@ -550,7 +551,7 @@ public abstract class SimpleTestsBase
         assertEquals(true, testFile.exists());
 
         // now VFS thinks the file exists, we delete it in SQL
-        Connection c = dataSource.getConnection();
+        Connection c = dialect.getConnection();
         PreparedStatement ps = dialect.prepareQuery(c, "DELETE FROM {table} WHERE cParent='/key' and cName=?");
         ps.setString(1, "readfile_" + now);
         int count = ps.executeUpdate();
@@ -726,6 +727,7 @@ public abstract class SimpleTestsBase
         ps.close();
         c.commit();
         c.close();
+        dialect.returnConnection(c);
     }
 
     abstract void verifyDatabase();

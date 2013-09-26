@@ -38,7 +38,7 @@ public class SimpleDerbyTest extends SimpleTestsBase
         ds.setDatabaseName("target/SimpleDerbyTestDB");
 
         SimpleTestsBase.dataSource = ds;
-        SimpleTestsBase.dialect = JdbcDialectBase.getDialect(dataSource);
+        SimpleTestsBase.dialect = JdbcDialectBase.getDialect(ds);
 
         assertEquals(JdbcDialectBase.class.getName(), dialect.getClass().getName());
     }
@@ -54,8 +54,7 @@ public class SimpleDerbyTest extends SimpleTestsBase
     @Override
     void verifyDatabase()
     {
-        // TODO Auto-generated method stub
-
+        // TODO implement connection counting
     }
 }
 

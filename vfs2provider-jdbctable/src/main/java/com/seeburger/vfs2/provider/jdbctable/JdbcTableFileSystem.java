@@ -14,16 +14,19 @@ import org.apache.commons.vfs2.provider.AbstractFileSystem;
 
 public class JdbcTableFileSystem extends AbstractFileSystem
 {
-    String tableName;
-    JdbcTableProvider provider;
+    final JdbcDialect dialect;
+    final JdbcTableProvider provider;
+    final boolean writeMode;
 
     protected JdbcTableFileSystem(final FileName rootName,
                                   final JdbcTableProvider jdbcTableProvider,
                                   final FileSystemOptions fileSystemOptions)
     {
         super(rootName, /*parentlayer*/null, fileSystemOptions);
-        this.tableName = JdbcTableFileSystemConfigBuilder.getInstance().getTablename(fileSystemOptions);
         this.provider = jdbcTableProvider;
+        JdbcTableFileSystemConfigBuilder config = JdbcTableFileSystemConfigBuilder.getInstance();
+        this.writeMode = config.getWriteMode(fileSystemOptions);
+        this.dialect = jdbcTableProvider.getDialectForTable(config.getTablename(fileSystemOptions));
     }
 
     /**
@@ -33,6 +36,11 @@ public class JdbcTableFileSystem extends AbstractFileSystem
     protected void addCapabilities(final Collection<Capability> caps)
     {
         caps.addAll(JdbcTableProvider.capabilities);
+        // do we have the capability to change things?
+        if (writeMode)
+        {
+            caps.addAll(JdbcTableProvider.writeCapabilities);
+        }
     }
 
     @Override
@@ -49,24 +57,11 @@ public class JdbcTableFileSystem extends AbstractFileSystem
     protected FileObject createFile(final AbstractFileName name)
                     throws Exception
     {
-        String path = name.getPath();
-        //System.out.println("new file " + name + " (" + name.getPath() + ")");
-
-        if ("/".equals(path))
-            return new JdbcTableSpecialFile(name, this);
-
-        if ("/key".equals(path))
-            return new JdbcTableSpecialFile(name, this);
-
-        if (path.startsWith("/key/"))
-            return new JdbcTableRowFile(name, this);
-
-        throw new FileNotFoundException(name);
+        return new JdbcTableRowFile(name, this);
     }
 
-    String getTableName()
+    public JdbcDialect getDialect()
     {
-        return tableName; // TODO
+        return dialect;
     }
-
 }

@@ -38,15 +38,18 @@ public class JdbcDialectBase
     static final String TABLE_NAME = "tBlobs";
     static final int MS = 1000000;
 
-    final protected String tableName;
-    final protected DataSource dataSource;
-
     final protected ConcurrentMap<String, String> sqlCache = new ConcurrentHashMap<String, String>(23);
 
+    final protected DataSource dataSource;
+    final protected String tableName;
+
+
     /**
-     * Determines what the type of the provided datasource is and returns the appropriate JdbcDialect. Currently supporting only MSSQL and Oracle.
-     * @param ds
-     * @return
+     * Determines what the type of the provided datasource is and
+     * returns the appropriate JdbcDialect. Currently supporting only MSSQL and Oracle.
+     *
+     * @param datasource returning one of the know database driver connections
+     * @return new instance of dialect
      * @throws SQLException
      */
     public static JdbcDialect getDialect(DataSource ds)
@@ -84,17 +87,15 @@ public class JdbcDialectBase
     }
 
 
-    /** Create a database description for the given datasource with a specifc table name. */
-    public JdbcDialectBase(String tableName, DataSource dataSource)
-    {
-        this.tableName = tableName;
-        this.dataSource = dataSource;
-    }
-
-
     public JdbcDialectBase(DataSource dataSource)
     {
         this(TABLE_NAME, dataSource);
+    }
+
+    public JdbcDialectBase(String tableNameArg, DataSource dataSourceArg)
+    {
+        this.tableName = tableNameArg;
+        this.dataSource = dataSourceArg;
     }
 
 
@@ -177,5 +178,11 @@ public class JdbcDialectBase
     public boolean supportsAppendBlob()
     {
         return false;
+    }
+
+    @Override
+    public JdbcDialect getDialectForTable(String tableName)
+    {
+        return new JdbcDialectBase(tableName, dataSource);
     }
 }
