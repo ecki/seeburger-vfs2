@@ -3,6 +3,8 @@ package com.seeburger.vfs2.provider.jdbctable.test;
 
 import static org.junit.Assert.*;
 
+import java.sql.SQLException;
+
 import javax.sql.DataSource;
 
 import org.apache.commons.vfs2.CacheStrategy;
@@ -12,11 +14,15 @@ import org.apache.commons.vfs2.FileSystemException;
 import org.apache.commons.vfs2.FileSystemOptions;
 import org.apache.commons.vfs2.impl.DefaultFileSystemManager;
 import org.apache.commons.vfs2.provider.local.DefaultLocalFileProvider;
+import org.h2.jdbcx.JdbcDataSource;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
+import com.googlecode.flyway.core.Flyway;
 import com.seeburger.vfs2.provider.jdbctable.JdbcDialect;
+import com.seeburger.vfs2.provider.jdbctable.JdbcDialectBase;
 import com.seeburger.vfs2.provider.jdbctable.JdbcTableFileSystemConfigBuilder;
 import com.seeburger.vfs2.provider.jdbctable.JdbcTableProvider;
 
@@ -158,6 +164,29 @@ public class ProviderConfigTest
         FileSystem fs2 = key2.getFileSystem();
 
         assertSame(fs1, fs2);
+    }
+
+    @BeforeClass
+    public static void setupDatabase() throws SQLException
+    {
+        System.out.println("Starting H2 database");
+        JdbcDataSource ds = new JdbcDataSource();
+        ds.setUser("VFSTEST");
+        ds.setPassword("secret");
+        // make sure mem database is not anonymous and will not get droped on conenction close
+        ds.setURL("jdbc:h2:mem:test;DB_CLOSE_DELAY=-1;JMX=TRUE");
+
+        Flyway flyway = new Flyway();
+        flyway.setDataSource(ds);
+        flyway.setLocations("db/migration/h2_derby");
+        flyway.setValidateOnMigrate(true);
+        flyway.setCleanOnValidationError(true);
+        flyway.migrate();
+
+        ProviderConfigTest.dataSource = ds;
+        ProviderConfigTest.dialect = JdbcDialectBase.getDialect(dataSource);
+
+        assertEquals(JdbcDialectBase.class.getName(), dialect.getClass().getName());
     }
 }
 
