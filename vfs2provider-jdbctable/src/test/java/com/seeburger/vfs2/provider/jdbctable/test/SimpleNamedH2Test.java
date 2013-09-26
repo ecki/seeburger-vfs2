@@ -74,7 +74,7 @@ public class SimpleNamedH2Test
         verifyDatabase();
 
         Connection c = dialect.getConnection();
-        PreparedStatement ps = dialect.prepareQuery(c, "SELECT cName,cParent FROM {table} WHERE cParent=? AND cName=?");
+        PreparedStatement ps = dialect.prepareQuery(c, "SELECT cName,cParent,'{table}' FROM {table} WHERE cParent=? AND cName=?");
         ps.setString(1, "/key");
         ps.setString(2, "dir_"+now);
 
@@ -82,6 +82,11 @@ public class SimpleNamedH2Test
         assertTrue(rs.next());
         final String name = rs.getString(1);
         final String folder = rs.getString(2);
+
+        // verify the replacement by dialect to be the default table
+        final String replacedTable = rs.getString(3);
+        assertEquals("tBlobs", replacedTable);
+
         rs.close(); ps.close(); c.close(); dialect.returnConnection(c);
 
         assertEquals("dir_"+now, name);
@@ -111,7 +116,7 @@ public class SimpleNamedH2Test
 
         JdbcDialect dialect2 = dialect.getDialectForTable("tBlobs2");
         Connection c = dialect2.getConnection();
-        PreparedStatement ps = dialect2.prepareQuery(c, "SELECT cName,cParent FROM {table} WHERE cParent=? AND cName=?");
+        PreparedStatement ps = dialect2.prepareQuery(c, "SELECT cName,cParent,'{table}' FROM {table} WHERE cParent=? AND cName=?");
         ps.setString(1, "/key");
         ps.setString(2, "dir_"+now);
 
@@ -119,6 +124,11 @@ public class SimpleNamedH2Test
         assertTrue(rs.next());
         final String name = rs.getString(1);
         final String folder = rs.getString(2);
+
+        // verify the replacement by dialect to be the table 2
+        final String replacedTable = rs.getString(3);
+        assertEquals("tBlobs2", replacedTable);
+
         rs.close(); ps.close(); c.close(); dialect2.returnConnection(c);
 
         assertEquals("dir_"+now, name);
