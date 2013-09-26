@@ -61,7 +61,7 @@ public class JdbcTableProvider
         }
         catch (SQLException e)
         {
-            throw new FileSystemException("", e);
+            throw new FileSystemException("Exception while obtaining database's metadata!", e);
         }
 
         setFileNameParser(JdbcTableNameParser.getInstance());
