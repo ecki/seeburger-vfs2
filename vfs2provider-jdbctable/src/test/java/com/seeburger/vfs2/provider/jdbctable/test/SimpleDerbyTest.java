@@ -1,6 +1,7 @@
 package com.seeburger.vfs2.provider.jdbctable.test;
 
-import static org.junit.Assert.fail;
+
+import static org.junit.Assert.assertEquals;
 
 import java.sql.SQLException;
 
@@ -15,7 +16,7 @@ import com.seeburger.vfs2.provider.jdbctable.JdbcDialectBase;
 public class SimpleDerbyTest extends SimpleTestsBase
 {
     @BeforeClass
-    public static void setupDatabase()
+    public static void setupDatabase() throws SQLException
     {
         System.out.println("Creating Derby Database");
         EmbeddedDataSource ds = new EmbeddedDataSource();
@@ -37,15 +38,9 @@ public class SimpleDerbyTest extends SimpleTestsBase
         ds.setDatabaseName("target/SimpleDerbyTestDB");
 
         SimpleTestsBase.dataSource = ds;
+        SimpleTestsBase.dialect = JdbcDialectBase.getDialect(dataSource);
 
-        try
-        {
-            SimpleTestsBase.dialect = JdbcDialectBase.getDialect(dataSource);
-        }
-        catch (SQLException e)
-        {
-            fail("Exception while determining database dialect:" + e.getMessage());
-        }
+        assertEquals(JdbcDialectBase.class.getName(), dialect.getClass().getName());
     }
 
     @AfterClass

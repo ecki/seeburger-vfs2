@@ -1,7 +1,7 @@
 package com.seeburger.vfs2.provider.jdbctable.test;
 
 
-import static org.junit.Assert.fail;
+import static org.junit.Assert.assertEquals;
 
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
@@ -54,15 +54,9 @@ public class SimpleMSSQLTest extends SimpleTestsBase
         rs.close(); c.close();
 
         SimpleTestsBase.dataSource = ds;
+        SimpleTestsBase.dialect = JdbcDialectBase.getDialect(dataSource);
 
-        try
-        {
-            SimpleTestsBase.dialect = JdbcDialectBase.getDialect(dataSource);
-        }
-        catch (SQLException e)
-        {
-            fail("Exception while determining database dialect:" + e.getMessage());
-        }
+        assertEquals(JdbcDialectMSSQL.class.getName(), dialect.getClass().getName());
     }
 
     @AfterClass

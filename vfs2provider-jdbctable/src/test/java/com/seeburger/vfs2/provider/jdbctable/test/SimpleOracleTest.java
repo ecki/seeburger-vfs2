@@ -1,6 +1,6 @@
 package com.seeburger.vfs2.provider.jdbctable.test;
 
-import static org.junit.Assert.fail;
+import static org.junit.Assert.assertEquals;
 
 import java.lang.reflect.InvocationTargetException;
 import java.sql.Connection;
@@ -52,14 +52,9 @@ public class SimpleOracleTest extends SimpleTestsBase
         rs.close(); c.close();
 
         SimpleTestsBase.dataSource = ds;
-        try
-        {
-            SimpleTestsBase.dialect = JdbcDialectBase.getDialect(dataSource);
-        }
-        catch (SQLException e)
-        {
-            fail("Exception while determining database dialect:" + e.getMessage());
-        }
+        SimpleTestsBase.dialect = JdbcDialectBase.getDialect(dataSource);
+
+        assertEquals(JdbcDialectOracle.class.getName(), dialect.getClass().getName());
     }
 
     @AfterClass
