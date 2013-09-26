@@ -1,0 +1,28 @@
+language: java
+
+install: mvn -B -X -q clean
+
+jdk:
+  - oraclejdk7
+
+env:
+  matrix:
+    - VER=7
+
+matrix:
+  include:
+    - jdk: openjdk6
+      env: VER=6
+
+
+# clean / compile - test - package - verify - install - deploy / site
+script: mvn -B -Dmaven.compiler.source=${VER} -Dmaven.compiler.target=${VER} verify
+
+
+#branches:
+# only:
+# - master
+
+notifications:
+  email:
+    - b.eckenfels@seeburger.de
