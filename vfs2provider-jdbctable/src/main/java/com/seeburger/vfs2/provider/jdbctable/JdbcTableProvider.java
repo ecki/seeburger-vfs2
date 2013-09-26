@@ -50,12 +50,21 @@ public class JdbcTableProvider
 
 	/**
      * Constructs a new provider for given DataSource.
+	 * @throws FileSystemException
      */
-    public JdbcTableProvider(DataSource dataSource)
+    public JdbcTableProvider(DataSource dataSource) throws FileSystemException
     {
-        // TODO: automatic detection via JdbcDialectBase#getDialect(DataSource)
-        this(new JdbcDialectBase(dataSource));
+        super();
+        try
+        {
+            this.dialect = JdbcDialectBase.getDialect(dataSource);
+        }
+        catch (SQLException e)
+        {
+            throw new FileSystemException("", e);
+        }
 
+        setFileNameParser(JdbcTableNameParser.getInstance());
     }
 
     /**
