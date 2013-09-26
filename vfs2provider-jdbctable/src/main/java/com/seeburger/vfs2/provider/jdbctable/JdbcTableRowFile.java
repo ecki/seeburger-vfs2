@@ -600,17 +600,21 @@ public class JdbcTableRowFile extends AbstractFileObject
     {
         FileName parent = file.getName().getParent();
         String parentName;
+        String baseName;
+
+        // Oracle does not like Null name/parent, so we insert // for root-dir
         if (parent == null)
         {
             parentName="//";
+            baseName = "//";
         }
         else
         {
             parentName = parent.getPathDecoded();
+            baseName = file.getName().getBaseName();
         }
-        return new String[] {
-                              parentName,
-                              file.getName().getBaseName() };
+
+        return new String[] { parentName, baseName };
     }
 
 
