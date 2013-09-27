@@ -29,14 +29,15 @@ public interface JdbcDialect
      */
     Connection getConnection() throws SQLException;
 
-    /** Connection is no longer needed (aka close() it). */
+    /** Connection is no longer needed, will be used to close() it. */
     void returnConnection(Connection connection);
 
-    /** replace placehodlers like {{table}} and {{FOR UPDATE}} placeholders. Expansions can be cached. */
+    /** replace place holders like {{table}} and {{FOR UPDATE}}. Expansions might be cached. */
     String expandSQL(String sql);
 
     /**
      * First {@link #expandSQL(String)} then create a prepared statement for query.
+     *
      * @throws SQLException
      */
     PreparedStatement prepareQuery(Connection con, String sql) throws SQLException;
@@ -49,7 +50,9 @@ public interface JdbcDialect
      */
     PreparedStatement prepareUpdateable(Connection con, String sql) throws SQLException;
 
+    /** Does this dialect allow positional updates to Blobs or requires rewrite. */
     boolean supportsAppendBlob();
 
+    /** Clone the dialect object with given table name (from fsoptions). */
     JdbcDialect getDialectForTable(String tableName);
 }
