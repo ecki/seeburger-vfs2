@@ -114,7 +114,7 @@ public class SimpleNamedH2Test
 
         verifyDatabase();
 
-        JdbcDialect dialect2 = dialect.getDialectForTable("tBlobs2");
+        JdbcDialect dialect2 = dialect.cloneDialect("tBlobs2");
         Connection c = dialect2.getConnection();
         PreparedStatement ps = dialect2.prepareQuery(c, "SELECT cName,cParent,'{table}' FROM {table} WHERE cParent=? AND cName=?");
         ps.setString(1, "/key");

@@ -1,3 +1,4 @@
+/* License: TODO */
 package com.seeburger.vfs2.provider.jdbctable;
 
 
@@ -5,18 +6,24 @@ import java.util.Collection;
 
 import org.apache.commons.vfs2.Capability;
 import org.apache.commons.vfs2.FileName;
-import org.apache.commons.vfs2.FileNotFoundException;
 import org.apache.commons.vfs2.FileObject;
 import org.apache.commons.vfs2.FileSystemOptions;
 import org.apache.commons.vfs2.provider.AbstractFileName;
 import org.apache.commons.vfs2.provider.AbstractFileSystem;
 
 
+/**
+ * An Apche VFS2 file system backed by a JDBC Table.
+ */
 public class JdbcTableFileSystem extends AbstractFileSystem
 {
+    /** dialect instance used to communicate with database driver. */
     final JdbcDialect dialect;
+    /** file system provider creating this instance. */
     final JdbcTableProvider provider;
+    /** Is write access allowed? */
     final boolean writeMode;
+
 
     protected JdbcTableFileSystem(final FileName rootName,
                                   final JdbcTableProvider jdbcTableProvider,
@@ -24,6 +31,8 @@ public class JdbcTableFileSystem extends AbstractFileSystem
     {
         super(rootName, /*parentlayer*/null, fileSystemOptions);
         this.provider = jdbcTableProvider;
+
+        // extract configuration options
         JdbcTableFileSystemConfigBuilder config = JdbcTableFileSystemConfigBuilder.getInstance();
         this.writeMode = config.getWriteMode(fileSystemOptions);
         this.dialect = jdbcTableProvider.getDialectForTable(config.getTablename(fileSystemOptions));
@@ -37,21 +46,18 @@ public class JdbcTableFileSystem extends AbstractFileSystem
     {
         caps.addAll(JdbcTableProvider.capabilities);
         // do we have the capability to change things?
-        if (writeMode)
+        if (!writeMode)
         {
-            caps.addAll(JdbcTableProvider.writeCapabilities);
+            caps.removeAll(JdbcTableProvider.writeCapabilities);
         }
     }
 
-    @Override
-    public void doCloseCommunicationLink()
-    {
-//System.out.println("doCloseCommunicationLink() " + toString());
-    }
-
     /**
-     * Creates a file object.  This method is called only if the requested
-     * file is not cached.
+     * Creates a file object.
+     * <P>
+     * This method is called only if the requested file is not cached.
+     *
+     * @see JdbcTableRowFile
      */
     @Override
     protected FileObject createFile(final AbstractFileName name)
@@ -60,7 +66,12 @@ public class JdbcTableFileSystem extends AbstractFileSystem
         return new JdbcTableRowFile(name, this);
     }
 
-    public JdbcDialect getDialect()
+    /**
+     * Access to the databse for {@link JdbcTableRowFile}.
+     *
+     * @see JdbcTableRowFile
+     */
+    protected JdbcDialect getDialect()
     {
         return dialect;
     }

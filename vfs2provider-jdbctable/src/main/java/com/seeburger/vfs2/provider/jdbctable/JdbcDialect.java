@@ -3,7 +3,7 @@
  *
  * created at 2013-09-13 by Bernd Eckenfels <b.eckenfels@seeburger.de>
  *
- * Copyright (c) SEEBURGER AG, Germany. All Rights Reserved.
+ * Copyright (c) SEEBURGER AG, Germany. All Rights Reserved. TODO
  */
 package com.seeburger.vfs2.provider.jdbctable;
 
@@ -13,23 +13,41 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 
+import javax.sql.DataSource;
+
 
 /**
- * Database and Driver specific functions.
+ * Database driver abstraction layer.
  * <P>
- * This can be used to customize the way connections are retrieved and used.
+ * This can be used to customize the way connections are retrieved and used. The default
+ * implementations {@link JdbcDialectBase} and {@link JdbcDialectMSSQL} and {@link JdbcDialectOracle}
+ * are all based on {@link DataSource} objects.
  */
 public interface JdbcDialect
 {
-    /** Returns the (appropriately quoted) table identifier for use in Statements. */
+    /**
+     * Returns the (appropriately quoted) table identifier for use in Statements.
+     * <P>
+     * This is also used to construct namespaces (schema, owener, database).
+     */
     String getQuotedTable();
 
-    /** Get connection (from DataSource).
+    /**
+     * Get connection (from DataSource).
+     * <P>
+     * It is expected autocommit is turned off for this connection and it
+     * is actually lend from a pool.
+     *
      * @throws SQLException
      */
     Connection getConnection() throws SQLException;
 
-    /** Connection is no longer needed, will be used to close() it. */
+    /**
+     * Connection is no longer needed.
+     * <P>
+     * This will be used adter each transaction to free/return the connection.
+     * In the base implementation this simply calls {@link Connection#close()}.
+     */
     void returnConnection(Connection connection);
 
     /** replace place holders like {{table}} and {{FOR UPDATE}}. Expansions might be cached. */
@@ -53,6 +71,13 @@ public interface JdbcDialect
     /** Does this dialect allow positional updates to Blobs or requires rewrite. */
     boolean supportsAppendBlob();
 
-    /** Clone the dialect object with given table name (from fsoptions). */
-    JdbcDialect getDialectForTable(String tableName);
+    /**
+     * Clone the dialect object with given table name.
+     * <P>
+     * This is typically used when the file system is created. The table name is read from
+     * {@link JdbcTableFileSystemConfigBuilder}.
+     *
+     * @see JdbcTableProvider#createFileSystem(String, org.apache.commons.vfs2.FileObject, org.apache.commons.vfs2.FileSystemOptions)
+     */
+    JdbcDialect cloneDialect(String tableName);
 }

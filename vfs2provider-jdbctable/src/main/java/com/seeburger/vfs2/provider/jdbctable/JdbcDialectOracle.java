@@ -3,7 +3,7 @@
  *
  * created at 2013-09-13 by Bernd Eckenfels <b.eckenfels@seeburger.de>
  *
- * Copyright (c) SEEBURGER AG, Germany. All Rights Reserved.
+ * Copyright (c) SEEBURGER AG, Germany. All Rights Reserved. TODO
  */
 package com.seeburger.vfs2.provider.jdbctable;
 
@@ -23,8 +23,13 @@ public class JdbcDialectOracle extends JdbcDialectBase implements JdbcDialect
 
     /**
      * Create dialect for Oracle server with default table name {@value #TABLE_NAME}.
+     * <P>
+     * {@link #getQuotedTable()} will return <code>"\"" + TABLE_NAME + "\""</code>.
      *
-     * @param ds
+     * @param ds the data source to get JDBC connections
+     *
+     * @see #getQuotedTable()
+     * @see JdbcDialectBase#TABLE_NAME
      */
     public JdbcDialectOracle(DataSource ds)
     {
@@ -33,14 +38,19 @@ public class JdbcDialectOracle extends JdbcDialectBase implements JdbcDialect
 
     /**
      * Create dialect for Oracle server with table name specified.
+     * <P>
+     * {@link #getQuotedTable()} will return <code>"\"" + tableName + "\""</code>.
      *
-     * @param tableName
-     * @param ds
+     * @param ds the data source to get JDBC connections
+     * @param tableName the name of the table
+     *
+     * @see #getQuotedTable()
+     * @see JdbcDialectBase#TABLE_NAME
      */
-    public JdbcDialectOracle(String name, DataSource ds)
+    public JdbcDialectOracle(String tableName, DataSource ds)
     {
-        super(name, ds);
-        this.quotedTable = "\"" + name + "\"";
+        super(tableName, ds);
+        this.quotedTable = "\"" + tableName + "\"";
     }
 
     /**
@@ -49,6 +59,7 @@ public class JdbcDialectOracle extends JdbcDialectBase implements JdbcDialect
      * On Oracle identifiers get quoted like " " (which makes them case sensitive).
      *
      *  @see #JdbcDialectOracle(String, DataSource)
+     *  @see #JdbcDialectOracle(DataSource)
      */
     public String getQuotedTable()
     {
@@ -67,7 +78,7 @@ public class JdbcDialectOracle extends JdbcDialectBase implements JdbcDialect
     }
 
     @Override
-    public JdbcDialect getDialectForTable(String tableName)
+    public JdbcDialect cloneDialect(String tableName)
     {
         return new JdbcDialectOracle(tableName, dataSource);
     }

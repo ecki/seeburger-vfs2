@@ -12,8 +12,14 @@ import org.apache.commons.vfs2.FileObject;
 import org.apache.commons.vfs2.impl.DecoratedFileObject;
 
 
+/** Utility functions to work with {@link FileObject} and {@link JdbcTableRowFile}. */
 public class JdbcFileUtil
 {
+    /** Unwrap decorated fileObject and cast if possible.
+     *
+     * @param file a possibly decorate {@link JdbcTableRowFile}
+     * @return the unwraped obejct or null
+     */
     public static JdbcTableRowFile unwrapJdbcFile(FileObject file)
     {
         if (file == null)
@@ -40,6 +46,4 @@ public class JdbcFileUtil
         return null;
     }
 }
-
-
 

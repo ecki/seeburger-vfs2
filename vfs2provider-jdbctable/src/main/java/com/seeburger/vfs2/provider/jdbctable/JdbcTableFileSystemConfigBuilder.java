@@ -1,3 +1,4 @@
+/* License: TODO */
 package com.seeburger.vfs2.provider.jdbctable;
 
 
@@ -17,6 +18,7 @@ import org.apache.commons.vfs2.FileSystemOptions;
  */
 public class JdbcTableFileSystemConfigBuilder extends FileSystemConfigBuilder
 {
+    /** Singleton of this builder. */
     private static final JdbcTableFileSystemConfigBuilder BUILDER = new JdbcTableFileSystemConfigBuilder();
 
     protected JdbcTableFileSystemConfigBuilder(final String prefix)
@@ -34,21 +36,25 @@ public class JdbcTableFileSystemConfigBuilder extends FileSystemConfigBuilder
         return BUILDER;
     }
 
+    /** Specify a new table name. */
     public void setTablename(final FileSystemOptions opts, final String name)
     {
         setParam(opts, "table", name);
     }
 
+    /** What is the table name to store data (Default: {@value JdbcDialectBase#TABLE_NAME}. */
     public String getTablename(final FileSystemOptions opts)
     {
-        return getString(opts, "table", "tBlobs");
+        return getString(opts, "table", JdbcDialectBase.TABLE_NAME);
     }
 
+    /** Set a new write mode. */
     public void setWriteMode(final FileSystemOptions opts, final boolean write)
     {
         setParam(opts, "write", Boolean.valueOf(write));
     }
 
+    /** Does the filesystem allow write access (Default: true). */
     public boolean getWriteMode(final FileSystemOptions opts)
     {
         return getBoolean(opts, "write", true);

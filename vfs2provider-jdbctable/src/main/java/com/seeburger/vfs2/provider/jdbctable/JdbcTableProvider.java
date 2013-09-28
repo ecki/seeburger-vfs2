@@ -1,3 +1,4 @@
+/* License: TODO */
 package com.seeburger.vfs2.provider.jdbctable;
 
 
@@ -17,6 +18,7 @@ import org.apache.commons.vfs2.FileSystemOptions;
 import org.apache.commons.vfs2.provider.AbstractOriginatingFileProvider;
 
 
+/** Provide a new Apache VFS2 file system to access Blobs in database via JDBC. */
 public class JdbcTableProvider
     extends AbstractOriginatingFileProvider
 {
@@ -50,15 +52,17 @@ public class JdbcTableProvider
         Capability.RENAME
     }));
 
-    static final int MS = 1000000;
-
+    /** The specified dialect template (will be cloned for different table names) */
     final JdbcDialect dialect;
 
     // TODO: this needs a JdbcTableProvider(FileSystemManager manager) constructor for file config
 
 	/**
      * Constructs a new provider for given DataSource.
+     *
 	 * @throws FileSystemException
+	 *
+	 * @see {@link JdbcDialectBase#getDialect(DataSource)}
      */
     public JdbcTableProvider(DataSource dataSource) throws FileSystemException
     {
@@ -85,12 +89,11 @@ public class JdbcTableProvider
         setFileNameParser(JdbcTableNameParser.getInstance());
     }
 
+
     @Override
     protected FileSystem doCreateFileSystem(final FileName name, final FileSystemOptions fileSystemOptions)
         throws FileSystemException
     {
-        // name can be instance of GenericFileName or URLFileName
-        //final URLFileName rootName = (UrlFileNameParser) name;
         return new JdbcTableFileSystem(name, this, fileSystemOptions);
     }
 
@@ -106,9 +109,8 @@ public class JdbcTableProvider
     }
 
     /** Return a new Dialect instance and configure it for the given table name. */
-    public JdbcDialect getDialectForTable(String tablename)
+    protected JdbcDialect getDialectForTable(String tablename)
     {
-        return dialect.getDialectForTable(tablename);
+        return dialect.cloneDialect(tablename);
     }
-
 }

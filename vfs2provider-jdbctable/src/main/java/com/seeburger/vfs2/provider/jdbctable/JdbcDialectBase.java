@@ -3,7 +3,7 @@
  *
  * created at 2013-09-13 by Bernd Eckenfel <b.eckenfes@seeburger.de>
  *
- * Copyright (c) SEEBURGER AG, Germany. All Rights Reserved.
+ * Copyright (c) SEEBURGER AG, Germany. All Rights Reserved. TODO
  */
 package com.seeburger.vfs2.provider.jdbctable;
 
@@ -13,6 +13,7 @@ import java.sql.DatabaseMetaData;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.Locale;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -25,19 +26,21 @@ import javax.sql.DataSource;
  * Can be used for H2 and Derby databases. There are some more specific subclasses. Own implementations should
  * extend {@link JdbcDialectBase}.
  *
- * @see JdbcDialectBase
+ * @see JdbcDialect
  * @see JdbcDialectOracle
  * @see JdbcDialectMSSQL
  */
-public class JdbcDialectBase
-    implements JdbcDialect
+public class JdbcDialectBase implements JdbcDialect
 {
     private static final String ORACLE_DIALECT = "oracle";
     private static final String MSSQL_DIALECT$ = "micro$oft";
     private static final String MSSQL_DIALECT = "microsoft";
-    static final String TABLE_NAME = "tBlobs";
-    static final int MS = 1000000;
+    private static final int MS = 1000000;
 
+    /** Default table name. */
+    static protected final String TABLE_NAME = "tBlobs";
+
+    /** Cache for prepared statements. Not shared with other instances. */
     final protected ConcurrentMap<String, String> sqlCache = new ConcurrentHashMap<String, String>(23);
 
     final protected DataSource dataSource;
@@ -46,11 +49,17 @@ public class JdbcDialectBase
 
     /**
      * Determines what the type of the provided datasource is and
-     * returns the appropriate JdbcDialect. Currently supporting only MSSQL and Oracle.
+     * returns the appropriate JdbcDialect.
+     * <P>
+     * Returns {@link JdbcDialectMSSQL} for Microsoft database, {@link JdbcDialectOracle}
+     * for Oracle drivers and {@link JdbcDialectBase} for all others.
      *
      * @param datasource returning one of the know database driver connections
-     * @return new instance of dialect
+     * @return new instance of dialect with default table name configured
      * @throws SQLException
+     *
+     * @see {@link JdbcDialectBase#JdbcDialectBase(DataSource)}
+     * @see DatabaseMetaData#getDatabaseProductName()
      */
     public static JdbcDialect getDialect(DataSource ds)
         throws SQLException
@@ -61,7 +70,7 @@ public class JdbcDialectBase
         {
             con = ds.getConnection();
             DatabaseMetaData md = con.getMetaData();
-            String provider = md.getDatabaseProductName().toLowerCase();
+            String provider = md.getDatabaseProductName().toLowerCase(Locale.ENGLISH);
             if (provider.contains(MSSQL_DIALECT) || provider.contains(MSSQL_DIALECT$))
             {
                 result = new JdbcDialectMSSQL(ds);
@@ -79,19 +88,18 @@ public class JdbcDialectBase
         }
         finally
         {
-            if (con != null)
-            {
-                con.close();
-            }
+            safeClose(con);
         }
     }
 
 
+    /** Create base dialect with default table name {@value JdbcDialectBase#TABLE_NAME}. */
     public JdbcDialectBase(DataSource dataSource)
     {
         this(TABLE_NAME, dataSource);
     }
 
+    /** Create base dialect with specified table name. */
     public JdbcDialectBase(String tableNameArg, DataSource dataSourceArg)
     {
         this.tableName = tableNameArg;
@@ -99,32 +107,32 @@ public class JdbcDialectBase
     }
 
 
-    /** borrow a new connection from pool (or create one). */
+    /** Borrow a new connection from pool (or create one). */
     @Override
     public Connection getConnection()
         throws SQLException
     {
-        long start = System.nanoTime();
+        long start = System.nanoTime(); // TODO: stopwatch/monitoring service
+
         Connection c = dataSource.getConnection();
+
         long duration = System.nanoTime() - start;
         if (duration > 100 * MS)
             System.out.printf("slow getConnection(): %.6fs%n", (duration / 1000000000.0)); // TODO: logging?
+
         return c;
     }
 
-
-    /** resturn connection to the pool (most often this will only call close(). */
+    /**
+     * Return connection to the pool.
+     * <P>
+     * For the base implementation this will {@link #safeClose(Connection)} the connection.
+     */
     @Override
     public void returnConnection(Connection c)
     {
-        try
-        {
-            c.close();
-        }
-        catch (Exception ignored)
-        {}
+        safeClose(c);
     }
-
 
     /** {@inheritDoc} */
     @Override
@@ -133,25 +141,26 @@ public class JdbcDialectBase
         return tableName;
     }
 
-
     /** {@inheritDoc} */
     @Override
     public String expandSQL(String sql)
     {
+        // no synchronisation here needed as producing multiple instances is acceptable
+        // and sqlCache is a ConcurrentMap and therefore thread safe
         String cached = sqlCache.get(sql);
 
         if (cached != null)
-            return cached;
-
-        synchronized (this)
         {
-            String created = sql.replaceAll("\\{table\\}", getQuotedTable());
-            created = created.replaceAll(" ?\\{FOR UPDATE\\}", " FOR UPDATE");
-            sqlCache.put(sql, created);
-            return created;
+            return cached;
         }
-    }
 
+        String created = sql.replaceAll("\\{table\\}", getQuotedTable());
+        created = created.replaceAll(" ?\\{FOR UPDATE\\}", " FOR UPDATE");
+
+        sqlCache.put(sql, created);
+
+        return created;
+    }
 
     /** {@inheritDoc} */
     @Override
@@ -162,7 +171,6 @@ public class JdbcDialectBase
         return con.prepareStatement(expanded); // TYPE_FORWARD_ONLY, CONCUR_READ_ONLY
     }
 
-
     /** {@inheritDoc} */
     @Override
     public PreparedStatement prepareUpdateable(Connection con, String sql)
@@ -172,7 +180,6 @@ public class JdbcDialectBase
         return con.prepareStatement(expanded, ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_UPDATABLE);
     }
 
-
     /** {@inheritDoc} */
     @Override
     public boolean supportsAppendBlob()
@@ -180,9 +187,23 @@ public class JdbcDialectBase
         return false;
     }
 
+    /**
+     * Create new instance of this dialect with given table name.
+     *
+     * @see com.seeburger.vfs2.provider.jdbctable.JdbcDialect#cloneDialect(java.lang.String)
+     */
     @Override
-    public JdbcDialect getDialectForTable(String tableName)
+    public JdbcDialect cloneDialect(String tableName)
     {
         return new JdbcDialectBase(tableName, dataSource);
+    }
+
+    /** Close connection and swallow all Exceptions. */
+    private static void safeClose(Connection con)
+    {
+        if (con != null)
+        {
+            try { con.close(); } catch (Exception ignored) { }
+        }
     }
 }

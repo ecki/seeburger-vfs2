@@ -26,9 +26,13 @@ public class JdbcDialectMSSQL extends JdbcDialectBase implements JdbcDialect
 
 
     /**
-     * Create dialect for SQL server with default table name {@value #TABLE_NAME}.
+     * Create dialect for SQL server with default table name.
+     * <P>
+     * {@link #getQuotedTable()} will return <code>"[" + TABLE_NAME +"]"</code>.
      *
-     * @param ds
+     * @param ds data source providing JDBC connections
+     *
+     * @see JdbcDialectBase#TABLE_NAME
      */
     public JdbcDialectMSSQL(DataSource ds)
     {
@@ -37,9 +41,11 @@ public class JdbcDialectMSSQL extends JdbcDialectBase implements JdbcDialect
 
     /**
      * Create dialect for SQL server with table name specified.
+     * <P>
+     * {@link #getQuotedTable()} will return <code>"[" + tableName +"]"</code>.
      *
-     * @param tableName
-     * @param ds
+     * @param tableName name of the table where the blobs are stored
+     * @param ds data source providing JDBC connections
      */
     public JdbcDialectMSSQL(String tableName, DataSource ds)
     {
@@ -47,12 +53,17 @@ public class JdbcDialectMSSQL extends JdbcDialectBase implements JdbcDialect
         this.quotedTable = "[" + tableName + "]";
     }
 
+
     /**
      * Create dialect for SQL server with schema and table name specified.
+     * <P>
+     * {@link #getQuotedTable()} will return <code>"[" + schemaName + "].[" + tableName +"]"</code>.
      *
-     * @param schemaName
-     * @param tableName
-     * @param ds
+     * @param schemaName the schema name where the table lives
+     * @param tableName name of the table where the blobs are stored
+     * @param ds data source providing JDBC connections
+     *
+     * @see #getQuotedTable()
      */
     public JdbcDialectMSSQL(String schemaName, String tableName, DataSource ds)
     {
@@ -67,6 +78,9 @@ public class JdbcDialectMSSQL extends JdbcDialectBase implements JdbcDialect
      * include a (quoted) schema name.
      *
      *  @see #JdbcDialectMSSQL(String, String, DataSource)
+     *  @see #JdbcDialectMSSQL(String, DataSource)
+     *  @see #JdbcDialectMSSQL(DataSource)
+     *  @see JdbcDialectBase#TABLE_NAME
      */
     @Override
     public String getQuotedTable()
@@ -93,23 +107,23 @@ public class JdbcDialectMSSQL extends JdbcDialectBase implements JdbcDialect
     @Override
     public String expandSQL(String sql)
     {
-        String cached = sqlCache.get(sql); // Concurrent map -> happens after satisfied
+        String cached = sqlCache.get(sql);
 
         if (cached != null)
-            return cached;
-
-        synchronized(this)
         {
-            String created = sql.replaceAll("\\{table\\}", getQuotedTable());
-            created = created.replaceAll(" ?\\{FOR UPDATE\\}", "");
-            // System.out.printf("  %s%n    %s%n", sql, created);
-            sqlCache.put(sql, created);
-            return created;
+            return cached;
         }
+
+        String created = sql.replaceAll("\\{table\\}", getQuotedTable());
+        created = created.replaceAll(" ?\\{FOR UPDATE\\}", "");
+
+        sqlCache.put(sql, created);
+
+        return created;
     }
 
     @Override
-    public JdbcDialect getDialectForTable(String tableName)
+    public JdbcDialect cloneDialect(String tableName)
     {
         return new JdbcDialectMSSQL(tableName, dataSource);
     }
