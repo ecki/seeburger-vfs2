@@ -6,21 +6,30 @@ import java.io.IOException;
 import java.io.OutputStream;
 
 
+/**
+ * Output stream which reads all data into memory and
+ * writes it to the {@link JdbcTableRowFile} on close.
+ * <P>
+ * WARNING: this can consume MAX_INTEGER bytes memory.
+ *
+ * @see ByteArrayOutputStream
+ * @see JdbcTableRowFile#doGetOutputStream(boolean)
+ */
 public class JdbcTableOutputStream extends OutputStream
 {
-    protected JdbcTableRowFile file;
-    protected byte[] buffer1 = new byte[1];
-    protected boolean closed = false;
+    protected final JdbcTableRowFile file;
+    protected final boolean append;
 
-    private IOException exc;
-    private ByteArrayOutputStream bufferStream = new ByteArrayOutputStream();
-    private boolean append;
+    protected boolean closed = false;
+    protected ByteArrayOutputStream bufferStream = new ByteArrayOutputStream();
+
 
     public JdbcTableOutputStream(JdbcTableRowFile file, boolean append) throws IOException
     {
-        this.file = file;
+        this.file = file; // TODO: use data description instead
         this.append = append;
     }
+
 
     @Override
     public void write(byte[] b, int off, int len) throws IOException
@@ -35,11 +44,6 @@ public class JdbcTableOutputStream extends OutputStream
     }
 
     @Override
-    public void flush() throws IOException
-    {
-    }
-
-    @Override
     public void close() throws IOException
     {
         if (closed)
@@ -47,13 +51,7 @@ public class JdbcTableOutputStream extends OutputStream
             return;
         }
 
-        // Notify on close that there was an IOException while writing
-        if (exc != null)
-        {
-            throw exc;
-        }
-
-        this.closed = true; // TODO - after Exception?
+        this.closed = true; // TODO - after write?
         try
         {
             this.file.writeData(bufferStream.toByteArray(), append);

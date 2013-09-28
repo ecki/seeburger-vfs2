@@ -3,7 +3,7 @@
  *
  * created at 2013-08-12 by Bernd Eckenfels <b.eckenfels@seeburger.de>
  *
- * Copyright (c) SEEBURGER AG, Germany. All Rights Reserved.
+ * Copyright (c) SEEBURGER AG, Germany. All Rights Reserved. TODO
  */
 package com.seeburger.vfs2.provider.jdbctable;
 
@@ -15,29 +15,53 @@ import java.sql.SQLException;
 import com.seeburger.vfs2.provider.jdbctable.JdbcTableRowFile.DataDescription;
 
 
+/**
+ * Input Stream backed by a JDBC blob.
+ * <P>
+ * WARNING: this currently only allows to read blobs up to 5 MB.
+ * This is a TODO, it is intended to reopen the Blob every {@link #MAX_BUFFER_SIZE}
+ * read bytes.
+ *
+ * @see JdbcTableRowFile#startReadData(int)
+ * @see JdbcTableRowFile#doGetInputStream()
+ */
 public class JdbcTableInputStream extends InputStream
 {
-    static final long MAX_BUFFER_SIZE = 2 * 1024 * 1024;
+    static final int MAX_BUFFER_SIZE = 5 * 1024 * 1024;
 
-    long mark = 0; // TODO: long
-    JdbcTableRowFile file;
+    /** Keep state for re-requesting additional data. */
+    final DataDescription dataDescription;
 
-    DataDescription dataDescription;
+    /** position for mark/reset support. */
+    long mark = 0;
 
+    /** read position in the buffer */
     int bufferPos;
+    /** Number of bytes in the buffer. */
     int bufferSize;
+    /** Current data chunk buffer. Only {@link #bufferSize} bytes are valid. */
     byte[] buf;
 
     protected JdbcTableInputStream(JdbcTableRowFile file) throws IOException, SQLException
     {
-        this.file = file;
-        int bufsize = (int)Math.min(MAX_BUFFER_SIZE, file.getContent().getSize());
+        long fileSize = file.getContent().getSize();
+        int bufsize;
 
+        if (fileSize > (long)MAX_BUFFER_SIZE)
+        {
+            bufsize = MAX_BUFFER_SIZE;
+            System.out.println("TODO: Warning, JdbcTableInputStream on " + file  + " only supports " + MAX_BUFFER_SIZE + " bytes. (filesize=" + fileSize + ")");
+        }
+        else
+        {
+            bufsize = (int)fileSize;
+        }
+
+        // This is used to keep optimistic lockig state.
         dataDescription = file.startReadData(bufsize);
         buf = dataDescription.buffer;
         bufferPos = 0;
         bufferSize = buf.length;
-        mark = 0;
     }
 
     /**
@@ -73,19 +97,22 @@ public class JdbcTableInputStream extends InputStream
             return -1;
         }
 
+        int readBytes;
         if (bufferPos + len > bufferSize)
         {
-            len = bufferSize - bufferPos;
+            readBytes = bufferSize - bufferPos;
+        } else {
+            readBytes = len;
         }
 
-        if (len <= 0) // == 0
+        if (readBytes <= 0) // == 0
         {
             return 0;
         }
 
-        System.arraycopy(buf, bufferPos, b, off, len);
-        bufferPos += len;
-        return len;
+        System.arraycopy(buf, bufferPos, b, off, readBytes);
+        bufferPos += readBytes;
+        return readBytes;
     }
 
     /**
@@ -93,16 +120,27 @@ public class JdbcTableInputStream extends InputStream
      */
     public synchronized long skip(long n)
     {
+        int skipBytes;
+
         if (bufferPos + n > bufferSize)
         {
-            n = bufferSize - bufferPos;
+            skipBytes = bufferSize - bufferPos;
         }
-        if (n < 0)
+        else if (n > Integer.MAX_VALUE)
+        {
+            skipBytes = Integer.MAX_VALUE;
+        }
+        else
+        {
+            skipBytes = (int)n;
+        }
+
+        if (skipBytes < 0)
         {
             return 0;
         }
-        bufferPos += n;
-        return n;
+        bufferPos += skipBytes;
+        return skipBytes;
     }
 
     /**
@@ -135,15 +173,11 @@ public class JdbcTableInputStream extends InputStream
      */
     public synchronized void reset()
     {
-        bufferPos = (int)mark; // TODO: relative
+        bufferPos = (int)mark; // TODO: relative to buffer
     }
 
     public void close() throws IOException
     {
-        dataDescription = null;
         buf = null;
     }
 }
-
-
-
