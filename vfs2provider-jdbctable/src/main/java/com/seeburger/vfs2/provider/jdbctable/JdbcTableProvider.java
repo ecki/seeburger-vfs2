@@ -16,6 +16,7 @@ import org.apache.commons.vfs2.FileSystemConfigBuilder;
 import org.apache.commons.vfs2.FileSystemException;
 import org.apache.commons.vfs2.FileSystemOptions;
 import org.apache.commons.vfs2.provider.AbstractOriginatingFileProvider;
+import org.apache.commons.vfs2.provider.local.GenericFileNameParser;
 
 
 /** Provide a new Apache VFS2 file system to access Blobs in database via JDBC. */
@@ -76,7 +77,7 @@ public class JdbcTableProvider
             throw new FileSystemException("Exception while obtaining database's metadata!", e);
         }
 
-        setFileNameParser(JdbcTableNameParser.getInstance());
+        // super does setFileNameParser(GenericFileNameParser.getInstance());
     }
 
     /**
@@ -86,7 +87,7 @@ public class JdbcTableProvider
     {
         super();
         this.dialect = dialect;
-        setFileNameParser(JdbcTableNameParser.getInstance());
+        // super does setFileNameParser(GenericFileNameParser.getInstance());
     }
 
 
