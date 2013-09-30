@@ -104,7 +104,7 @@ public class DarcFileProvider extends AbstractLayeredFileProvider implements Fil
         {
             // Create the file system
             fs = doCreateFileSystem(scheme, file, fileSystemOptions);
-            System.out.println("created " + fs.hashCode());
+System.out.println("created Darc Filesystem hashcode=" + fs.hashCode());
             addFileSystem(rootName, fs);
         }
         return fs.getRoot();
