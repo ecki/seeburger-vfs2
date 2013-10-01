@@ -1,6 +1,6 @@
 package com.seeburger.vfs2.provider.digestarc;
 
-import java.io.ByteArrayInputStream;
+
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -13,7 +13,6 @@ import java.util.Map;
 
 import org.apache.commons.vfs2.CacheStrategy;
 import org.apache.commons.vfs2.FileObject;
-import org.apache.commons.vfs2.FileSystem;
 import org.apache.commons.vfs2.FileSystemOptions;
 import org.apache.commons.vfs2.impl.DefaultFileSystemManager;
 import org.apache.commons.vfs2.provider.local.DefaultLocalFileProvider;
@@ -22,42 +21,51 @@ import com.seeburger.vfs2.provider.digestarc.DarcTree.Directory;
 import com.seeburger.vfs2.provider.digestarc.DarcTree.Entry;
 import com.seeburger.vfs2.util.TreePrinter;
 
+
 public class StandaloneClient
 {
-	private static final Charset ASCII = Charset.forName("ASCII");
+    private static final Charset ASCII = Charset.forName("ASCII");
 
     /**
-	 * @param args
+     * @param args
      * @throws IOException
      * @throws NoSuchAlgorithmException
-	 */
-	public static void main(String[] args) throws NoSuchAlgorithmException, IOException
-	{
-	    File testDir = new File("target/testdir");
-	    populateTestdir(testDir);
+     */
+    public static void main(String[] args) throws NoSuchAlgorithmException, IOException
+    {
+        File testDir = new File("target/testdir");
+        populateTestdir(testDir);
 
-	    DefaultFileSystemManager manager = new DefaultFileSystemManager();
-		manager.addProvider("seearc", new DarcFileProvider());
-		manager.addProvider("file", new DefaultLocalFileProvider());
-		manager.setCacheStrategy(CacheStrategy.ON_RESOLVE);
-		manager.init();
+        DefaultFileSystemManager manager = new DefaultFileSystemManager();
+        manager.addProvider("seearc", new DarcFileProvider());
+        manager.addProvider("file", new DefaultLocalFileProvider());
+        manager.setCacheStrategy(CacheStrategy.ON_RESOLVE);
+        manager.init();
 
-		FileSystemOptions opts = new FileSystemOptions();
-		DarcFileConfigBuilder config = DarcFileConfigBuilder.getInstance();
-		config.setChangeSession(opts, "2");
+        FileSystemOptions opts = new FileSystemOptions();
+        DarcFileConfigBuilder config = DarcFileConfigBuilder.getInstance();
+        config.setChangeSession(opts, "2");
 
-		FileObject base = manager.resolveFile(testDir, "a3/6af8df2216a8357967276438ea608fe1a2c0e1");
-		String uri = "seearc:" + base.getName().getURI() + "!/";
-		final FileObject dir1 = manager.resolveFile(uri, opts);
+        FileObject base = manager.resolveFile(testDir, "");
+        String uri = "seearc:" + base.getName().getURI();
+        FileObject dir1 = manager.resolveFile(uri, opts);
+        dir1.createFolder();
         DarcFileSystem fs = (DarcFileSystem)dir1.getFileSystem();
-		final FileObject root = fs.getRoot();
+        System.out.println("Commiting empty: " + fs.commitChanges());
 
-		TreePrinter.printTree(root, "| ", System.out);
 
-		FileObject testFile = dir1.resolveFile("file2");
+        base = manager.resolveFile(testDir, "a3/6af8df2216a8357967276438ea608fe1a2c0e1");
+        uri = "seearc:" + base.getName().getURI() + "!/";
+        dir1 = manager.resolveFile(uri, opts);
+        fs = (DarcFileSystem)dir1.getFileSystem();
+        final FileObject root = fs.getRoot();
 
-System.out.println("opened file: " + testFile);
-System.out.println("       size: " + testFile.getContent().getSize());
+        TreePrinter.printTree(root, "| ", System.out);
+
+        FileObject testFile = dir1.resolveFile("file2");
+
+        System.out.println("opened file: " + testFile);
+        System.out.println("       size: " + testFile.getContent().getSize());
 
         InputStream is = testFile.getContent().getInputStream();
         int c;
@@ -100,14 +108,14 @@ System.out.println("       size: " + testFile.getContent().getSize());
         String newHash = fs.commitChanges();
         System.out.println("commited changes: " + newHash);
 
-        base = manager.resolveFile(testDir, new BlobStorageProvider(null).hashToPath(newHash));
+        base = manager.resolveFile(testDir, BlobStorageProvider.hashToPath(newHash));
         FileObject dir2 = manager.createFileSystem("seearc", base);
         TreePrinter.printTree(dir2, "== ", System.out);
 
         FileObject dir4 = dir2.getChild("folder");
         dir4.getChildren();
 
-	}
+    }
 
     private static void populateTestdir(File base) throws IOException, NoSuchAlgorithmException
     {
@@ -131,8 +139,7 @@ System.out.println("       size: " + testFile.getContent().getSize());
         FileOutputStream out = new FileOutputStream(temp);
         String hash = dir.writeToStream(out);
         out.close();
-        BlobStorageProvider provider = new BlobStorageProvider(null);
-        String path = provider.hashToPath(hash);
+        String path = BlobStorageProvider.hashToPath(hash);
         File target = new File(base, path);
         if (target.exists())
         {
@@ -154,8 +161,7 @@ System.out.println("       size: " + testFile.getContent().getSize());
         fos.close();
         String hashString = DarcTree.asHex(hash);
 
-        BlobStorageProvider provider = new BlobStorageProvider(null);
-        String path = provider.hashToPath(hashString);
+        String path = BlobStorageProvider.hashToPath(hashString);
         File target = new File(base, path);
 
         if (target.exists())
