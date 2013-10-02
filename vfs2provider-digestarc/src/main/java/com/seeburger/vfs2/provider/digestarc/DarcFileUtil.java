@@ -100,4 +100,17 @@ public class DarcFileUtil
         DarcFileSystem dfs = (DarcFileSystem)fs;
         return dfs.commitChanges();
     }
+
+
+    /**
+     * Return the digest of the specified object.
+     *
+     * @param file and FileObject within a digest archive filesystem
+     * @return string if it has the githash attribute or null
+     * @throws FileSystemException problems while accessing the file are rethrown
+     */
+    public static String getObjectID(FileObject file) throws FileSystemException
+    {
+        return (String)file.getContent().getAttribute(DarcFileObject.ATTRIBUTE_GITHASH);
+    }
 }
