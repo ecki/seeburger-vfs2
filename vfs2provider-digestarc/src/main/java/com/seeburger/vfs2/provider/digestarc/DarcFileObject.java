@@ -79,8 +79,14 @@ public class DarcFileObject extends AbstractFileObject implements FileListener
     @Override
     protected String[] doListChildren() throws IOException
     {
-        Directory dir = (Directory)entry;
-    	return dir.getChildrenNames(provider);
+        if (entry instanceof Directory)
+        {
+            Directory dir = (Directory)entry;
+            return dir.getChildrenNames(provider);
+        }
+
+        // if we are a file or virtual
+        return null;
     }
 
     @Override

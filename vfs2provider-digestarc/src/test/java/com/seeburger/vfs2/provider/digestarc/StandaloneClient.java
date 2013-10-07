@@ -12,6 +12,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import org.apache.commons.vfs2.CacheStrategy;
+import org.apache.commons.vfs2.FileNotFolderException;
 import org.apache.commons.vfs2.FileObject;
 import org.apache.commons.vfs2.FileSystemOptions;
 import org.apache.commons.vfs2.impl.DefaultFileSystemManager;
@@ -80,6 +81,8 @@ public class StandaloneClient
 
         dir1.resolveFile("newtestfile1").createFile();
         dir1.resolveFile("folder").createFolder();
+        dir1.resolveFile("folder1/folder2/folder3/").createFolder();
+        System.out.println(" children 3 levels non exist: " + dir1.resolveFile("folder1/folder2/folder3/").getChildren());
         dir1.resolveFile("folder/newtestfile2").createFile();
         dir1.resolveFile("file1").delete();
 
@@ -93,6 +96,11 @@ public class StandaloneClient
         final FileObject root3 = dir3.getFileSystem().getRoot();
 
         TreePrinter.printTree(root3, "<< ", System.out);
+
+        try
+        {
+            dir3.resolveFile("folder1/folder2/folder3/").getChildren();
+        } catch (FileNotFolderException expected) { System.out.println("not folder: " + expected); }
 
         System.out.println("Listing the fs inside session");
         opts = new FileSystemOptions();
@@ -114,6 +122,8 @@ public class StandaloneClient
 
         FileObject dir4 = dir2.getChild("folder");
         dir4.getChildren();
+
+
 
     }
 
