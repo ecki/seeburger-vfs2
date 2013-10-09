@@ -129,7 +129,7 @@ public class JdbcTableRowFile extends AbstractFileObject
 
             lastModified = now;
             contentSize = -1;
-        }
+        } // TODO: catch at least SQLEXception to add a more helpful diagnostic?
         finally
         {
             rollbackConnection(null, rs, ps, con);
