@@ -373,14 +373,9 @@ public class DarcTree
             } // end while
             dis.close();
             String digest = asHex(digester.getMessageDigest().digest());
-            if (expectedHash == null)
+            if (expectedHash != null && !expectedHash.equals(digest))
             {
-                System.out.println("seetree hash=" + digest);
-            }
-            else
-            {
-                if (!expectedHash.equals(digest))
-                    throw new IOException("While readig file with expected hash=" + expectedHash + " we read corrupted data with hash=" + digest);
+                throw new IOException("While readig file with expected hash=" + expectedHash + " we read corrupted data with hash=" + digest);
             }
             return newContent;
         }

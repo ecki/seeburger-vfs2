@@ -157,15 +157,12 @@ public class DarcFileInputStream extends InflaterInputStream
      */
     private void finishDigest() throws IOException
     {
-        String streamDigest = asHex(digester.digest());
+        byte[] calculated = digester.digest();
         digester = null;
 
-        if (expectedHash == null)
+        if (expectedHash != null)
         {
-            System.out.println(" read hash=" + streamDigest);
-        }
-        else
-        {
+            String streamDigest = asHex(calculated);
             if (!streamDigest.equals(expectedHash))
             {
                 throw new IOException("Data Corruption, the hashes mismatch. expected=" + expectedHash + " actual=" + streamDigest + " stream=" + in);
@@ -198,7 +195,6 @@ public class DarcFileInputStream extends InflaterInputStream
             size += len;
             count++;
         }
-        System.out.println("After " + count + " reads we have " + size + " bytes.");
     }
 
     // TODO: available/mark/reset

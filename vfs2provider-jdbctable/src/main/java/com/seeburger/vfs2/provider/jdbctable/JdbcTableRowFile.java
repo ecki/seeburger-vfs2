@@ -730,6 +730,7 @@ public class JdbcTableRowFile extends AbstractFileObject
     {
         if (warnings != null)
         {
+            // TODO: logging
             RuntimeException stack = new RuntimeException("Found JDBC Warnings: " + warnings);
             stack.fillInStackTrace();
             stack.printStackTrace(System.err);
