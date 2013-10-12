@@ -100,7 +100,7 @@ public class StandaloneClient
         try
         {
             dir3.resolveFile("folder1/folder2/folder3/").getChildren();
-        } catch (FileNotFolderException expected) { System.out.println("not folder: " + expected); }
+        } catch (FileNotFolderException expected) { System.out.println("not folder (expected): " + expected); }
 
         System.out.println("Listing the fs inside session");
         opts = new FileSystemOptions();
