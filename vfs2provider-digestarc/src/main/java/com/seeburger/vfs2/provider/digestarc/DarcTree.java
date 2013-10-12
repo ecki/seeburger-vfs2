@@ -25,8 +25,6 @@ import org.apache.commons.vfs2.FileObject;
 public class DarcTree
 {
     static final Charset ASCII = Charset.forName("ASCII");
-    static final byte[] BLOB_HEADER = "blob ".getBytes(ASCII);
-    static final byte[] EMPTY_BYTES = new byte[0];
 
     DarcTree.Directory root;
 
