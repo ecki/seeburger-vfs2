@@ -406,6 +406,7 @@ public class FileNameGlobbingTest
         assertEquals("Testing getBase(\"" + pattern + "\")", expected, g.getBase());
     }
 
+    // TODO: "**" "a**a"  "a**/" "**b/" "\c" "?" ("000/*/*"vs"???/*/*")
 }
 
 
