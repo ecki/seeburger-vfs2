@@ -8,7 +8,13 @@
 package com.seeburger.vfs2.provider.digestarc;
 
 
+import java.io.Closeable;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.OutputStream;
+import java.security.DigestOutputStream;
 
 import org.apache.commons.vfs2.FileObject;
 import org.apache.commons.vfs2.FileSystem;
@@ -16,13 +22,14 @@ import org.apache.commons.vfs2.FileSystemException;
 import org.apache.commons.vfs2.impl.DecoratedFileObject;
 
 
+/** Static utility functions to work with digest archive data and files. */
 public class DarcFileUtil
 {
     /** No need to instantiate this class, private constructor. */
     private DarcFileUtil() { }
 
     /**
-     * Cast or unwrap FileObject to provider specific implementation.
+     * Unwrap and cast FileObject to provider specific implementation.
      * <P>
      * Can deal with decorated file objects.
      * @param file
@@ -74,7 +81,6 @@ public class DarcFileUtil
         return null;
     }
 
-
     /**
      * Commit the changes to the filesystem owning the specified file and return new treeID.
      *
@@ -101,7 +107,6 @@ public class DarcFileUtil
         return dfs.commitChanges();
     }
 
-
     /**
      * Return the digest of the specified object.
      *
@@ -112,5 +117,89 @@ public class DarcFileUtil
     public static String getObjectID(FileObject file) throws FileSystemException
     {
         return (String)file.getContent().getAttribute(DarcFileObject.ATTRIBUTE_GITHASH);
+    }
+
+    /**
+     * Calculate and return the githash for the content of the file.
+     *
+     * @param file the file to checksum
+     * @return string represenation of git hash or null
+     * @throws FileNotFoundException if file was not found
+     * @throws IOException when reading problems occured
+     */
+    public static String calculateBlobDigest(File file) throws IOException
+    {
+        ObjectStorage store = new ObjectStorage();
+        OutputStream nullOut = new NullOutputStream();
+        FileInputStream in = new FileInputStream(file);
+        DigestOutputStream dout = null;
+        try
+        {
+            dout = store.decorateWithDigester(nullOut);
+            store.writeHeader(dout, "blob", file.length());
+            store.pumpStreams(in, dout);
+            dout.close();
+            return DarcTree.asHex(dout.getMessageDigest().digest());
+        }
+        finally
+        {
+            safeClose(in);
+            safeClose(dout, nullOut);
+        }
+    }
+
+    /**
+     * Close stacked streams. Will try to close one after the other till first suceeds.
+     *
+     * @param streams variable number of Closeables, the first one not null will be closed
+     */
+    protected static void safeClose(Closeable...streams)
+    {
+        for(int i=0;i<streams.length;i++)
+        {
+            if (streams[i] != null)
+            {
+                try
+                {
+                    streams[i].close();
+                    break;
+                }
+                catch (Exception ex) { /* ignored */ }
+            }
+        } // for
+    }
+
+
+    /** OutputStream which swallows everything. */
+    public static class NullOutputStream extends OutputStream
+    {
+        public NullOutputStream()
+        {
+        }
+
+        @Override
+        public void write(int b)
+            throws IOException
+        { /* does nothing */ }
+
+        @Override
+        public void write(byte[] b)
+            throws IOException
+        { /* does nothing */ }
+
+        @Override
+        public void write(byte[] b, int off, int len)
+            throws IOException
+        { /* does nothing */ }
+
+        @Override
+        public void flush()
+            throws IOException
+        { /* does nothing */ }
+
+        @Override
+        public void close()
+            throws IOException
+        { /* does nothing */ }
     }
 }

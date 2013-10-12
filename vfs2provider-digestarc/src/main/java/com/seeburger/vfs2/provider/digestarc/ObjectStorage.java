@@ -50,6 +50,9 @@ public class ObjectStorage
      * <P>
      * This method will close the given <code>out</code> stream.
      *
+     * @param out the stream to write the compressed and marked data
+     * @param data byte array with full content
+     * @param type the magic signature type for the object (see {@link BlobStorageProvider#}
      * @return the hash of the written data (as created by MessageDigester)
      * @throws IOException if any of the IO functions failed or Digest was not found.
      *
@@ -107,7 +110,7 @@ public class ObjectStorage
     }
 
 
-    private void pumpStreams(InputStream in, DigestOutputStream dout) throws IOException
+    void pumpStreams(InputStream in, DigestOutputStream dout) throws IOException
     {
         byte[] buf = new byte[32*Kb];
         int n;
@@ -130,17 +133,17 @@ public class ObjectStorage
     /**
      * Very defensive way of closing any of the provided stacked output streams.
      *
-     * @param outs variable number of Closeables, the first one not null will be closed
+     * @param streams variable number of Closeables, the first one not null will be closed
      */
-    protected void safeClose(Closeable...outs)
+    protected void safeClose(Closeable...streams)
     {
-        for(int i=0;i<outs.length;i++)
+        for(int i=0;i<streams.length;i++)
         {
-            if (outs[i] != null)
+            if (streams[i] != null)
             {
                 try
                 {
-                    outs[i].close();
+                    streams[i].close();
                     break;
                 }
                 catch (Exception ex)
@@ -160,7 +163,7 @@ public class ObjectStorage
     }
 
 
-    protected DigestOutputStream decorateWithDigester(OutputStream out) throws IOException
+    DigestOutputStream decorateWithDigester(OutputStream out) throws IOException
     {
         return new DigestOutputStream(out, getDigester());
     }
@@ -172,7 +175,7 @@ public class ObjectStorage
     }
 
 
-    protected MessageDigest getDigester() throws IOException
+    MessageDigest getDigester() throws IOException
     {
         try
         {
