@@ -102,7 +102,7 @@ public class DarcFileObject extends AbstractFileObject implements FileListener
     @Override
     protected long doGetLastModifiedTime() throws Exception
     {
-        return entry.getTime();
+        return 0l; // Not supported by Darc File System
     }
 
     /**

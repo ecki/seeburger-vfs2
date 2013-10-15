@@ -20,6 +20,7 @@ import java.util.zip.DeflaterOutputStream;
 import java.util.zip.InflaterInputStream;
 
 import org.apache.commons.vfs2.FileContent;
+import org.apache.commons.vfs2.FileNotFolderException;
 import org.apache.commons.vfs2.FileObject;
 
 public class DarcTree
@@ -75,7 +76,9 @@ public class DarcTree
             {
                 // me is the last existing entry
                 if (me instanceof File)
-                    throw new IOException("File " + me + " is not a folder to create " + name); // TODO: me.toString()
+                {
+                    throw new FileNotFolderException(name);
+                }
                 Directory parentDir = (Directory)me;
                 Directory newChild = null;
                 for(int j=i;j<parts.length;j++)
@@ -108,7 +111,9 @@ public class DarcTree
             {
                 // me is the last existing entry
                 if (me instanceof File)
-                    throw new IOException("File " + me + " is not a folder to create " + name); // TODO: me.toString()
+                {
+                    throw new FileNotFolderException(name);
+                }
                 Directory parentDir = (Directory)me;
                 Directory newChild = null;
                 for(int j=i;j<parts.length-1;j++)
@@ -155,8 +160,6 @@ public class DarcTree
         abstract Entry getChild(String string, BlobStorageProvider provider) throws IOException;
 
         abstract String getHash();
-
-        abstract long getTime();
     }
 
     class File extends Entry
@@ -176,7 +179,7 @@ public class DarcTree
         @Override
         Entry getChild(String name, BlobStorageProvider provider) throws IOException
         {
-            //throw new FileNotFolderException(name); // TODO: not sure if name arg works as it is relative
+            //throw new FileNotFolderException(name); // TODO: name arg does not work, as it is relative string
             throw new IOException("This Entry is no Folder. name=" + name);
         }
 
@@ -184,14 +187,6 @@ public class DarcTree
         {
             return size;
         }
-
-        @Override
-        long getTime()
-        {
-            // TODO Auto-generated method stub
-            return 0;
-        }
-
     }
 
     class Directory extends Entry
@@ -251,12 +246,6 @@ public class DarcTree
             materializeContent(provider);
             modified = true;
             content.put(name, newChild);
-        }
-
-        public long getTime()
-        {
-            // TODO Auto-generated method stub
-            return 0;
         }
 
         Entry getChild(String name, BlobStorageProvider provider) throws IOException
@@ -338,13 +327,15 @@ public class DarcTree
             InflaterInputStream inflated = new InflaterInputStream(is);
             DigestInputStream digester = new DigestInputStream(inflated, getDigester());
             DataInputStream dis = new DataInputStream(digester);
-            long len = readHeader(dis, "seetree");
+            readHeader(dis, "seetree");
             Map<String, Entry> newContent = new HashMap<String, Entry>(20);
             while(true)
             {
                 int type = dis.read();
                 if (type == -1)
+                {
                     break;
+                }
                 switch(type)
                 {
                     case DIRECTORY_MARKER:
@@ -451,7 +442,9 @@ public class DarcTree
     {
         Map<String, Entry> content = dir.content;
         if (content == null)
-            content = Collections.EMPTY_MAP;
+        {
+            content = Collections.emptyMap();
+        }
         Set<java.util.Map.Entry<String, Entry>> childrens = content.entrySet();
         for(java.util.Map.Entry<String, Entry> e : childrens)
         {

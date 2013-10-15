@@ -27,7 +27,7 @@ public class DarcFileProvider extends AbstractLayeredFileProvider implements Fil
     protected static final Collection<Capability> capabilities =
         Collections.unmodifiableCollection(Arrays.asList(new Capability[]
         {
-            Capability.GET_LAST_MODIFIED,
+            //Capability.GET_LAST_MODIFIED,
             Capability.GET_TYPE,
             Capability.LIST_CHILDREN,
             Capability.READ_CONTENT,

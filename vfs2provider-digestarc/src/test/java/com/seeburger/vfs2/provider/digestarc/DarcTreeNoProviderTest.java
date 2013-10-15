@@ -26,7 +26,8 @@ import com.seeburger.vfs2.provider.digestarc.DarcTree.Entry;
 import com.seeburger.vfs2.provider.digestarc.DarcTree.File;
 
 
-public class DarcTreeTest
+/** Tests DarcTree operations with no-provider cases (i.e. in-memory changes). */
+public class DarcTreeNoProviderTest
 {
     @Test
     public void testDarcFileWriteBlob16() throws NoSuchAlgorithmException, IOException
@@ -70,12 +71,6 @@ public class DarcTreeTest
         assertEquals("9e0f96a2a253b173cb45b41868209a5d043e1437", new BigInteger(1, digest).toString(16));
     }
 
-    @Test @Ignore
-    public void testReadFromStream()
-    {
-        fail("Not yet implemented");
-    }
-
     @Test
     public void testResolveFileNotFound() throws IOException
     {
@@ -99,12 +94,12 @@ public class DarcTreeTest
         assertTrue("Must be a File entry", result instanceof File);
     }
 
+    /** getChildren on a File entry is rejected with IOException. */
     @Test(expected=IOException.class)
     public void testResolveTraverseFile() throws IOException
     {
         DarcTree tree = buildDefaultTestTree();
         Entry result = tree.resolveName("/file2/test", null);
-        assertNotNull(result);
     }
 
     @Test
@@ -125,9 +120,9 @@ public class DarcTreeTest
         Entry result = tree.resolveName("/dir1/dir12/dir12file2", null);
         assertNull(result);
         tree.addFile("/dir1/dir12/dir12file2", "abc", 3, null);
-        result = tree.resolveName("/dir1/dir12/dir12file2", null);
-        assertNotNull(result);
         result = tree.resolveName("/dir1/dir12", null);
+        assertNotNull(result);
+        result = tree.resolveName("/dir1/dir12/dir12file2", null);
         assertNotNull(result);
     }
 
@@ -147,6 +142,26 @@ public class DarcTreeTest
         result = tree.resolveName("/dir1/dir12", null);
         assertNotNull(result);
         assertTrue(result instanceof Directory);
+
+        result = tree.resolveName("/dir1", null);
+        result = result.getChild("dir12", null);
+        assertNotNull(result);
+        assertTrue(result instanceof Directory);
+    }
+
+    @Test
+    public void testParentNoticesDelete() throws IOException
+    {
+        DarcTree tree = buildDefaultTestTree();
+        Directory dir1 = (Directory)tree.resolveName("/dir1", null);
+        assertNotNull(dir1);
+        File file = (File)dir1.getChild("dir1file3", null);
+        assertNotNull(file);
+        dir1.removeChild("dir1file3", null);
+        dir1 = (Directory)tree.resolveName("/dir1", null);
+        assertNotNull(dir1);
+        file = (File)dir1.getChild("dir1file3", null);
+        assertNull(file);
     }
 
 
