@@ -21,6 +21,7 @@ import org.apache.commons.vfs2.provider.AbstractFileObject;
 import org.apache.commons.vfs2.util.WeakRefFileListener;
 
 import com.seeburger.vfs2.provider.digestarc.DarcTree.Directory;
+import com.seeburger.vfs2.provider.digestarc.DarcTree.Entry;
 import com.seeburger.vfs2.provider.digestarc.DarcTree.File;
 
 
@@ -34,7 +35,7 @@ public class DarcFileObject extends AbstractFileObject implements FileListener
     private final DarcTree tree;
     private final BlobStorageProvider provider;
 
-    private DarcTree.Entry entry;
+    private DarcTree.Entry cachedEntry;
     private FileType type = FileType.IMAGINARY;
     private WeakReference<FileObject> targetRef;
 
@@ -51,16 +52,18 @@ public class DarcFileObject extends AbstractFileObject implements FileListener
     }
 
 
-    /**
-     * Determines if this file can be written to.
-     *
-     * @return {@code true} if this file is writeable, {@code false} if not.
-     * @throws FileSystemException if an error occurs.
-     */
     @Override
-    public boolean isWriteable() throws FileSystemException
+    protected boolean doIsWriteable()
+        throws Exception
     {
-        return false; // TODO
+        return true;
+    }
+
+    @Override
+    protected void doRename(FileObject newfile)
+        throws Exception
+    {
+        super.doRename(newfile); // TODO: throws not implemented
     }
 
     /**
@@ -79,6 +82,7 @@ public class DarcFileObject extends AbstractFileObject implements FileListener
     @Override
     protected String[] doListChildren() throws IOException
     {
+        Entry entry = getEntry();
         if (entry instanceof Directory)
         {
             Directory dir = (Directory)entry;
@@ -90,11 +94,34 @@ public class DarcFileObject extends AbstractFileObject implements FileListener
     }
 
     @Override
-    protected long doGetContentSize()
+    protected long doGetContentSize() throws FileSystemException
     {
+        Entry entry = getEntry();
         File file = (File)entry;
         return file.getSize();
     }
+
+    private synchronized Entry getEntry() throws FileSystemException
+    {
+        Entry entry = cachedEntry;
+        if (entry != null)
+            return entry;
+        try
+        {
+            entry = tree.resolveName(getName().getPathDecoded(), provider);
+            cachedEntry = entry;
+            return entry;
+        }
+        catch (FileSystemException fse)
+        {
+            throw fse;
+        }
+        catch (IOException ioe)
+        {
+            throw new FileSystemException(ioe);
+        }
+    }
+
 
     /**
      * Returns the last modified time of this file.
@@ -114,6 +141,7 @@ public class DarcFileObject extends AbstractFileObject implements FileListener
     @Override
     protected InputStream doGetInputStream() throws Exception
     {
+        Entry entry = getEntry();
         if (!getType().hasContent())
         {
             throw new FileSystemException("vfs.provider/read-not-file.error", getName());
@@ -126,7 +154,8 @@ public class DarcFileObject extends AbstractFileObject implements FileListener
 	@Override
 	protected void doAttach() throws Exception
 	{
-	    entry = tree.resolveName(getName().getPathDecoded(), provider);
+	    cachedEntry = null;
+	    Entry entry = getEntry();
         if (entry instanceof Directory)
         {
             type = FileType.FOLDER;
@@ -143,6 +172,7 @@ public class DarcFileObject extends AbstractFileObject implements FileListener
 	protected void doDetach() throws Exception
 	{
 		type = FileType.IMAGINARY;
+		cachedEntry = null;
 //System.out.println("detached " + getName());
 	}
 
@@ -153,6 +183,7 @@ public class DarcFileObject extends AbstractFileObject implements FileListener
     protected Map<String, Object> doGetAttributes()
         throws Exception
     {
+        Entry entry = getEntry();
         String hash = entry.getHash();
         HashMap<String, Object> ht = new HashMap<String, Object>();
         if (hash != null)
@@ -176,6 +207,7 @@ public class DarcFileObject extends AbstractFileObject implements FileListener
 
     private FileObject resolveHash() throws FileSystemException
     {
+        Entry entry = getEntry();
         String hash = entry.getHash();
         FileObject targetFile = provider.resolveFileHash(hash);
         if (targetFile != null)
@@ -226,16 +258,18 @@ public class DarcFileObject extends AbstractFileObject implements FileListener
     protected void onChange()
         throws Exception
     {
+        cachedEntry = null;
         // super.onChange(); does nothing
-// System.out.println("Change received " + getName());
+//System.out.println("Change received " + getName());
     }
 
     @Override
     protected void onChildrenChanged(FileName child, FileType newType)
         throws Exception
     {
+        cachedEntry = null;
         // super.onChildrenChanged(child, newType); is empty
-// System.out.println("children of " + getName().getPath() + " changed: " + child.getBaseName() + " " + newType);
+//System.out.println("children of " + getName().getPath() + " changed: " + child.getBaseName() + " " + newType);
     }
 
     @Override
