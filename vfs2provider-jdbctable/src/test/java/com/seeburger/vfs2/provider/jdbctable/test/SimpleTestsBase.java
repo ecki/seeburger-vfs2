@@ -369,11 +369,11 @@ public abstract class SimpleTestsBase
     @Test(expected=FileSystemException.class)
     public void testRenameNonexistingOverNonexisting() throws FileSystemException
     {
-        final long now = System.currentTimeMillis();
+        final long now = System.nanoTime();
 
         // create one file and make sure the target does not exist
-        final FileObject testFile = manager.resolveFile("seejt:///key/renameme_"+now);
-        final FileObject targetFile = manager.resolveFile("seejt:///key/renamed_"+now);
+        final FileObject testFile = manager.resolveFile("seejt:///key/testRenameNonexistingOverNonexisting_A_"+now);
+        final FileObject targetFile = manager.resolveFile("seejt:///key/testRenameNonexistingOverNonexisting_B_"+now);
 
         assertEquals(false, testFile.exists());
         assertEquals(FileType.IMAGINARY, testFile.getType());
@@ -391,11 +391,11 @@ public abstract class SimpleTestsBase
     @Test(expected=FileSystemException.class)
     public void testRenameNonexistingOverExisting() throws FileSystemException
     {
-        final long now = System.currentTimeMillis();
+        final long now = System.nanoTime();
 
         // create one file and make sure the target does not exist
-        final FileObject testFile = manager.resolveFile("seejt:///key/renameme_"+now);
-        final FileObject targetFile = manager.resolveFile("seejt:///key/renamed_"+now);
+        final FileObject testFile = manager.resolveFile("seejt:///key/testRenameNonexistingOverExisting_A_"+now);
+        final FileObject targetFile = manager.resolveFile("seejt:///key/testRenameNonexistingOverExisting_B_"+now);
 
         assertEquals(false, testFile.exists());
         assertEquals(FileType.IMAGINARY, testFile.getType());
@@ -414,11 +414,11 @@ public abstract class SimpleTestsBase
     @Test
     public void testRenameOverNonexisting() throws IOException, SQLException
     {
-        final long now = System.currentTimeMillis();
+        final long now = System.nanoTime();
 
         // create one file and make sure the target does not exist
-        final FileObject testFile = manager.resolveFile("seejt:///key/renameme_"+now);
-        final FileObject targetFile = manager.resolveFile("seejt:///key/renamed_"+now);
+        final FileObject testFile = manager.resolveFile("seejt:///key/testRenameOverNonexisting_A_"+now);
+        final FileObject targetFile = manager.resolveFile("seejt:///key/testRenameOverNonexisting_B_"+now);
 
         assertEquals(false, testFile.exists());
         assertEquals(FileType.IMAGINARY, testFile.getType());
@@ -429,7 +429,7 @@ public abstract class SimpleTestsBase
         assertEquals(false, targetFile.exists());
         assertEquals(FileType.IMAGINARY, targetFile.getType());
 
-        // rename existing file to nonexisting
+        // rename existing file to non-existing
         testFile.moveTo(targetFile);
 
         assertEquals(false,  testFile.exists());
@@ -444,14 +444,15 @@ public abstract class SimpleTestsBase
     @Test
     public void testRenameOverExisting() throws IOException, SQLException
     {
-        final long now = System.currentTimeMillis();
+        final long now = System.nanoTime();
 
         // create two files
-        final FileObject testFile = manager.resolveFile("seejt:///key/renameme_"+now);
-        final FileObject targetFile = manager.resolveFile("seejt:///key/renamed_"+now);
+        final FileObject testFile = manager.resolveFile("seejt:///key/testRenameOverExisting_A_"+now);
+        final FileObject targetFile = manager.resolveFile("seejt:///key/testRenameOverExisting_B_"+now);
 
         assertEquals(false, testFile.exists());
         assertEquals(FileType.IMAGINARY, testFile.getType());
+
         testFile.createFile();
         assertEquals(true,  testFile.exists());
         assertEquals(FileType.FILE, testFile.getType());
@@ -459,6 +460,7 @@ public abstract class SimpleTestsBase
         assertEquals(FileType.IMAGINARY, targetFile.getType());
         assertEquals(false, targetFile.exists());
         targetFile.createFile();
+
         assertEquals(true,  targetFile.exists());
         assertEquals(FileType.FILE, targetFile.getType());
 
@@ -478,10 +480,10 @@ public abstract class SimpleTestsBase
     @Test @Ignore // does not reject rename of open/missing files
     public void testRenameOpen() throws IOException, SQLException
     {
-        final long now = System.currentTimeMillis();
+        final long now = System.nanoTime();
 
-        final FileObject testFile = manager.resolveFile("seejt:///key/renameme_"+now);
-        final FileObject targetFile = manager.resolveFile("seejt:///key/renamed_"+now);
+        final FileObject testFile = manager.resolveFile("seejt:///key/testRenameOpen_A_"+now);
+        final FileObject targetFile = manager.resolveFile("seejt:///key/testRenameOpen_B_"+now);
         assertEquals(false, testFile.exists());
         assertEquals(FileType.IMAGINARY, testFile.getType());
 
@@ -502,10 +504,10 @@ public abstract class SimpleTestsBase
     @Test
     public void testRenameContent() throws IOException, SQLException
     {
-        final long now = System.currentTimeMillis();
+        final long now = System.nanoTime();
 
-        final FileObject testFile = manager.resolveFile("seejt:///key/renameme_"+now);
-        final FileObject targetFile = manager.resolveFile("seejt:///key/renamed_"+now);
+        final FileObject testFile = manager.resolveFile("seejt:///key/testRenameContent_A_"+now);
+        final FileObject targetFile = manager.resolveFile("seejt:///key/testRenameContent_B_"+now);
         assertEquals(false, testFile.exists());
         assertEquals(FileType.IMAGINARY, testFile.getType());
 
