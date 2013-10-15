@@ -35,10 +35,10 @@ public class DarcFileProvider extends AbstractLayeredFileProvider implements Fil
             Capability.COMPRESS,
             Capability.VIRTUAL,
 
-            Capability.APPEND_CONTENT,
+            // TODO: why not work? Capability.APPEND_CONTENT,
             Capability.CREATE,
             Capability.DELETE,
-            Capability.RENAME,
+            // Capability.RENAME,
             Capability.WRITE_CONTENT
         }));
 
@@ -46,10 +46,10 @@ public class DarcFileProvider extends AbstractLayeredFileProvider implements Fil
     protected static final Collection<Capability> writeCapabilities =
         Collections.unmodifiableCollection(Arrays.asList(new Capability[]
         {
-             Capability.APPEND_CONTENT,
+             // TOOD Capability.APPEND_CONTENT,
              Capability.CREATE,
              Capability.DELETE,
-             Capability.RENAME,
+             // TODO: currently not supported Capability.RENAME,
              Capability.WRITE_CONTENT,
         }));
 

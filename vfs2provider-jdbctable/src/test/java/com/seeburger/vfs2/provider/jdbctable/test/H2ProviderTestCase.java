@@ -83,6 +83,8 @@ public class H2ProviderTestCase extends AbstractProviderTestConfig implements Pr
      */
     public static Test suite() throws Exception
     {
+        System.setProperty("test.basedir",  "../src/test/test-data");
+
         JdbcDataSource ds = new JdbcDataSource();
         ds.setUser("VFSTEST");
         ds.setPassword("secret");
@@ -104,7 +106,7 @@ public class H2ProviderTestCase extends AbstractProviderTestConfig implements Pr
 
         dataSource = ds;
 
-        return new ProviderTestSuite(new H2ProviderTestCase());
+        return new ProviderTestSuite(new H2ProviderTestCase(), true);
     }
 }
 

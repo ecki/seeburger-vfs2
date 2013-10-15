@@ -72,6 +72,8 @@ public class MSSQLProviderTestCase extends AbstractProviderTestConfig implements
      */
     public static Test suite() throws Exception
     {
+        System.setProperty("test.basedir",  "../src/test/test-data");
+
         JtdsDataSource ds = new JtdsDataSource();
         ds.setUser("VFSTEST");
         ds.setPassword("secret");
@@ -94,7 +96,7 @@ public class MSSQLProviderTestCase extends AbstractProviderTestConfig implements
 
         dataSource = ds;
 
-        return new ProviderTestSuite(new MSSQLProviderTestCase());
+        return new ProviderTestSuite(new MSSQLProviderTestCase(), true);
     }
 }
 

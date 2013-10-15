@@ -12,8 +12,12 @@ import static org.junit.Assert.*;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.OutputStream;
 
 import org.apache.commons.vfs2.CacheStrategy;
+import org.apache.commons.vfs2.FileChangeEvent;
+import org.apache.commons.vfs2.FileContent;
+import org.apache.commons.vfs2.FileListener;
 import org.apache.commons.vfs2.FileObject;
 import org.apache.commons.vfs2.FileSystemException;
 import org.apache.commons.vfs2.FileSystemOptions;
@@ -278,6 +282,63 @@ public class DarcBasicTest
         else
             return manager.resolveFile("darc:ram:/" + BlobStorageProvider.hashToPath(id) + "!/");
     }
+
+    @Test
+    public void testCreateRecreate() throws IOException
+    {
+        FileObject root = getTestRoot(true);
+        FileObject file = root.resolveFile("file");
+        assertEquals(FileType.IMAGINARY, file.getType());
+
+        MyFileListener list = new MyFileListener();
+        file.getFileSystem().addListener(file, list);
+        try
+        {
+            file.createFile();
+            assertEquals(FileType.FILE, file.getType());
+            FileContent content = file.getContent();
+            OutputStream os = content.getOutputStream();
+            os.close();
+
+            file.delete();
+
+            assertSame(1, list.deleted);
+            //assertSame(1, list.changed);
+            assertSame(1, list.created);
+        }
+        finally
+        {
+            file.getFileSystem().removeListener(file, list);
+        }
+    }
+
+    static class MyFileListener implements FileListener
+    {
+        public int deleted, created, changed;
+        @Override
+        public void fileDeleted(FileChangeEvent event)
+            throws Exception
+        {
+            deleted++;
+        }
+
+
+        @Override
+        public void fileCreated(FileChangeEvent event)
+            throws Exception
+        {
+            created++;
+        }
+
+
+        @Override
+        public void fileChanged(FileChangeEvent event)
+            throws Exception
+        {
+            changed++;
+        }
+    };
+
 }
 
 

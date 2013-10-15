@@ -72,6 +72,8 @@ public class OracleProviderTestCase extends AbstractProviderTestConfig implement
      */
     public static Test suite() throws Exception
     {
+        System.setProperty("test.basedir",  "../src/test/test-data");
+
         // dynamically construct Oracle Data Source since this is a properitary dependency
         DataSource ds = (DataSource)Class.forName("oracle.jdbc.pool.OracleDataSource").newInstance();
         PropertyUtils.setSimpleProperty(ds, "user", "TESTVFS"); // ds.setUser("TESTVFS");
@@ -92,7 +94,7 @@ public class OracleProviderTestCase extends AbstractProviderTestConfig implement
 
         dataSource = ds;
 
-        return new ProviderTestSuite(new OracleProviderTestCase());
+        return new ProviderTestSuite(new OracleProviderTestCase(), true);
     }
 }
 

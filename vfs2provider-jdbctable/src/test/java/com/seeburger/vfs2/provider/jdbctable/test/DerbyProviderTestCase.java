@@ -83,6 +83,8 @@ public class DerbyProviderTestCase extends AbstractProviderTestConfig implements
      */
     public static Test suite() throws Exception
     {
+        System.setProperty("test.basedir",  "../src/test/test-data");
+
         EmbeddedDataSource ds = new EmbeddedDataSource();
         ds.setUser("SEEASOWN");
         ds.setPassword("secret");
@@ -108,7 +110,7 @@ public class DerbyProviderTestCase extends AbstractProviderTestConfig implements
 
         dataSource = ds;
 
-        return new ProviderTestSuite(new DerbyProviderTestCase());
+        return new ProviderTestSuite(new DerbyProviderTestCase(), true);
     }
 }
 

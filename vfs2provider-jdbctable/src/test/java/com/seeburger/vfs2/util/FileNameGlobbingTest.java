@@ -83,7 +83,7 @@ public class FileNameGlobbingTest
     public void testGetSelectorDirWild() throws FileSystemException
     {
         FileObject dir = getTestDir();
-        FileNameGlobbing g = new FileNameGlobbing("db/*/mssql/*");
+        FileNameGlobbing g = new FileNameGlobbing("test-data/*/dir1/*");
 
         // get a selector for this pattern
         FileSelector s = g.getSelector();
@@ -99,7 +99,9 @@ public class FileNameGlobbingTest
         for(FileObject file : files)
             names.add(dir.getName().getRelativeName(file.getName()));
 
-        assertTrue(names.remove("db/migration/mssql/V20130909__Initial_Table.sql"));
+        assertTrue(names.remove("test-data/read-tests/dir1/file1.txt"));
+        assertTrue(names.remove("test-data/read-tests/dir1/file2.txt"));
+        assertTrue(names.remove("test-data/read-tests/dir1/file3.txt"));
         assertTrue(names.isEmpty());
     }
 
@@ -395,7 +397,7 @@ public class FileNameGlobbingTest
         manager.addProvider("file", new DefaultLocalFileProvider());
         manager.setCacheStrategy(CacheStrategy.MANUAL);
         manager.setFilesCache(new DefaultFilesCache());
-        FileObject file = manager.resolveFile(new File("."), "src/test/resources/");
+        FileObject file = manager.resolveFile(new File("."), "../src/test/");
         assertTrue("Test directory must exist", file.getType().hasChildren());
         return file;
     }
