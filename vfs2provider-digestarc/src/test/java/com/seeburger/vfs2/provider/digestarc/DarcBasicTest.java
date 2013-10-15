@@ -1,0 +1,197 @@
+/*
+ * DarcBasicTest.java
+ *
+ * created at 2013-10-15 by Bernd Eckenfels <b.eckenfels@seeburger.de>
+ *
+ * Copyright (c) SEEBURGER AG, Germany. All Rights Reserved.
+ */
+package com.seeburger.vfs2.provider.digestarc;
+
+
+import static org.junit.Assert.*;
+
+import java.io.File;
+import java.io.IOException;
+
+import org.apache.commons.vfs2.CacheStrategy;
+import org.apache.commons.vfs2.FileObject;
+import org.apache.commons.vfs2.FileSystemException;
+import org.apache.commons.vfs2.FileSystemOptions;
+import org.apache.commons.vfs2.FileType;
+import org.apache.commons.vfs2.cache.DefaultFilesCache;
+import org.apache.commons.vfs2.impl.DefaultFileReplicator;
+import org.apache.commons.vfs2.impl.DefaultFileSystemManager;
+import org.apache.commons.vfs2.provider.local.DefaultLocalFileProvider;
+import org.apache.commons.vfs2.provider.ram.RamFileProvider;
+import org.apache.commons.vfs2.provider.url.UrlFileProvider;
+import org.junit.Ignore;
+import org.junit.Test;
+
+
+public class DarcBasicTest
+{
+    @Test(expected=FileSystemException.class)
+    public void testReadOnlyRoot() throws IOException
+    {
+        FileObject root = getTestRoot(false);
+        root.createFile();
+    }
+
+    @Test(expected=FileSystemException.class)
+    public void testReadOnlyFile() throws IOException
+    {
+        FileObject root = getTestRoot(false);
+        root.resolveFile("file").createFile();
+    }
+
+    @Test(expected=FileSystemException.class)
+    public void testReadOnlyRootDir() throws IOException
+    {
+        FileObject root = getTestRoot(false);
+        root.resolveFile("dir").createFolder();
+    }
+
+    @Test
+    public void testRootFile() throws IOException
+    {
+        FileObject root = getTestRoot(true);
+        FileObject file = root.resolveFile("file");
+        assertEquals(FileType.IMAGINARY, file.getType());
+
+        file.createFile();
+        assertEquals(FileType.FILE, file.getType());
+    }
+
+    @Test
+    public void testRootDir() throws IOException
+    {
+        FileObject root = getTestRoot(true);
+        FileObject file = root.resolveFile("dir");
+        assertEquals(FileType.IMAGINARY, file.getType());
+
+        file.createFolder();
+        assertEquals(FileType.FOLDER, file.getType());
+    }
+
+    @Test
+    public void testParentChild() throws IOException
+    {
+        FileObject root = getTestRoot(true);
+
+        FileObject dir = root.resolveFile("dir");
+        assertEquals(FileType.IMAGINARY, dir.getType());
+
+        FileObject file = root.resolveFile("dir/file");
+        assertEquals(FileType.IMAGINARY, file.getType());
+
+        file.createFile();
+        assertEquals(FileType.FILE, file.getType());
+        assertEquals(FileType.FOLDER, dir.getType());
+
+        dir = root.resolveFile("dir");
+        assertEquals(FileType.FOLDER, dir.getType());
+
+        file = dir.getChild("file");
+        assertEquals(FileType.FILE, file.getType());
+    }
+
+    @Test
+    public void testParentNoticesDelete() throws IOException
+    {
+        FileObject root = getTestRoot(true);
+
+        FileObject dir = root.resolveFile("dir1");
+        assertEquals(FileType.FOLDER, dir.getType());
+
+        dir = dir.getChild("dir1a");
+        assertEquals(FileType.FOLDER, dir.getType());
+
+        FileObject file = dir.getChild("file1");
+        assertEquals(FileType.FILE, file.getType());
+
+        file.delete();
+        assertEquals(FileType.IMAGINARY, file.getType());
+
+        file = dir.getChild("file1");
+        assertNull(file);
+
+        file = root.resolveFile("dir1/dir1a/file1");
+        assertEquals(FileType.IMAGINARY, file.getType());
+    }
+
+    @Test @Ignore // rename not implemneted
+    public void testParentRename() throws IOException
+    {
+        FileObject root = getTestRoot(true);
+
+        FileObject dir2 = root.resolveFile("dir1/dir1a");
+        assertEquals(FileType.FOLDER, dir2.getType());
+
+        FileObject dir1 = root.resolveFile("dir1");
+        assertEquals(FileType.FOLDER, dir1.getType());
+
+        FileObject dir3 = root.resolveFile("dir2/dir2c");
+        assertEquals(FileType.IMAGINARY, dir3.getType());
+
+        dir2.moveTo(dir3);
+
+        dir1 = root.resolveFile("dir1/dir1a");
+        assertEquals(FileType.IMAGINARY, dir1.getType());
+
+        dir2 = root.resolveFile("dir2");
+        assertEquals(FileType.FOLDER, dir1.getType());
+
+        dir2 = dir2.getChild("dir2c");
+        assertEquals(FileType.FOLDER, dir2.getType());
+
+        dir3 = root.resolveFile("dir2/dir2c");
+        assertEquals(FileType.FOLDER, dir3.getType());
+    }
+
+
+
+    /** creates a new test filesystem.
+     * @throws IOException */
+    private FileObject getTestRoot(boolean write) throws IOException
+    {
+        DefaultFileSystemManager manager = new DefaultFileSystemManager();
+        manager.addProvider("file", new DefaultLocalFileProvider());
+        manager.addProvider("ram", new RamFileProvider());
+        manager.addProvider("darc", new DarcFileProvider());
+
+        manager.setCacheStrategy(CacheStrategy.MANUAL);
+        manager.setFilesCache(new DefaultFilesCache());
+
+        manager.setDefaultProvider(new UrlFileProvider());
+        manager.setBaseFile(manager.resolveFile("ram:/"));
+
+        File tmp = new File(System.getProperty("java.io.tmpdir"), "vfslocal");
+        tmp.mkdirs();
+        manager.setReplicator(new DefaultFileReplicator(tmp));
+
+        FileSystemOptions writeOpts = new FileSystemOptions();
+        DarcFileConfigBuilder config = DarcFileConfigBuilder.getInstance();
+        config.setChangeSession(writeOpts, "+");
+        FileObject root = manager.resolveFile("darc:ram:/", writeOpts);
+        root.resolveFile("dir1").createFolder();
+        root.resolveFile("dir1/dir1a").createFolder();
+        root.resolveFile("dir1/dir1b").createFolder();
+        root.resolveFile("dir1/dir1a/file1").createFile();
+        root.resolveFile("dir1/dir1a/file2").createFile();
+        root.resolveFile("dir2").createFolder();
+        root.resolveFile("dir2/dir2a").createFolder();
+        root.resolveFile("dir2/dir2a/file1").createFile();
+        root.resolveFile("dir2/dir2a/file2").createFile();
+        root.resolveFile("dir2/dir2b").createFolder();
+        DarcFileSystem fs = (DarcFileSystem)root.getFileSystem();
+        String id = fs.commitChanges();
+
+        if (write)
+            return manager.resolveFile("darc:ram:/" + BlobStorageProvider.hashToPath(id) + "!/", writeOpts);
+        else
+            return manager.resolveFile("darc:ram:/" + BlobStorageProvider.hashToPath(id) + "!/");
+    }
+}
+
+
+
