@@ -96,6 +96,93 @@ public class DarcBasicTest
     }
 
     @Test
+    public void testCreateChildGap0() throws IOException
+    {
+        FileObject root = getTestRoot(true);
+
+        FileObject file = root.resolveFile("dir1/fileA");
+        assertEquals(FileType.IMAGINARY, file.getType());
+
+        file.createFile();
+        assertEquals(FileType.FILE, file.getType());
+
+        file = root.resolveFile("dir1/fileA");
+        assertEquals(FileType.FILE, file.getType());
+
+        FileObject dir = root.resolveFile("dir1");
+        file = dir.getChild("fileA");
+        assertNotNull(file);
+    }
+
+    @Test
+    public void testCreateChildGap1() throws IOException
+    {
+        FileObject root = getTestRoot(true);
+
+        FileObject file = root.resolveFile("dir1/missing1/fileA");
+        assertEquals(FileType.IMAGINARY, file.getType());
+
+        file.createFile();
+        assertEquals(FileType.FILE, file.getType());
+
+        file = root.resolveFile("dir1/missing1/fileA");
+        assertEquals(FileType.FILE, file.getType());
+        assertEquals(FileType.FOLDER, file.getParent().getType());
+
+        FileObject dir = root.resolveFile("dir1");
+        file = dir.getChild("missing1");
+        assertNotNull(file);
+        file = file.getChild("fileA");
+        assertNotNull(file);
+    }
+
+    @Test
+    public void testCreateChildGap2() throws IOException
+    {
+        FileObject root = getTestRoot(true);
+
+        FileObject file = root.resolveFile("dir1/missing1/missing2/fileA");
+        assertEquals(FileType.IMAGINARY, file.getType());
+
+        file.createFile();
+        assertEquals(FileType.FILE, file.getType());
+
+        file = root.resolveFile("dir1/missing1/missing2/fileA");
+        assertEquals(FileType.FILE, file.getType());
+        assertEquals(FileType.FOLDER, file.getParent().getType());
+
+        FileObject dir = root.resolveFile("dir1");
+        file = dir.getChild("missing1");
+        assertNotNull(file);
+        file = file.getChild("missing2");
+        assertNotNull(file);
+        file = file.getChild("fileA");
+        assertNotNull(file);
+    }
+
+    @Test(expected=FileSystemException.class)
+    public void testCreateOverlap() throws IOException
+    {
+        FileObject file1 = null;
+        try
+        {
+            FileObject root = getTestRoot(true);
+
+            file1 = root.resolveFile("dir2/missing1/fileA");
+            assertEquals(FileType.IMAGINARY, file1.getType());
+
+            FileObject file2 = root.resolveFile("dir2/missing1");
+            assertEquals(FileType.IMAGINARY, file1.getType());
+
+            file2.createFile();
+            assertEquals(FileType.FILE, file2.getType());
+        }
+        catch (Exception failure) { fail(failure.toString()); }
+
+        file1.createFile(); // must fail
+    }
+
+    @Test
     public void testParentNoticesDelete() throws IOException
     {
         FileObject root = getTestRoot(true);
