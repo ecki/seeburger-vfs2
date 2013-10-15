@@ -56,6 +56,8 @@ public class MSSQLProviderTestCase extends AbstractProviderTestConfig implements
             // fs.importTree(getTestDirectory());
             FileObject from = manager.resolveFile(new File("."), getTestDirectory());
             base.copyFrom(from, new AllFileSelector());
+            base.resolveFile("read-tests/emptydir").createFolder();
+
             FileObject fo = manager.resolveFile("seejt:/key/test-data/code");
             from = manager.resolveFile(new File("."), "target/test-classes/code");
             fo.copyFrom(from, new AllFileSelector());

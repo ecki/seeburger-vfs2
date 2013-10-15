@@ -56,6 +56,7 @@ public class DarcProviderTestCase extends AbstractProviderTestConfig implements 
             // fs.importTree(getTestDirectory());
             FileObject from = manager.resolveFile(new File("."), getTestDirectory());
             base.copyFrom(from, new AllFileSelector());
+            base.resolveFile("read-tests/emptydir").createFolder();
 
             FileObject fo = manager.resolveFile("darc:ram:/!/test-data/code", opts);
             from = manager.resolveFile(new File("."), "target/test-classes/code");

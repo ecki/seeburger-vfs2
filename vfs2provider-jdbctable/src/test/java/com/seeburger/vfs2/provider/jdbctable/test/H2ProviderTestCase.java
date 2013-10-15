@@ -64,6 +64,7 @@ public class H2ProviderTestCase extends AbstractProviderTestConfig implements Pr
             // fs.importTree(getTestDirectory());
             FileObject from = manager.resolveFile(new File("."), getTestDirectory());
             base.copyFrom(from, new AllFileSelector());
+            base.resolveFile("read-tests/emptydir").createFolder();
 
             FileObject fo = manager.resolveFile("seejt:/key/test-data/code", opts);
             from = manager.resolveFile(new File("."), "target/test-classes/code");
