@@ -44,7 +44,6 @@ public class DarcFileUtilTest
     public void testUnwrapDarcFileJunction() throws FileSystemException
     {
         DefaultFileSystemManager manager = getManager(); manager.init();
-        FileObject backend = manager.resolveFile("ram:/");
 
         FileSystemOptions fsoptions = new FileSystemOptions();
         DarcFileConfigBuilder config = DarcFileConfigBuilder.getInstance();
@@ -65,9 +64,8 @@ public class DarcFileUtilTest
     @Test
     public void testUnwrapDarcFileSyncJunction() throws FileSystemException
     {
-        DefaultFileSystemManager manager = (DefaultFileSystemManager)getManager();
+        DefaultFileSystemManager manager = getManager();
         manager.setFileObjectDecorator(SynchronizedFileObject.class); manager.init();
-        FileObject backend = manager.resolveFile("ram:/");
 
         FileSystemOptions fsoptions = new FileSystemOptions();
         DarcFileConfigBuilder config = DarcFileConfigBuilder.getInstance();
