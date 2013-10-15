@@ -116,7 +116,7 @@ public class DarcFileUtil
      *
      * @param file and FileObject within a digest archive filesystem
      * @return string if it has the githash attribute or null
-     * @throws FileSystemException problems while accessing the file are rethrown
+     * @throws FileSystemException problems while accessing the file (getContent, getAttribztes) are rethrown
      */
     public static String getObjectID(FileObject file) throws FileSystemException
     {

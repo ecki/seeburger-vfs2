@@ -21,6 +21,7 @@ import org.apache.commons.vfs2.cache.DefaultFilesCache;
 import org.apache.commons.vfs2.impl.DefaultFileReplicator;
 import org.apache.commons.vfs2.impl.DefaultFileSystemManager;
 import org.apache.commons.vfs2.impl.SynchronizedFileObject;
+import org.apache.commons.vfs2.provider.DelegateFileObject;
 import org.apache.commons.vfs2.provider.local.DefaultLocalFileProvider;
 import org.apache.commons.vfs2.provider.ram.RamFileProvider;
 import org.apache.commons.vfs2.provider.url.UrlFileProvider;
@@ -55,8 +56,7 @@ public class DarcFileUtilTest
         FileSystem vfs = vfsRoot.getFileSystem();
         vfs.addJunction("test", darc.resolveFile("test"));
         FileObject del = vfsRoot.resolveFile("test");
-        assertFalse(del instanceof DarcFileObject);
-        assertNotNull(del);
+        assertTrue(del instanceof DelegateFileObject);
         assertTrue(DarcFileUtil.unwrapDarcFile(del) instanceof DarcFileObject);
         assertSame(test, DarcFileUtil.unwrapDarcFile(del));
     }
