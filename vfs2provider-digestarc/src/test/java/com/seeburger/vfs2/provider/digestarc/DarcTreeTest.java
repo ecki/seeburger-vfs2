@@ -108,6 +108,49 @@ public class DarcTreeTest
     }
 
     @Test
+    public void testResolveNewFileL1() throws IOException
+    {
+        DarcTree tree = buildDefaultTestTree();
+        Entry result = tree.resolveName("/dir1/dir1file2", null);
+        assertNull(result);
+        tree.addFile("/dir1/dir1file2", "abc", 3, null);
+        result = tree.resolveName("/dir1/dir1file2", null);
+        assertNotNull(result);
+    }
+
+    @Test
+    public void testResolveNewFileL2() throws IOException
+    {
+        DarcTree tree = buildDefaultTestTree();
+        Entry result = tree.resolveName("/dir1/dir12/dir12file2", null);
+        assertNull(result);
+        tree.addFile("/dir1/dir12/dir12file2", "abc", 3, null);
+        result = tree.resolveName("/dir1/dir12/dir12file2", null);
+        assertNotNull(result);
+        result = tree.resolveName("/dir1/dir12", null);
+        assertNotNull(result);
+    }
+
+    @Test
+    public void testResolveNewFileL3() throws IOException
+    {
+        DarcTree tree = buildDefaultTestTree();
+        Entry result = tree.resolveName("/dir1/dir12/dir123/dir123file1", null);
+        assertNull(result);
+        tree.addFile("/dir1/dir12/dir123/dir123file1", "abc", 3, null);
+        result = tree.resolveName("/dir1/dir12/dir123/dir123file1", null);
+        assertNotNull(result);
+        assertTrue(result instanceof DarcTree.File);
+        result = tree.resolveName("/dir1/dir12/dir123", null);
+        assertNotNull(result);
+        assertTrue(result instanceof Directory);
+        result = tree.resolveName("/dir1/dir12", null);
+        assertNotNull(result);
+        assertTrue(result instanceof Directory);
+    }
+
+
+    @Test
     public void testResolveDirectoryNotFound() throws IOException
     {
         DarcTree tree = buildDefaultTestTree();

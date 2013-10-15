@@ -253,6 +253,16 @@ public class DarcFileObject extends AbstractFileObject implements FileListener
         String hash = provider.storeTempBlob(os, DarcTree.asHex(digest));
         os = null; // free early
         tree.addFile(getName().getPathDecoded(), hash, len, provider);
+
+        //super.endOutput();
+        if (type == FileType.IMAGINARY)
+        {
+            handleCreate(FileType.FILE);
+        }
+        else
+        {
+            onChange();
+        }
     }
 
 

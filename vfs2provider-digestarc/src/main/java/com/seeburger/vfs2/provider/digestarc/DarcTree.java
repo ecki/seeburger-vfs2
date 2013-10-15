@@ -81,7 +81,7 @@ public class DarcTree
                 for(int j=i;j<parts.length;j++)
                 {
                     newChild = new Directory(new HashMap<String, Entry>());
-                    parentDir.addDirectory(parts[j], newChild);
+                    parentDir.addDirectory(parts[j], newChild, provider);
                     parentDir = newChild;
                 }
                 return;
@@ -103,7 +103,7 @@ public class DarcTree
         {
             me = child;
             child = me.getChild(parts[i], provider);
-//System.out.println("addFile " + name + " me=" + me + " child=" + child + " i=" + i);
+//System.out.println("  me=" + parts[i-1] + " child=" + ((child!=null)?parts[i]:"-") + " i=" + i);
             if (child == null)
             {
                 // me is the last existing entry
@@ -114,14 +114,15 @@ public class DarcTree
                 for(int j=i;j<parts.length-1;j++)
                 {
                     newChild = new Directory(new HashMap<String, Entry>());
-                    parentDir.addDirectory(parts[j], newChild);
+                    parentDir.addDirectory(parts[j], newChild, provider);
                     parentDir = newChild;
                 }
-                return;
+                child = parentDir;
+                break;
             }
         }
-        // me is the parent of the file
-        ((Directory)child).addFile(parts[parts.length-1], length, hash);
+        // child is the parent of the file
+        ((Directory)child).addFile(parts[parts.length-1], length, hash, provider);
     }
 
     public void delete(String name, BlobStorageProvider provider) throws IOException
@@ -142,7 +143,7 @@ public class DarcTree
                 throw new RuntimeException("Not found " + name);
             }
         }
-        ((Directory)me).removeChild(parts[parts.length-1]);
+        ((Directory)me).removeChild(parts[parts.length-1], provider);
     }
 
 
@@ -229,25 +230,25 @@ public class DarcTree
             return keys.toArray(new String[keys.size()]);
         }
 
-        public void addFile(String name, long length, String hash)
+        public void addFile(String name, long length, String hash, BlobStorageProvider provider) throws IOException
         {
-            // TODO: materializeContent(provider);
+            materializeContent(provider);
             Entry file = new File(length,  hash);
             content.put(name, file);
             modified = true;
         }
 
-        public void removeChild(String name)
+        public void removeChild(String name, BlobStorageProvider provider) throws IOException
         {
-            // TODO: materializeContent(provider);
+            materializeContent(provider);
             Entry entry = content.remove(name);
             if (entry != null)
                 modified = true;
         }
 
-        public void addDirectory(String name, Directory newChild)
+        public void addDirectory(String name, Directory newChild, BlobStorageProvider provider) throws IOException
         {
-            // TODO: materializeContent(provider);
+            materializeContent(provider);
             modified = true;
             content.put(name, newChild);
         }
