@@ -18,6 +18,7 @@ import org.apache.commons.vfs2.FileSystemException;
 import org.apache.commons.vfs2.FileType;
 import org.apache.commons.vfs2.provider.AbstractFileName;
 import org.apache.commons.vfs2.provider.AbstractFileObject;
+import org.apache.commons.vfs2.provider.UriParser;
 import org.apache.commons.vfs2.util.WeakRefFileListener;
 
 import com.seeburger.vfs2.provider.digestarc.DarcTree.Directory;
@@ -36,7 +37,6 @@ public class DarcFileObject extends AbstractFileObject implements FileListener
     private final BlobStorageProvider provider;
 
     private DarcTree.Entry cachedEntry;
-    private FileType type = FileType.IMAGINARY;
     private WeakReference<FileObject> targetRef;
 
     private boolean ignoreEvent; // TODO: currently not needed as it is RO
@@ -68,11 +68,21 @@ public class DarcFileObject extends AbstractFileObject implements FileListener
 
     /**
      * Returns the file's type.
+     * @throws FileSystemException
      */
     @Override
-    protected FileType doGetType()
+    protected FileType doGetType() throws FileSystemException
     {
-        return type;
+        Entry entry = getEntry();
+        if (entry instanceof Directory)
+        {
+            return FileType.FOLDER;
+        }
+        else if (entry instanceof File)
+        {
+            return FileType.FILE;
+        }
+        return null;
     }
 
     /**
@@ -86,7 +96,7 @@ public class DarcFileObject extends AbstractFileObject implements FileListener
         if (entry instanceof Directory)
         {
             Directory dir = (Directory)entry;
-            return dir.getChildrenNames(provider);
+            return UriParser.encode(dir.getChildrenNames(provider));
         }
 
         // if we are a file or virtual
@@ -155,25 +165,12 @@ public class DarcFileObject extends AbstractFileObject implements FileListener
 	protected void doAttach() throws Exception
 	{
 	    cachedEntry = null;
-	    Entry entry = getEntry();
-        if (entry instanceof Directory)
-        {
-            type = FileType.FOLDER;
-        }
-        else if (entry instanceof File)
-        {
-            type = FileType.FILE;
-        }
-
-//System.out.println("attached " + getName() + " " + getName().getPath() + " " + type);
 	}
 
 	@Override
 	protected void doDetach() throws Exception
 	{
-		type = FileType.IMAGINARY;
 		cachedEntry = null;
-//System.out.println("detached " + getName());
 	}
 
     /**
@@ -259,8 +256,6 @@ public class DarcFileObject extends AbstractFileObject implements FileListener
         throws Exception
     {
         cachedEntry = null;
-        // super.onChange(); does nothing
-//System.out.println("Change received " + getName());
     }
 
     @Override
@@ -268,8 +263,6 @@ public class DarcFileObject extends AbstractFileObject implements FileListener
         throws Exception
     {
         cachedEntry = null;
-        // super.onChildrenChanged(child, newType); is empty
-//System.out.println("children of " + getName().getPath() + " changed: " + child.getBaseName() + " " + newType);
     }
 
     @Override
@@ -277,26 +270,25 @@ public class DarcFileObject extends AbstractFileObject implements FileListener
         throws Exception
     {
         // TODO this is the naive in-memory implementation
-        ByteArrayOutputStream  baos = this.dataOut; this.dataOut = null;
-        byte[] content = baos.toByteArray(); baos = null;
+        ByteArrayOutputStream  baos = this.dataOut;
+        this.dataOut = null; // free early
+
+        byte[] content = baos.toByteArray();
+        baos = null;
+
         long len = content.length;
+
         OutputStream os = provider.getTempStream();
         ObjectStorage storage = new ObjectStorage();
         byte[] digest = storage.writeBytes(os, content, "blob"); // closes stream
-        content = null; // free early
+        content = null;
+
         String hash = provider.storeTempBlob(os, DarcTree.asHex(digest));
-        os = null; // free early
+        os = null;
+
         tree.addFile(getName().getPathDecoded(), hash, len, provider);
 
-        //super.endOutput();
-        if (type == FileType.IMAGINARY)
-        {
-            handleCreate(FileType.FILE);
-        }
-        else
-        {
-            onChange();
-        }
+        super.endOutput(); // call handleCreate or onChange
     }
 
 
