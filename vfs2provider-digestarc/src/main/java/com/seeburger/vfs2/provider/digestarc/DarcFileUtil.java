@@ -20,6 +20,7 @@ import org.apache.commons.vfs2.FileObject;
 import org.apache.commons.vfs2.FileSystem;
 import org.apache.commons.vfs2.FileSystemException;
 import org.apache.commons.vfs2.impl.DecoratedFileObject;
+import org.apache.commons.vfs2.provider.DelegateFileObject;
 
 
 /** Static utility functions to work with digest archive data and files. */
@@ -51,12 +52,15 @@ public class DarcFileUtil
             if (current instanceof DecoratedFileObject)
             {
                 current = ((DecoratedFileObject)current).getDecoratedFileObject();
-                // if null falls through next two instanceofs.
+                continue;
             }
-            else
+            if (current instanceof DelegateFileObject)
             {
-                return null;
+                current = ((DelegateFileObject)current).getDelegateFile();
+                continue;
             }
+            // if null or unknown
+            return null;
         }
         return null;
     }
