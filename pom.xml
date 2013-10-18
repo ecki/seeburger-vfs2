@@ -10,6 +10,13 @@
     <name>SEEBURGER VFS2 Parent</name>
     <description>Modules for the apache-commons VFS2 project.</description>
 
+    <scm>
+        <connection>scm:git:https://github.com/seeburger-ag/seeburger-vfs2.git</connection>
+        <url>http://github.com/seeburger-ag/seeburger-vfs2</url>
+        <developerConnection>scm:git:git@github.com:seeburger-ag/seeburger-vfs2.git</developerConnection>
+        <tag>master</tag>
+    </scm>
+
     <properties>
         <maven.build.timestamp.format>yyyyMMdd-HHmm</maven.build.timestamp.format>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
