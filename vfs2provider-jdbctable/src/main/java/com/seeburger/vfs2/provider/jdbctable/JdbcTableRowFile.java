@@ -1,4 +1,12 @@
+/*
+ * JdbcTableRowFile.java
+ *
+ * created at 2013-08-09 by Bernd Eckenfels <b.eckenfels@seeburger.de>
+ *
+ * Copyright (c) SEEBURGER AG, Germany. All Rights Reserved.
+ */
 package com.seeburger.vfs2.provider.jdbctable;
+
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -24,6 +32,7 @@ import org.apache.commons.vfs2.RandomAccessContent;
 import org.apache.commons.vfs2.provider.AbstractFileName;
 import org.apache.commons.vfs2.provider.AbstractFileObject;
 import org.apache.commons.vfs2.util.RandomAccessMode;
+
 
 public class JdbcTableRowFile extends AbstractFileObject
 {

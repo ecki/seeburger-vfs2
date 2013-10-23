@@ -1,4 +1,12 @@
+/*
+ * SimpleOracleTest.java
+ *
+ * created at 2013-09-09 by Bernd Eckenfels <b.eckenfels@seeburger.de>
+ *
+ * Copyright (c) SEEBURGER AG, Germany. All Rights Reserved.
+ */
 package com.seeburger.vfs2.provider.jdbctable.test;
+
 
 import static org.junit.Assert.assertEquals;
 

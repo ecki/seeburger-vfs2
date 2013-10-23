@@ -1,4 +1,10 @@
-/* License: TODO */
+/*
+ * JdbcTableFileSystem.java
+ *
+ * created at 2013-08-09 by Bernd Eckenfels <b.eckenfels@seeburger.de>
+ *
+ * Copyright (c) SEEBURGER AG, Germany. All Rights Reserved.
+ */
 package com.seeburger.vfs2.provider.jdbctable;
 
 
@@ -13,7 +19,7 @@ import org.apache.commons.vfs2.provider.AbstractFileSystem;
 
 
 /**
- * An Apche VFS2 file system backed by a JDBC Table.
+ * An Apache VFS2 file system backed by a JDBC Table.
  */
 public class JdbcTableFileSystem extends AbstractFileSystem
 {

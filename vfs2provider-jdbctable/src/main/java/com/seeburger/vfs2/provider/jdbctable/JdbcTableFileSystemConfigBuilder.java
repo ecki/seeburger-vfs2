@@ -1,4 +1,10 @@
-/* License: TODO */
+/*
+ * JdbcTableFileSystemConfigBuilder.java
+ *
+ * created at 2013-08-09 by Bernd Eckenfels <b.eckenfels@seeburger.de>
+ *
+ * Copyright (c) SEEBURGER AG, Germany. All Rights Reserved.
+ */
 package com.seeburger.vfs2.provider.jdbctable;
 
 

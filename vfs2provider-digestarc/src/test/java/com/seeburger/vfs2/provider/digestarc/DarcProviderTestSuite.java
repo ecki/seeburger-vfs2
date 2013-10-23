@@ -3,7 +3,7 @@
  *
  * created at 2013-10-15 by Bernd Eckenfels <b.eckenfels@seeburger.de>
  *
- * Copyright (c) SEEBURGER AG, Germany. All Rights Reserved. TODO
+ * Copyright (c) SEEBURGER AG, Germany. All Rights Reserved.
  */
 package com.seeburger.vfs2.provider.digestarc;
 

@@ -1,4 +1,12 @@
+/*
+ * DarcFileConfigBuilder.java
+ *
+ * created at 2013-09-25 by Bernd Eckenfels <b.eckenfels@seeburger.de>
+ *
+ * Copyright (c) SEEBURGER AG, Germany. All Rights Reserved.
+ */
 package com.seeburger.vfs2.provider.digestarc;
+
 
 import org.apache.commons.vfs2.FileSystem;
 import org.apache.commons.vfs2.FileSystemConfigBuilder;

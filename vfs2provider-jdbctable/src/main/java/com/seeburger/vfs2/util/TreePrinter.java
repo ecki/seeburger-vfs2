@@ -3,9 +3,10 @@
  *
  * created at 2013-08-16 by Bernd Eckenfels <b.eckenfels@seeburger.de>
  *
- * Copyright (c) SEEBURGER AG, Germany. All Rights Reserved. TODO
+ * Copyright (c) SEEBURGER AG, Germany. All Rights Reserved.
  */
 package com.seeburger.vfs2.util;
+
 
 import java.io.PrintStream;
 import java.util.Date;

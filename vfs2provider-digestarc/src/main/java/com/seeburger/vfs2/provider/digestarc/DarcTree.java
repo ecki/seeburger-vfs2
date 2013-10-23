@@ -1,4 +1,12 @@
+/*
+ * DarcTree.java
+ *
+ * created at 2013-09-16 by Bernd Eckenfels <b.eckenfels@seeburger.de>
+ *
+ * Copyright (c) SEEBURGER AG, Germany. All Rights Reserved.
+ */
 package com.seeburger.vfs2.provider.digestarc;
+
 
 import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
@@ -22,6 +30,7 @@ import java.util.zip.InflaterInputStream;
 import org.apache.commons.vfs2.FileContent;
 import org.apache.commons.vfs2.FileNotFolderException;
 import org.apache.commons.vfs2.FileObject;
+
 
 public class DarcTree
 {
