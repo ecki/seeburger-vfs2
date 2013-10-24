@@ -26,6 +26,7 @@ import java.security.Permissions;
 import java.security.SecureClassLoader;
 import java.security.cert.Certificate;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Enumeration;
 import java.util.Iterator;
 import java.util.jar.Attributes;
@@ -373,25 +374,26 @@ public class VFSClassLoader extends SecureClassLoader
     /**
      * Returns an Enumeration of all the resources in the search path
      * with the specified name.
-     * TODO - Implement this.
      * @param name The resources to find.
      * @return An Enumeration of the resources associated with the name.
      */
     @Override
-    protected Enumeration<URL> findResources(final String name)
+    protected Enumeration<URL> findResources(final String name) throws IOException
     {
-        return new Enumeration<URL>()
+        ArrayList<URL> result = new ArrayList<URL>(2);
+        final Iterator<FileObject> it = resources.iterator();
+        while (it.hasNext())
         {
-            public boolean hasMoreElements()
+            final FileObject baseFile = it.next();
+            final FileObject file =
+                baseFile.resolveFile(name, NameScope.DESCENDENT_OR_SELF);
+            if (file.exists())
             {
-                return false;
+                result.add(new Resource(name, baseFile, file).getURL());
             }
+        }
 
-            public URL nextElement()
-            {
-                return null;
-            }
-        };
+        return Collections.enumeration(result);
     }
 
     /**
