@@ -18,6 +18,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.SQLWarning;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -193,16 +194,34 @@ public class JdbcTableRowFile extends AbstractFileObject
 
     @Override
     protected Map<String, Object> doGetAttributes() throws Exception {
-        // TODO Auto-generated method stub
-        return super.doGetAttributes(); // aka empty
+
+        Map<String, Object> attributes = new HashMap<String, Object>();
+        long markTime = getMarkTime();
+        attributes.put("markTime", markTime);
+        return attributes;
     }
 
     @Override
     protected void doSetAttribute(String attrName, Object value)
                     throws Exception
     {
-        // TODO Auto-generated method stub
-        super.doSetAttribute(attrName, value);
+        if (attrName.equalsIgnoreCase("markTime"))
+        {
+            long time = 0;
+            if ((value != null) && (Long.class.isInstance(value)))
+            {
+                time = (Long) value;
+            }
+            else
+            {
+                time = System.currentTimeMillis();
+            }
+          setMarkTime(time);
+        }
+        else
+        {
+            super.doSetAttribute(attrName, value);
+        }
     }
 
     @Override
@@ -768,6 +787,68 @@ public class JdbcTableRowFile extends AbstractFileObject
             }
             catch (Exception ignored) { }
         }
+    }
+
+   private void setMarkTime(long time)
+       throws Exception
+   {
+       Connection connection = getConnection("mark");
+       PreparedStatement ps = null;
+       try
+       {
+           ps = dialect.prepareQuery(connection, "UPDATE {table} SET cMarkGarbage=? WHERE cParent=? AND cName=?");
+           setPrimaryKey(ps, this, 1);
+           ps.setLong(1, time);
+
+           int count = ps.executeUpdate();
+           if (count == 0)
+           {
+               // Derby generates warnings on no-match: https://issues.apache.org/jira/browse/DERBY-448
+               ps.clearWarnings();
+               throw new IOException("No file to mark: " + getName());
+           }
+
+           if (count != 1)
+           {
+               throw new IOException("Inconsitent result " + count +" while mark " + getName());
+           }
+
+           connection.commit();
+           connection.close();
+           connection = null;
+       }
+       finally
+       {
+           rollbackConnection(null, null, ps, connection);
+       }
+   }
+
+
+    private long getMarkTime()
+        throws Exception
+    {
+        long markTime = 0;
+        Connection connection = getConnection("mark");
+        PreparedStatement ps = null;
+        try
+        {
+            ps = dialect.prepareQuery(connection, "SELECT cMarkGarbage FROM {table} WHERE cParent=? AND cName=?");
+            setPrimaryKey(ps, this, 0);
+
+            ResultSet rs = ps.executeQuery();
+            if (rs.next())
+            {
+                markTime = rs.getLong(1);
+            }
+        }
+        finally
+        {
+            if (connection != null)
+            {
+                connection.close();
+            }
+        }
+        return markTime;
     }
 
 }
