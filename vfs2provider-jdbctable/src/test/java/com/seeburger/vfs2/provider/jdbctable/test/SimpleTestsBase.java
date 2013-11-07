@@ -18,6 +18,9 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.List;
 
 import javax.sql.DataSource;
 
@@ -27,13 +30,17 @@ import org.apache.commons.vfs2.FileObject;
 import org.apache.commons.vfs2.FileSystemException;
 import org.apache.commons.vfs2.FileType;
 import org.apache.commons.vfs2.impl.DefaultFileSystemManager;
+import org.apache.commons.vfs2.operations.FileOperationProvider;
 import org.apache.commons.vfs2.provider.local.DefaultLocalFileProvider;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
 
+import com.seeburger.vfs2.operations.BulkSetAttributeOperation;
+import com.seeburger.vfs2.operations.ExpireFilesOperation;
 import com.seeburger.vfs2.provider.jdbctable.JdbcDialect;
+import com.seeburger.vfs2.provider.jdbctable.JdbcTableOperationProvider;
 import com.seeburger.vfs2.provider.jdbctable.JdbcTableProvider;
 
 
@@ -52,6 +59,7 @@ public abstract class SimpleTestsBase
             manager.addProvider("seejt", new JdbcTableProvider(dialect));
         else
             manager.addProvider("seejt", new JdbcTableProvider(dataSource));
+        manager.addOperationProvider("seejt", JdbcTableOperationProvider.getInstance());
         manager.addProvider("file", new DefaultLocalFileProvider());
         manager.setCacheStrategy(CacheStrategy.ON_RESOLVE);
         manager.init();
@@ -731,6 +739,176 @@ public abstract class SimpleTestsBase
 
         verifyDatabase();
     }
+
+    @Test
+    public void testMarkTime() throws FileSystemException
+    {
+        final long now = System.currentTimeMillis();
+
+        final FileObject testFile1 = manager.resolveFile("seejt:///key/marktime_"+now);
+        assertEquals(false,  testFile1.exists());
+        assertEquals(FileType.IMAGINARY, testFile1.getType());
+        testFile1.createFile();
+        assertEquals(true,  testFile1.exists());
+        assertEquals(FileType.FILE, testFile1.getType());
+
+        // ensure markTime is initialized to lastModified if freshly created
+        assertEquals(testFile1.getContent().getLastModifiedTime(), testFile1.getContent().getAttribute("markTime"));
+
+        // support Long values
+        testFile1.getContent().setAttribute("markTime", new Long(1));
+        testFile1.refresh();
+        assertEquals(new Long(1), testFile1.getContent().getAttribute("markTime"));
+
+        // support String values
+        testFile1.getContent().setAttribute("markTime", "1");
+        testFile1.close(); // TODO: currently required, will cache the string in DefaultFileContent
+        assertEquals(new Long(1), testFile1.getContent().getAttribute("markTime"));
+
+        // support null as alias for current
+        testFile1.getContent().setAttribute("markTime", null);
+        testFile1.close(); // TODO: currently required, will cache the null in DefaultFileContent
+        long current = ((Long)(testFile1.getContent().getAttribute("markTime"))).longValue();
+        long diff = current - now;
+        assertTrue(diff < 10000);
+
+        // and finally find connection leaks
+        verifyDatabase();
+    }
+
+    @Test
+    public void testBulkSet() throws FileSystemException
+    {
+        final long now = System.currentTimeMillis();
+
+        final FileObject testFile1 = manager.resolveFile("seejt:///key/bulkset_"+now+"/file1");
+        assertEquals(false,  testFile1.exists());
+        assertEquals(FileType.IMAGINARY, testFile1.getType());
+        testFile1.createFile();
+        assertEquals(true,  testFile1.exists());
+        assertEquals(FileType.FILE, testFile1.getType());
+        testFile1.close(); // avoid attribute cache
+
+        final FileObject testFile2 = manager.resolveFile("seejt:///key/bulkset_"+now+"/file2");
+        assertEquals(false,  testFile2.exists());
+        assertEquals(FileType.IMAGINARY, testFile2.getType());
+        testFile2.createFile();
+        assertEquals(true,  testFile2.exists());
+        assertEquals(FileType.FILE, testFile2.getType());
+        testFile2.close(); // avoid attribute cache
+
+        final FileObject testParent = manager.resolveFile("seejt:///key/bulkset_"+now);
+        assertEquals(true,  testParent.exists());
+        assertEquals(FileType.FOLDER, testParent.getType());
+
+        // make sure all files return operation and none is reused
+        BulkSetAttributeOperation op1a = (BulkSetAttributeOperation)testFile1.getFileOperations().getOperation(BulkSetAttributeOperation.class);
+        assertNotNull(op1a);
+        BulkSetAttributeOperation op2 = (BulkSetAttributeOperation)testFile2.getFileOperations().getOperation(BulkSetAttributeOperation.class);
+        assertNotNull(op2);
+        assertNotSame(op1a, op2);
+        BulkSetAttributeOperation op1b = (BulkSetAttributeOperation)testFile1.getFileOperations().getOperation(BulkSetAttributeOperation.class);
+        assertNotNull(op1b);
+        assertNotSame(op1a, op1b);
+
+        // now prepare actual bulk operation on parent (for relative name checking)
+        BulkSetAttributeOperation op = (BulkSetAttributeOperation)testParent.getFileOperations().getOperation(BulkSetAttributeOperation.class);
+        assertNotNull(op);
+
+        op.setAttribute("markTime", String.valueOf(Long.MAX_VALUE));
+        // test with one relative and one absolute and one missing relative file name
+        List<String> files = Arrays.asList("file1", "/key/bulkset_"+now+"/file2", "file3");
+        op.setFilesList(files);
+
+        op.process();
+
+        // now verify the time stamps have actually changed
+        FileObject verifyFile = manager.resolveFile("seejt:///key/bulkset_"+now+"/file1");
+        long markTime = ((Long)(verifyFile.getContent().getAttribute("markTime"))).longValue();
+        assertEquals(Long.MAX_VALUE, markTime);
+
+        verifyFile = manager.resolveFile("seejt:///key/bulkset_"+now+"/file2");
+        markTime = ((Long)(verifyFile.getContent().getAttribute("markTime"))).longValue();
+        assertEquals(Long.MAX_VALUE, markTime);
+
+        // make sure the missing file has not been created
+        verifyFile = manager.resolveFile("seejt:///key/bulkset_"+now+"/file3");
+        assertEquals(false, verifyFile.exists());
+
+        // check that exactly the missing file was reported
+        Collection<String> result = op.getMissingFiles();
+        assertNotNull(result);
+        assertEquals(1, result.size());
+        assertEquals(true, result.contains("file3"));
+
+        // and finally find connection leaks
+        verifyDatabase();
+    }
+
+    @Test
+    public void testExpire() throws FileSystemException
+    {
+        final long now = System.currentTimeMillis();
+
+        final FileObject testFile1 = manager.resolveFile("seejt:///key/expire_"+now+"/in/file1");
+        testFile1.createFile();
+        testFile1.getContent().setAttribute("markTime", "1");
+        assertEquals(true,  testFile1.exists());
+        assertEquals(FileType.FILE, testFile1.getType());
+        testFile1.close(); // avoid attribute cache
+
+        final FileObject testSubFile1 = manager.resolveFile("seejt:///key/expire_"+now+"/in/sub/file1");
+        testSubFile1.createFile();
+        testSubFile1.getContent().setAttribute("markTime", "1");
+        assertEquals(true,  testSubFile1.exists());
+        assertEquals(FileType.FILE, testSubFile1.getType());
+        testSubFile1.close(); // avoid attribute cache
+
+        final FileObject testFile2 = manager.resolveFile("seejt:///key/expire_"+now+"/in/file2");
+        testFile2.createFile();
+        testFile2.getContent().setAttribute("markTime", "2");
+        assertEquals(true,  testFile2.exists());
+        assertEquals(FileType.FILE, testFile2.getType());
+        testFile2.close(); // avoid attribute cache
+
+        final FileObject testFile3 = manager.resolveFile("seejt:///key/expire_"+now+"/in/file3");
+        testFile3.createFile();
+        testFile3.getContent().setAttribute("markTime", "3");
+        assertEquals(true,  testFile3.exists());
+        assertEquals(FileType.FILE, testFile3.getType());
+        testFile3.close(); // avoid attribute cache
+
+        final FileObject testFile0 = manager.resolveFile("seejt:///key/expire_"+now+"/inout/file0");
+        testFile0.createFile();
+        testFile0.getContent().setAttribute("markTime", "0");
+        assertEquals(true,  testFile0.exists());
+        assertEquals(FileType.FILE, testFile0.getType());
+        testFile0.close(); // avoid attribute cache
+
+        // we now have 5 files and check if prefix and cutoff timestamp to expire them works
+        ExpireFilesOperation op = (ExpireFilesOperation)testFile0.getFileOperations().getOperation(ExpireFilesOperation.class);
+
+        op.setParentPrefix("/key/expire_"+now+"/in");
+        op.setTimeBefore(2l);
+        op.process();
+        int count = op.getDeleteCount();
+        assertEquals(2, count); // only file1 and sub/file1
+
+        FileObject verifyFile = manager.resolveFile("seejt:///key/expire_"+now+"/inout/file0");
+        assertEquals(true,  verifyFile.exists());
+        verifyFile = manager.resolveFile("seejt:///key/expire_"+now+"/in/file1");
+        assertEquals(false,  verifyFile.exists());
+        verifyFile = manager.resolveFile("seejt:///key/expire_"+now+"/in/sub/file1");
+        assertEquals(false,  verifyFile.exists());
+        verifyFile = manager.resolveFile("seejt:///key/expire_"+now+"/in/file2");
+        assertEquals(true,  verifyFile.exists());
+        verifyFile = manager.resolveFile("seejt:///key/expire_"+now+"/in/file3");
+        assertEquals(true,  verifyFile.exists());
+
+        // and finally find connection leaks
+        verifyDatabase();
+    }
+
 
     private void commitAndClose(PreparedStatement ps, Connection c) throws SQLException
     {

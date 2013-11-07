@@ -14,13 +14,13 @@ import org.apache.commons.vfs2.FileSystemException;
 import org.apache.commons.vfs2.operations.AbstractFileOperationProvider;
 import org.apache.commons.vfs2.operations.FileOperation;
 
+import com.seeburger.vfs2.operations.BulkSetAttributeOperation;
+import com.seeburger.vfs2.operations.ExpireFilesOperation;
+
 /**
-*
-* This class is an implementation of AbstractFileOperationProvider
-* that provides JDBC file system specific operations.
-*
-* @author y.gologanov
-*/
+ * This class is an implementation of AbstractFileOperationProvider
+ * that provides JDBC file system specific operations.
+ */
 public class JdbcTableOperationProvider extends AbstractFileOperationProvider
 {
 
@@ -32,8 +32,8 @@ public class JdbcTableOperationProvider extends AbstractFileOperationProvider
     public static JdbcTableOperationProvider getInstance() throws FileSystemException
     {
         JdbcTableOperationProvider provider = new JdbcTableOperationProvider();
-        provider.addOperation(CleanFilesOperation.class);
-        provider.addOperation(SetAttributeOperation.class);
+        provider.addOperation(ExpireFilesOperation.class);
+        provider.addOperation(BulkSetAttributeOperation.class);
         return provider;
     }
 
@@ -50,24 +50,22 @@ public class JdbcTableOperationProvider extends AbstractFileOperationProvider
     }
 
     @Override
-    protected FileOperation instantiateOperation(FileObject file,
-                                                 Class< ? extends FileOperation> operationClass)
+    protected FileOperation instantiateOperation(FileObject file, Class< ? extends FileOperation> operationClass)
         throws FileSystemException
     {
-        if (operationClass == CleanFilesOperation.class)
+        if (operationClass == ExpireFilesOperation.class)
         {
-            return new CleanFilesOperation(file);
+            return new JdbcFileExpireOperation(file);
         }
-        else if (operationClass == SetAttributeOperation.class)
+        else if (operationClass == BulkSetAttributeOperation.class)
         {
-            return new SetAttributeOperation(file);
+            return new JdbcFileBulkSetOperation(file);
         }
         else
         {
-            throw new FileSystemException("Unsupported operation: " + operationClass);
+            throw new FileSystemException("vfs.operation/not-found.error", operationClass);
         }
     }
-
 }
 
 

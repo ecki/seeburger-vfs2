@@ -197,7 +197,7 @@ public class JdbcTableRowFile extends AbstractFileObject
 
         Map<String, Object> attributes = new HashMap<String, Object>();
         long markTime = getMarkTime();
-        attributes.put("markTime", markTime);
+        attributes.put("markTime", Long.valueOf(markTime));
         return attributes;
     }
 
@@ -205,18 +205,26 @@ public class JdbcTableRowFile extends AbstractFileObject
     protected void doSetAttribute(String attrName, Object value)
                     throws Exception
     {
-        if (attrName.equalsIgnoreCase("markTime"))
+        if ("markTime".equalsIgnoreCase(attrName))
         {
             long time = 0;
-            if ((value != null) && (Long.class.isInstance(value)))
-            {
-                time = (Long) value;
-            }
-            else
+            if (value == null)
             {
                 time = System.currentTimeMillis();
             }
-          setMarkTime(time);
+            else if (value instanceof Long)
+            {
+                time = ((Long)value).longValue();
+            }
+            else if (value instanceof String)
+            {
+                time = Long.parseLong((String)value);
+            }
+            else
+            {
+                throw new IllegalArgumentException("attribute markTime requires null, Long or String as type. was=" + value.getClass());
+            }
+            setMarkTime(time);
         }
         else
         {
