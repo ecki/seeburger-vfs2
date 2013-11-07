@@ -75,14 +75,15 @@ public class JdbcFileExpireOperation implements ExpireFilesOperation
                 {
                     prefix = prefix.substring(0, prefix.length()-1);
                 }
-                ps = dialect.prepareQuery(connection, "DELETE FROM {table} WHERE cMarkGarbage < ? AND (cParent = ? OR cParent LIKE ?)");
+                // size >= 0 makes sure we do not delete directories
+                ps = dialect.prepareQuery(connection, "DELETE FROM {table} WHERE cMarkGarbage < ? AND (cParent = ? OR cParent LIKE ?) AND cSize >= 0");
                 ps.setLong(1, timeBefore);
                 ps.setString(2, prefix);
                 ps.setString(3, prefix + "/%");
             }
             else
             {
-                ps = dialect.prepareQuery(connection, "DELETE FROM {table} WHERE cMarkGarbage < ?");
+                ps = dialect.prepareQuery(connection, "DELETE FROM {table} WHERE cMarkGarbage < ? AND cSize >= 0");
                 ps.setLong(1, timeBefore);
             }
             this.deleteCount = ps.executeUpdate();
