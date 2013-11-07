@@ -45,8 +45,10 @@ public interface JdbcDialect
     /**
      * Connection is no longer needed.
      * <P>
-     * This will be used adter each transaction to free/return the connection.
+     * This will be used after each transaction to free/return the connection.
      * In the base implementation this simply calls {@link Connection#close()}.
+     * <P>
+     * If <code>connection</code> parameter is null this does nothing.
      */
     void returnConnection(Connection connection);
 
