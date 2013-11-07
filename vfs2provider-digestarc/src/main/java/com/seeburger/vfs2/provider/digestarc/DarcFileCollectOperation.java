@@ -1,5 +1,5 @@
 /*
- * CollectFilesOperation.java
+ * DarcFileCollectOperation.java
  *
  * created at 2013-10-29 by y.gologanov <y.gologanov@seeburger.com>
  *
@@ -13,24 +13,22 @@ import java.util.Collection;
 import org.apache.commons.vfs2.FileObject;
 import org.apache.commons.vfs2.FileSystemException;
 import org.apache.commons.vfs2.FileType;
-import org.apache.commons.vfs2.operations.FileOperation;
 import org.apache.commons.vfs2.operations.FileOperations;
+
+import com.seeburger.vfs2.operations.CollectFilesOperation;
+
 
 /**
  * This class is a FileOperation implementation responsible for
  * creating a list of file uri string object from a specified file tree.
- *
- * @author y.gologanov
  */
-public class CollectFilesOperation
-    implements FileOperation
+public class DarcFileCollectOperation implements CollectFilesOperation
 {
+    private final FileObject root;
 
-    private FileObject root = null;
     private Collection<String> filesList = null;
 
     /**
-     *
      * @param filesList a Collection where discovered files to be added to.
      */
     public void setFilesList(Collection<String> filesList)
@@ -41,7 +39,7 @@ public class CollectFilesOperation
     /**
      * @param root A file tree root object to be iterated
      */
-    public CollectFilesOperation(FileObject root)
+    public DarcFileCollectOperation(FileObject root)
     {
         this.root = root;
     }
@@ -73,5 +71,4 @@ public class CollectFilesOperation
             }
         }
     }
-
 }

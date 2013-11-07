@@ -7,6 +7,7 @@
  */
 package com.seeburger.vfs2.provider.digestarc;
 
+
 import java.util.Collection;
 
 import org.apache.commons.vfs2.FileObject;
@@ -14,23 +15,14 @@ import org.apache.commons.vfs2.FileSystemException;
 import org.apache.commons.vfs2.operations.AbstractFileOperationProvider;
 import org.apache.commons.vfs2.operations.FileOperation;
 
-import com.seeburger.vfs2.provider.digestarc.DarcFileObject;
+import com.seeburger.vfs2.operations.CollectFilesOperation;
+
 
 /**
- *
- * This class is an implementation of AbstractFileOperationProvider
- * that provides Darc file system specific operations.
- *
- * @author y.gologanov
+ * Provide Darc file system specific file operations.
  */
 public class DarcFileOperationProvider extends AbstractFileOperationProvider
 {
-
-    /**
-     *
-     * @return A new instance of the class
-     * @throws FileSystemException
-     */
     public static DarcFileOperationProvider getInstance() throws FileSystemException
     {
         DarcFileOperationProvider provider = new DarcFileOperationProvider();
@@ -57,14 +49,13 @@ public class DarcFileOperationProvider extends AbstractFileOperationProvider
     {
         if (operationClass == CollectFilesOperation.class)
         {
-            return new CollectFilesOperation(file);
+            return new DarcFileCollectOperation(file);
         }
         else
         {
             throw new FileSystemException("Unsupported operation: " + operationClass);
         }
     }
-
 }
 
 

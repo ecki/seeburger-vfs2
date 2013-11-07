@@ -13,6 +13,7 @@ import static org.junit.Assert.*;
 import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.util.ArrayList;
 
 import org.apache.commons.vfs2.CacheStrategy;
 import org.apache.commons.vfs2.FileChangeEvent;
@@ -25,11 +26,15 @@ import org.apache.commons.vfs2.FileType;
 import org.apache.commons.vfs2.cache.DefaultFilesCache;
 import org.apache.commons.vfs2.impl.DefaultFileReplicator;
 import org.apache.commons.vfs2.impl.DefaultFileSystemManager;
+import org.apache.commons.vfs2.operations.FileOperation;
 import org.apache.commons.vfs2.provider.local.DefaultLocalFileProvider;
 import org.apache.commons.vfs2.provider.ram.RamFileProvider;
 import org.apache.commons.vfs2.provider.url.UrlFileProvider;
 import org.junit.Ignore;
 import org.junit.Test;
+
+import com.seeburger.vfs2.operations.CollectFilesOperation;
+import com.seeburger.vfs2.util.TreePrinter;
 
 
 public class DarcBasicTest
@@ -249,6 +254,7 @@ public class DarcBasicTest
         manager.addProvider("file", new DefaultLocalFileProvider());
         manager.addProvider("ram", new RamFileProvider());
         manager.addProvider("darc", new DarcFileProvider());
+        manager.addOperationProvider("darc", DarcFileOperationProvider.getInstance());
 
         manager.setCacheStrategy(CacheStrategy.MANUAL);
         manager.setFilesCache(new DefaultFilesCache());
@@ -311,6 +317,26 @@ public class DarcBasicTest
             file.getFileSystem().removeListener(file, list);
         }
     }
+
+    @Test
+    public void testCollectBlobs() throws IOException
+    {
+        FileObject root = getTestRoot(true);
+
+        FileObject parent = root.resolveFile("dir2");
+
+        CollectFilesOperation collect = (CollectFilesOperation)parent.getFileOperations().getOperation(CollectFilesOperation.class);
+        ArrayList<String> list = new ArrayList<String>();
+
+        collect.setFilesList(list);
+        collect.process();
+
+        TreePrinter.printTree(parent, "> ", System.out);
+
+        // since we use an array list duplicates are not removed
+        assertEquals("[ram:///91/4ce7f9885561e332f4cfe8b900507c3b30d4bd, ram:///f2/5a65f492bc70b7db123964d374c5b953557a9d, ram:///95/702f71b2ac6b7ee67ff9f07eadfc9fb5dbac49, ram:///e6/9de29bb2d1d6434b8b29ae775ad8c2e48c5391, ram:///e6/9de29bb2d1d6434b8b29ae775ad8c2e48c5391]", list.toString());
+    }
+
 
     static class MyFileListener implements FileListener
     {
