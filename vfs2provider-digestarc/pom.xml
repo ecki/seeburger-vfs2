@@ -13,9 +13,8 @@
   <dependencies>
       <dependency>
           <groupId>com.seeburger.vfs2</groupId>
-          <artifactId>vfs2provider-jdbctable</artifactId> <!--  currently contains the util package -->
-          <version>1.0.2-SNAPSHOT</version>
-          <scope>test</scope>
+          <artifactId>vfs2provider-jdbctable</artifactId> <!--  currently contains the util and operations package -->
+          <scope>compile</scope>
       </dependency>
   </dependencies>
 </project>
