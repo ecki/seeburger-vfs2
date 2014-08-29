@@ -13,6 +13,8 @@ matrix:
   include:
     - jdk: openjdk6
       env: VER=6
+    - jdk: openjdk8
+      env: VER=8
 
 
 # clean / compile - test - package - verify - install - deploy / site
