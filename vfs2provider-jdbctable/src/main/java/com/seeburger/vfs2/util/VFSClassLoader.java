@@ -120,6 +120,24 @@ public class VFSClassLoader extends SecureClassLoader
     }
 
     /**
+     * Does a reverse lookup to find the FileObject for a resource.
+     *
+     * @param name The resource name.
+     * @return
+     * @throws FileSystemException if an error occurs.
+     */
+    public FileObject getFileObject(final String name)
+        throws FileSystemException
+    {
+        Resource res = loadResource(name);
+        if (res != null)
+        {
+            return res.getFileObject();
+        }
+        return null;
+    }
+
+    /**
      * Provide access to the file objects this class loader represents.
      * @return An array of FileObjects.
      * @since 2.0
