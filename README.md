@@ -17,8 +17,9 @@ SEEBURGER Extensions to Apache Commons VFS2
     * `ExpireFilesOperation`- used to delete file rows based on last markTime column with single SQL transaction
     * `BulkSetAttributeOperation` - used to set an attribute (markTime) on a list of files
 
-Use `mvn -Prelease-profile clean install` to build.
+Use `mvn -Prelease-profile clean install` to build. You need Apache Maven 3.2.x for this.
 
 Latest Release
 --------------
 *1.1.0* - Includes new com.seeburger.vfs2.operations package (in vfs2provider-jdbctable.jar)
+*1.2.0* - Provide VFSClassLoader#getFileObject(String) which retrieves backing file for resource
