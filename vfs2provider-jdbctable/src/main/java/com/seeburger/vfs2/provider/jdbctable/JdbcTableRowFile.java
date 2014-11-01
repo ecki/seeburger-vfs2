@@ -698,8 +698,8 @@ public class JdbcTableRowFile extends AbstractFileObject
             {
                 blob.free();
             }
-            catch (AbstractMethodError ignored) { } // TODO: JTDS
-            catch (Exception ignored) { }
+            catch (AbstractMethodError ignored) { /* nothing to recover */ } // TODO: JTDS
+            catch (Exception ignored) { /* nothing to recover */ }
         }
 
         if (rs != null)
@@ -709,7 +709,7 @@ public class JdbcTableRowFile extends AbstractFileObject
             {
                 rs.close();
             }
-            catch (Exception ignored) { }
+            catch (Exception ignored) { /* nothing to recover */ }
         }
 
         if (ps != null)
@@ -719,7 +719,7 @@ public class JdbcTableRowFile extends AbstractFileObject
             {
                 ps.close();
             }
-            catch (Exception ignored) { }
+            catch (Exception ignored) { /* nothing to recover */ }
         }
 
         if (connection != null)
@@ -730,7 +730,7 @@ public class JdbcTableRowFile extends AbstractFileObject
             {
                 connection.close();
             }
-            catch (Exception ignored) { }
+            catch (Exception ignored) { /* nothing to recover */ }
         }
     }
 
@@ -740,8 +740,8 @@ public class JdbcTableRowFile extends AbstractFileObject
         {
             processWarnings(rs.getWarnings());
         }
-        catch (NullPointerException ignored) { } // Oracle Driver Problem
-        catch (SQLException ignored) { }
+        catch (NullPointerException ignored) { /* nothing to recover */ } // Oracle Driver Problem
+        catch (SQLException ignored) { /* nothing to recover */ }
     }
 
     private void processWarnings(Connection connection)
@@ -750,7 +750,7 @@ public class JdbcTableRowFile extends AbstractFileObject
         {
             processWarnings(connection.getWarnings());
         }
-        catch (SQLException ignored) { }
+        catch (SQLException ignored) { /* nothing to recover */ }
     }
 
     private void processWarnings(PreparedStatement ps)
@@ -759,7 +759,7 @@ public class JdbcTableRowFile extends AbstractFileObject
         {
             processWarnings(ps.getWarnings());
         }
-        catch (SQLException ignored) { }
+        catch (SQLException ignored) { /* nothing to recover */ }
     }
 
     private void processWarnings(SQLWarning warnings)
@@ -793,7 +793,7 @@ public class JdbcTableRowFile extends AbstractFileObject
             {
                 connection.close();
             }
-            catch (Exception ignored) { }
+            catch (Exception ignored) { /* nothing to recover */ }
         }
     }
 

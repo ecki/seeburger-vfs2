@@ -144,9 +144,7 @@ public class ObjectStorage
                     streams[i].close();
                     break;
                 }
-                catch (Exception ex)
-                {
-                }
+                catch (Exception ignored) { /* nothing to recover */ }
             }
         } // for
     }

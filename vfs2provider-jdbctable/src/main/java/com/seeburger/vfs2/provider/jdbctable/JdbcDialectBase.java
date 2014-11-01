@@ -203,7 +203,7 @@ public class JdbcDialectBase implements JdbcDialect
     {
         if (con != null)
         {
-            try { con.close(); } catch (Exception ignored) { }
+            try { con.close(); } catch (Exception ignored) { /* nothing to recover */ }
         }
     }
 }

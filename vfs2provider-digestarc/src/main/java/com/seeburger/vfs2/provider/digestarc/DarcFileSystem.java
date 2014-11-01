@@ -54,40 +54,40 @@ public class DarcFileSystem extends AbstractFileSystem
      * @throws FileSystemException
      */
     public DarcFileSystem(final LayeredFileName rootName,
-			final FileObject parentLayer,
-			final FileSystemOptions fileSystemOptions)
-					throws FileSystemException
-	{
-		super(rootName, parentLayer, fileSystemOptions);
-		FileObject rootFile;
+                          final FileObject parentLayer,
+                          final FileSystemOptions fileSystemOptions)
+                                          throws FileSystemException
+    {
+        super(rootName, parentLayer, fileSystemOptions);
+        FileObject rootFile;
         // if this is a folder then this is the Blob base and we dont have a rootHash
-		if (parentLayer.getType().hasChildren())
-		{
-		    rootHash = null;
-		    rootFile = parentLayer;
-		}
-		else if (parentLayer.getType().hasContent()) {
-	        rootFile = parentLayer.getParent().getParent();
-	        String refName = rootFile.getName().getRelativeName(rootName.getOuterName());
-	        rootHash = refName.replaceFirst("/", "");
-		}
-		else
-		{
-		    throw new FileSystemException("Cannot produce layered digest archive filesystem, missing root node " + parentLayer);
-		}
+        if (parentLayer.getType().hasChildren())
+        {
+            rootHash = null;
+            rootFile = parentLayer;
+        }
+        else if (parentLayer.getType().hasContent()) {
+            rootFile = parentLayer.getParent().getParent();
+            String refName = rootFile.getName().getRelativeName(rootName.getOuterName());
+            rootHash = refName.replaceFirst("/", "");
+        }
+        else
+        {
+            throw new FileSystemException("Cannot produce layered digest archive filesystem, missing root node " + parentLayer);
+        }
 
-// System.out.println("Setting up BlobStorage at " + rootFile + " and asuming root index at " + rootHash);
+        // System.out.println("Setting up BlobStorage at " + rootFile + " and asuming root index at " + rootHash);
         provider = new BlobStorageProvider(rootFile);
 
         DarcFileConfigBuilder config = DarcFileConfigBuilder.getInstance();
         changeSession = config.getChangeSession(fileSystemOptions);
-	}
+    }
 
 
     @Override
-	public void init() throws FileSystemException
-	{
-		super.init();
+    public void init() throws FileSystemException
+    {
+        super.init();
 
         InputStream is = null;
         try
@@ -109,53 +109,61 @@ public class DarcFileSystem extends AbstractFileSystem
                     throw new FileSystemException(e);
                 }
             }
-		}
-		finally
-		{
-		    try { if (is != null) is.close(); } catch (Exception ignored) { }
-			closeCommunicationLink(); // TODO: why?
-		}
-	}
+        }
+        finally
+        {
+            try
+            {
+                if (is != null)
+                {
+                    is.close();
+                }
+            }
+            catch (Exception ignored) { /* nothing to recover */ }
+
+            closeCommunicationLink(); // TODO: why?
+        }
+    }
 
 
-	@Override
-	protected void doCloseCommunicationLink()
-	{
-//System.out.println("close link " + this);
-	    // Release what?
-	}
+    @Override
+    protected void doCloseCommunicationLink()
+    {
+        //System.out.println("close link " + this);
+        // Release what?
+    }
 
-	@Override
-	protected void addCapabilities(final Collection<Capability> caps)
-	{
-		caps.addAll(DarcFileProvider.capabilities);
-		if (changeSession == null)
-		{
-		    caps.removeAll(DarcFileProvider.writeCapabilities);
-		}
-	}
+    @Override
+    protected void addCapabilities(final Collection<Capability> caps)
+    {
+        caps.addAll(DarcFileProvider.capabilities);
+        if (changeSession == null)
+        {
+            caps.removeAll(DarcFileProvider.writeCapabilities);
+        }
+    }
 
-	/**
-	 * Creates a darcFile object.
-	 *
-	 * @throws IOException
-	 */
-	@Override
-	protected FileObject createFile(final AbstractFileName name) throws IOException
-	{
-//System.out.println("createFile called for " + name.getPathDecoded());
-	    // TODO: IMAGINARY?
-	    return new DarcFileObject(name, this, tree);
-	}
+    /**
+     * Creates a darcFile object.
+     *
+     * @throws IOException
+     */
+    @Override
+    protected FileObject createFile(final AbstractFileName name) throws IOException
+    {
+        //System.out.println("createFile called for " + name.getPathDecoded());
+        // TODO: IMAGINARY?
+        return new DarcFileObject(name, this, tree);
+    }
 
-	/** Used to propagate the current blob provider to freshly created {@link DarcFileObject}s. */
-	protected BlobStorageProvider getBlobProvider()
+    /** Used to propagate the current blob provider to freshly created {@link DarcFileObject}s. */
+    protected BlobStorageProvider getBlobProvider()
     {
         return provider;
     }
 
-	public String commitChanges() throws IOException
-	{
-	    return tree.commitChanges(provider);
-	}
+    public String commitChanges() throws IOException
+    {
+        return tree.commitChanges(provider);
+    }
 }
