@@ -14,6 +14,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.ArrayList;
+import java.util.Collections;
 
 import org.apache.commons.vfs2.CacheStrategy;
 import org.apache.commons.vfs2.FileChangeEvent;
@@ -333,9 +334,14 @@ public class DarcBasicTest
 
         TreePrinter.printTree(parent, "> ", System.out);
 
+        // sequence is not guranteed (java8 is known to produce different from java 7)
+        Collections.sort(list);
+
         // since we use an array list duplicates are not removed
-        assertEquals("[ram:///91/4ce7f9885561e332f4cfe8b900507c3b30d4bd, ram:///f2/5a65f492bc70b7db123964d374c5b953557a9d, ram:///95/702f71b2ac6b7ee67ff9f07eadfc9fb5dbac49, ram:///e6/9de29bb2d1d6434b8b29ae775ad8c2e48c5391, ram:///e6/9de29bb2d1d6434b8b29ae775ad8c2e48c5391]", list.toString());
+        assertEquals("[ram:///91/4ce7f9885561e332f4cfe8b900507c3b30d4bd, ram:///95/702f71b2ac6b7ee67ff9f07eadfc9fb5dbac49, ram:///e6/9de29bb2d1d6434b8b29ae775ad8c2e48c5391, ram:///e6/9de29bb2d1d6434b8b29ae775ad8c2e48c5391, ram:///f2/5a65f492bc70b7db123964d374c5b953557a9d]", list.toString());
     }
+
+
 
 
     static class MyFileListener implements FileListener
