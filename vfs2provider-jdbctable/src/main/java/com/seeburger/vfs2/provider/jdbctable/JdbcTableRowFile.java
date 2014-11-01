@@ -427,7 +427,7 @@ public class JdbcTableRowFile extends AbstractFileObject
             setPrimaryKey(ps, this, 0);
             rs = ps.executeQuery();
 
-            if (rs.next() == false)
+            if (!rs.next())
             {
                 throw new IOException("Database row not found for " + getName()); // TODO: deleted -> insert?
             }
@@ -459,7 +459,7 @@ public class JdbcTableRowFile extends AbstractFileObject
 
             rs.updateRow();
 
-            if (rs.next() != false)
+            if (rs.next())
             {
                 throw new IOException("More than one match for " + getName());
             }
@@ -556,7 +556,7 @@ public class JdbcTableRowFile extends AbstractFileObject
             setPrimaryKey(ps, this, 0);
             rs = ps.executeQuery();
 
-            if (rs.next() == false)
+            if (!rs.next())
             {
                 throw new IOException("Database row not found for " + getName()); // TODO: Filenotfound exception?
             }
@@ -588,7 +588,7 @@ public class JdbcTableRowFile extends AbstractFileObject
                 throw new IOException("Blob column content is null, expecting " + size + " bytes for " + getName());
             }
 
-            if (rs.next() != false)
+            if (rs.next())
             {
                 throw new IOException("Consitency Problem, more than one Database row for " + getName());
             }
