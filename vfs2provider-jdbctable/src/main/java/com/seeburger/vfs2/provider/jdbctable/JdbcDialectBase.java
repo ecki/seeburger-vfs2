@@ -38,13 +38,13 @@ public class JdbcDialectBase implements JdbcDialect
     private static final int MS = 1000000;
 
     /** Default table name. */
-    static protected final String TABLE_NAME = "tBlobs";
+    protected static final String TABLE_NAME = "tBlobs";
 
     /** Cache for prepared statements. Not shared with other instances. */
-    final protected ConcurrentMap<String, String> sqlCache = new ConcurrentHashMap<String, String>(23);
+    protected final ConcurrentMap<String, String> sqlCache = new ConcurrentHashMap<String, String>(23);
 
-    final protected DataSource dataSource;
-    final protected String tableName;
+    protected final DataSource dataSource;
+    protected final String tableName;
 
 
     /**
@@ -64,7 +64,6 @@ public class JdbcDialectBase implements JdbcDialect
     public static JdbcDialect getDialect(DataSource ds)
         throws SQLException
     {
-        JdbcDialect result = null;
         Connection con = null;
         try
         {
@@ -73,18 +72,16 @@ public class JdbcDialectBase implements JdbcDialect
             String provider = md.getDatabaseProductName().toLowerCase(Locale.ENGLISH);
             if (provider.contains(MSSQL_DIALECT) || provider.contains(MSSQL_DIALECT$))
             {
-                result = new JdbcDialectMSSQL(ds);
+                return new JdbcDialectMSSQL(ds);
             }
             else if (provider.contains(ORACLE_DIALECT))
             {
-                result = new JdbcDialectOracle(ds);
+                return new JdbcDialectOracle(ds);
             }
             else
             {
-                result = new JdbcDialectBase(ds);
+                return new JdbcDialectBase(ds);
             }
-
-            return result;
         }
         finally
         {
@@ -112,16 +109,21 @@ public class JdbcDialectBase implements JdbcDialect
     public Connection getConnection()
         throws SQLException
     {
-        long start = System.nanoTime(); // TODO: stopwatch/monitoring service
-
-        Connection c = dataSource.getConnection();
-
-        long duration = System.nanoTime() - start;
-        if (duration > 100 * MS)
-            System.out.printf("slow getConnection(): %.6fs%n", (duration / 1000000000.0)); // TODO: logging?
-
-        return c;
+        long start = System.nanoTime();
+        try
+        {
+            return dataSource.getConnection();
+        }
+        finally
+        {
+            long duration = System.nanoTime() - start;
+            if (duration > 100 * MS)
+            {
+                System.out.printf("slow getConnection(): %.6fs%n", (duration / 1000000000.0)); // TODO: logging?
+            }
+        }
     }
+
 
     /**
      * Return connection to the pool.

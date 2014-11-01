@@ -38,9 +38,9 @@ import org.apache.commons.vfs2.util.RandomAccessMode;
 public class JdbcTableRowFile extends AbstractFileObject
 {
     /** value of size entry for folders in db. */
-    final static long FOLDER_SIZE = -2;
+    static final long FOLDER_SIZE = -2;
     /** size of virtual files (never in DB) */
-    final static long VIRTUAL_SIZE = -1;
+    static final long VIRTUAL_SIZE = -1;
 
     public static class DataDescription
     {
