@@ -111,8 +111,7 @@ public class JdbcTableRowFile extends AbstractFileObject
     }
 
     @Override
-    protected void doCreateFolder()
-        throws Exception
+    protected void doCreateFolder() throws Exception
     {
         long now = System.currentTimeMillis(); // TODO: DB side?
         Connection con = getConnection("doCreateFolder");
@@ -129,7 +128,11 @@ public class JdbcTableRowFile extends AbstractFileObject
             int count = ps.executeUpdate();
             if (count != 1)
             {
-                throw new IOException("Inserting different than 1 (" + count + ") records for " + getName());
+                if (count == 0)
+                {
+                    ps.clearWarnings(); // Derby generates warnings on no-match: https://issues.apache.org/jira/browse/DERBY-448
+                }
+                throw new IOException("Inconsistent DB result count=" + count + "while inserting new directory=" + getName());
             }
 
             // TODO: update last modified of parent
@@ -152,8 +155,7 @@ public class JdbcTableRowFile extends AbstractFileObject
     }
 
     @Override
-    protected void doDelete()
-        throws Exception
+    protected void doDelete() throws Exception
     {
         Connection con = getConnection("doDelete");
         PreparedStatement ps = null;
@@ -167,8 +169,7 @@ public class JdbcTableRowFile extends AbstractFileObject
             {
                 if (count == 0)
                 {
-                    // Derby generates warnings on no-match: https://issues.apache.org/jira/browse/DERBY-448
-                    ps.clearWarnings();
+                    ps.clearWarnings(); // Derby generates warnings on no-match: https://issues.apache.org/jira/browse/DERBY-448
                 }
                 con.commit();
                 con.close(); con = null;
@@ -176,7 +177,7 @@ public class JdbcTableRowFile extends AbstractFileObject
             }
 
             // count > 1
-            throw new IOException("Corruption suspected, deleting different than 1 (" + count + ") records for " + getName());
+            throw new IOException("Inconsistent DB result count=" + count + " for deleting name=" + getName());
         }
         finally
         {
@@ -193,8 +194,8 @@ public class JdbcTableRowFile extends AbstractFileObject
     // doSetLastModifiedTime is not overwritten -> reject
 
     @Override
-    protected Map<String, Object> doGetAttributes() throws Exception {
-
+    protected Map<String, Object> doGetAttributes() throws Exception
+    {
         Map<String, Object> attributes = new HashMap<String, Object>();
         long markTime = getMarkTime();
         attributes.put("markTime", Long.valueOf(markTime));
@@ -311,8 +312,7 @@ public class JdbcTableRowFile extends AbstractFileObject
     }
 
     @Override
-    protected void doRename(FileObject newfile)
-        throws Exception
+    protected void doRename(FileObject newfile) throws Exception
     {
         Connection con = getConnection("doRename");
         long now = System.currentTimeMillis();
@@ -325,16 +325,13 @@ public class JdbcTableRowFile extends AbstractFileObject
             ps.setLong(3, now);
 
             int count = ps.executeUpdate();
-            if (count == 0)
-            {
-                // Derby generates warnings on no-match: https://issues.apache.org/jira/browse/DERBY-448
-                ps.clearWarnings();
-                throw new IOException("No file to rename to " + newfile.getName() + " from " + getName());
-            }
-
             if (count != 1)
             {
-                throw new IOException("Inconsitent result " + count +" while rename to " + newfile.getName() + " from " + getName());
+                if (count == 0)
+                {
+                    ps.clearWarnings(); // Derby generates warnings on no-match: https://issues.apache.org/jira/browse/DERBY-448
+                }
+                throw new IOException("Inconsistent DB result count=" + count +" while rename to=" + newfile.getName() + " from=" + getName());
             }
 
             // TODO: update parent lastModified
@@ -349,22 +346,30 @@ public class JdbcTableRowFile extends AbstractFileObject
     }
 
     /**
-     * Called by the OutputStream to set the result
-     * @throws SQLException
-     * @throws FileSystemException
+     * Called by the OutputStream to set the result.
+     * <p>
+     * This implementation will use {@link #writeDataInsert(long, byte[])}
+     * or {@link #writeDataUpdate(long, byte[])}
+     * or {@link #writeDataOverwrite(long, byte[])} depending if data exists
+     * and the {@code append} mode.
+     *
+     *
+     * @throws IOException if underlying operation throws
+     * @throws SQLException if underlying operation throws
+     * @throws FileSystemException if underlying operation throws
      */
-    void writeData(byte[] byteArray, boolean append) throws Exception
+    void writeData(byte[] byteArray, boolean append) throws FileSystemException, SQLException, IOException
     {
-        long now = System.currentTimeMillis(); // TODO: DB side?
+        long timeStamp = System.currentTimeMillis(); // TODO: DB side?
         // TODO: needs to handle concurrent modifications (i.e. changes since attach)
         if (exists())
         {
             if (append)
-                writeDataUpdate(now, byteArray);
+                writeDataUpdate(timeStamp, byteArray);
             else
-                writeDataOverwrite(now, byteArray);
+                writeDataOverwrite(timeStamp, byteArray);
         } else {
-            writeDataInsert(now, byteArray);
+            writeDataInsert(timeStamp, byteArray);
         }
     }
 
@@ -385,7 +390,11 @@ public class JdbcTableRowFile extends AbstractFileObject
             int count = ps.executeUpdate();
             if (count != 1)
             {
-                throw new IOException("Updating different than 1 (" + count + ") records for " + getName());
+                if (count == 0)
+                {
+                    ps.clearWarnings();  // Derby generates warnings on no-match: https://issues.apache.org/jira/browse/DERBY-448
+                }
+                throw new IOException("Inconsistent DB result count=" + count + " while updating name=" + getName());
             }
 
             con.commit(); // TODO: move behind endOutput?
@@ -506,7 +515,11 @@ public class JdbcTableRowFile extends AbstractFileObject
             int count = ps.executeUpdate();
             if (count != 1)
             {
-                throw new IOException("Inserting different than 1 (" + count + ") records for " + getName());
+                if (count == 0)
+                {
+                    ps.clearWarnings(); // Derby generates warnings on no-match: https://issues.apache.org/jira/browse/DERBY-448
+                }
+                throw new IOException("Inconsistent DB result count=" + count + " while inserting name=" + getName());
             }
 
             con.commit();
@@ -579,9 +592,13 @@ public class JdbcTableRowFile extends AbstractFileObject
 
             // Oracle might have null for empty blob, so we don't touch it at all
             if (size == 0)
+            {
                 bytes = new byte[0];
+            }
             else
+            {
                 bytes = blob.getBytes(pos+1, len);
+            }
 
             if (bytes == null)
             {
@@ -685,6 +702,60 @@ public class JdbcTableRowFile extends AbstractFileObject
         return;
     }
 
+    private void setMarkTime(long time) throws SQLException, IOException
+    {
+        Connection connection = getConnection("mark");
+        PreparedStatement ps = null;
+        try
+        {
+            ps = dialect.prepareQuery(connection, "UPDATE {table} SET cMarkGarbage=? WHERE cParent=? AND cName=?");
+            setPrimaryKey(ps, this, 1);
+            ps.setLong(1, time);
+
+            int count = ps.executeUpdate();
+            if (count != 1)
+            {
+                if (count == 0)
+                {
+                    ps.clearWarnings(); // Derby generates warnings on no-match: https://issues.apache.org/jira/browse/DERBY-448
+                }
+                throw new IOException("Inconsistent DB result count=" + count +" while mark name=" + getName());
+            }
+
+            connection.commit();
+            connection.close(); connection = null;
+        }
+        finally
+        {
+            rollbackConnection(null, null, ps, connection);
+        }
+    }
+
+    private long getMarkTime() throws SQLException, FileSystemException
+    {
+        long markTime = 0;
+        PreparedStatement ps = null;
+        ResultSet rs = null;
+        Connection connection = getConnection("mark");
+        try
+        {
+            ps = dialect.prepareQuery(connection, "SELECT cMarkGarbage FROM {table} WHERE cParent=? AND cName=?");
+            setPrimaryKey(ps, this, 0);
+
+            rs = ps.executeQuery();
+            if (rs.next())
+            {
+                markTime = rs.getLong(1);
+            }
+        }
+        finally
+        {
+            closeConnection(null, rs, ps, connection);
+        }
+        return markTime;
+    }
+
+
     private Connection getConnection(String where) throws SQLException
     {
         return dialect.getConnection();
@@ -725,7 +796,6 @@ public class JdbcTableRowFile extends AbstractFileObject
         if (connection != null)
         {
             processWarnings(connection);
-
             try
             {
                 connection.close();
@@ -773,7 +843,7 @@ public class JdbcTableRowFile extends AbstractFileObject
         }
     }
 
-    public void rollbackConnection(Blob blob, ResultSet rs, PreparedStatement ps, Connection connection)
+    private void rollbackConnection(Blob blob, ResultSet rs, PreparedStatement ps, Connection connection)
     {
         closeConnection(blob, rs, ps, null);
 
@@ -795,68 +865,6 @@ public class JdbcTableRowFile extends AbstractFileObject
             }
             catch (Exception ignored) { /* nothing to recover */ }
         }
-    }
-
-   private void setMarkTime(long time)
-       throws Exception
-   {
-       Connection connection = getConnection("mark");
-       PreparedStatement ps = null;
-       try
-       {
-           ps = dialect.prepareQuery(connection, "UPDATE {table} SET cMarkGarbage=? WHERE cParent=? AND cName=?");
-           setPrimaryKey(ps, this, 1);
-           ps.setLong(1, time);
-
-           int count = ps.executeUpdate();
-           if (count == 0)
-           {
-               // Derby generates warnings on no-match: https://issues.apache.org/jira/browse/DERBY-448
-               ps.clearWarnings();
-               throw new IOException("No file to mark: " + getName());
-           }
-
-           if (count != 1)
-           {
-               throw new IOException("Inconsitent result " + count +" while mark " + getName());
-           }
-
-           connection.commit();
-           connection.close();
-           connection = null;
-       }
-       finally
-       {
-           rollbackConnection(null, null, ps, connection);
-       }
-   }
-
-
-    private long getMarkTime()
-        throws Exception
-    {
-        long markTime = 0;
-        Connection connection = getConnection("mark");
-        PreparedStatement ps = null;
-        try
-        {
-            ps = dialect.prepareQuery(connection, "SELECT cMarkGarbage FROM {table} WHERE cParent=? AND cName=?");
-            setPrimaryKey(ps, this, 0);
-
-            ResultSet rs = ps.executeQuery();
-            if (rs.next())
-            {
-                markTime = rs.getLong(1);
-            }
-        }
-        finally
-        {
-            if (connection != null)
-            {
-                connection.close();
-            }
-        }
-        return markTime;
     }
 
 }
