@@ -23,7 +23,7 @@ import org.apache.commons.vfs2.FileSystemException;
 /**
  * Input Stream which allows reading and verifying Git Blobs.
  * <P>
- * Git blobs use deflater compression and have a "blob <size>\0" header.
+ * Git blobs use deflater compression and have a {@code "blob <size>\0"} header.
  * <P>
  * The various read methods are all delegated by the super class
  * to {@link #read(byte[], int, int)}.

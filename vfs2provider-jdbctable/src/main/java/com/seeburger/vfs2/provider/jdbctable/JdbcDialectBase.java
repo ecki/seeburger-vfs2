@@ -54,11 +54,11 @@ public class JdbcDialectBase implements JdbcDialect
      * Returns {@link JdbcDialectMSSQL} for Microsoft database, {@link JdbcDialectOracle}
      * for Oracle drivers and {@link JdbcDialectBase} for all others.
      *
-     * @param datasource returning one of the know database driver connections
+     * @param ds returning one of the know database driver connections
      * @return new instance of dialect with default table name configured
      * @throws SQLException
      *
-     * @see {@link JdbcDialectBase#JdbcDialectBase(DataSource)}
+     * @see JdbcDialectBase#JdbcDialectBase(DataSource)
      * @see DatabaseMetaData#getDatabaseProductName()
      */
     public static JdbcDialect getDialect(DataSource ds)

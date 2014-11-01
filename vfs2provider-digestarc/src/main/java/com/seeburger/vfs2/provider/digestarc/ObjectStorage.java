@@ -31,8 +31,6 @@ import java.util.zip.DeflaterOutputStream;
  * Instances of this class are reentrant/thread safe.
  *
  * @see #writeBytes(OutputStream, byte[], String)
- * @see #writeOutputStream()
- * @see #readBytes
  */
 public class ObjectStorage
 {

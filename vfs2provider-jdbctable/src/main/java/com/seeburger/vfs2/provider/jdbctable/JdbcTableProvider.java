@@ -68,7 +68,7 @@ public class JdbcTableProvider
      *
 	 * @throws FileSystemException
 	 *
-	 * @see {@link JdbcDialectBase#getDialect(DataSource)}
+	 * @see JdbcDialectBase#getDialect(DataSource)
      */
     public JdbcTableProvider(DataSource dataSource) throws FileSystemException
     {
