@@ -9,6 +9,7 @@ package com.seeburger.vfs2.provider.digestarc;
 
 
 import java.io.ByteArrayInputStream;
+import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.Charset;
@@ -73,53 +74,6 @@ public class DarcFileInputStream extends InflaterInputStream
         this(stream, hash, "blob");
     }
 
-    /** Read the Git blob header and return the specified size. */
-    private long readHeaderLength() throws IOException
-    {
-        final String expectedHeader = expectedType + " ";
-        final int typeLen = expectedHeader.length();
-
-        byte[] buf = new byte[20 + typeLen]; // 5 + 19 +1 1
-        read(buf, 0, typeLen); // "blob "
-        int i;
-        for(i=typeLen; i < buf.length; i++)
-        {
-            int c = read();
-            if (c == -1)
-            {
-                throw new IOException("Malformed blob file header. Unexpected end of blob stream at pos=" + i);
-            }
-
-            buf[i] = (byte)c;
-            if (c == 0)
-            {
-                break;
-            }
-        }
-
-        if (i == buf.length)
-        {
-            throw new IOException("Malformed blob file header, not nul byte till pos=" + i);
-        }
-
-        String header = new String(buf, 0, i, ASCII);
-        if (!header.startsWith(expectedHeader))
-        {
-            throw new IOException("Malformed file header. Expecting=" + expectedType + " found=" + header); // TODO: hex
-        }
-
-        String sizeString = header.substring(typeLen);
-        try
-        {
-            return Long.parseLong(sizeString);
-        }
-        catch (NumberFormatException ex)
-        {
-            throw new IOException("Malformed blob file header, cannot parse length argument=" + sizeString, ex);
-        }
-    }
-
-
     /**
      * Overwritten read method which does feed all read bytes to the digester.
      *
@@ -147,8 +101,62 @@ public class DarcFileInputStream extends InflaterInputStream
         return c;
     }
 
-    // TODO: available
-    // TODO: mark/reset
+    /** Read the Git blob header and return the specified size. */
+    private long readHeaderLength() throws IOException
+    {
+        final String expectedHeader = expectedType + " ";
+        final int typeLen = expectedHeader.length();
+        byte[] bytes = new byte[typeLen + 19 + 1];  // "blob <long digits>\0"
+
+        try
+        {
+            DarcFileUtil.readFully(this, bytes, 0, typeLen); // "blob "
+        }
+        catch (EOFException eof)
+        {
+            throw new IOException("Malformed file header. Cannot read signature=" + expectedType, eof);
+        }
+
+        int i;
+        for(i=typeLen; i < bytes.length; i++)
+        {
+            int c = read();
+            if (c == -1)
+            {
+                throw new IOException("Malformed blob file header. Unexpected end of blob stream at pos=" + i);
+            }
+
+            bytes[i] = (byte)c;
+
+            // length string is \0 terminated
+            if (c == 0)
+            {
+                break;
+            }
+        }
+
+        if (i == bytes.length)
+        {
+            throw new IOException("Malformed blob file header, no NUL byte till pos=" + i);
+        }
+
+        String header = new String(bytes, 0, i, ASCII);
+        if (!header.startsWith(expectedHeader))
+        {
+            throw new IOException("Malformed file header. Expecting=" + expectedType + " found=" + header); // TODO: hex
+        }
+
+        String sizeString = header.substring(typeLen);
+        try
+        {
+            return Long.parseLong(sizeString);
+        }
+        catch (NumberFormatException nfe)
+        {
+            throw new IOException("Malformed blob file header, cannot parse length argument=" + sizeString, nfe);
+        }
+    }
+
 
     /**
      * Check the digest against the expected value.
@@ -187,14 +195,7 @@ public class DarcFileInputStream extends InflaterInputStream
     {
         byte[] workBuffer = new byte[1024];
 
-        long size = 0;
-        int count = 0;
-
-        int len;
-        while((len = read(workBuffer)) != -1){
-            size += len;
-            count++;
-        }
+        while(read(workBuffer) != -1) { /* empty */ }
     }
 
     // TODO: available/mark/reset

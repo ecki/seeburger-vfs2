@@ -9,10 +9,12 @@ package com.seeburger.vfs2.provider.digestarc;
 
 
 import java.io.Closeable;
+import java.io.EOFException;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
 import java.security.DigestOutputStream;
 
@@ -171,6 +173,34 @@ public class DarcFileUtil
                 catch (Exception ex) { /* ignored */ }
             }
         } // for
+    }
+
+
+    /**
+     * Read exactly {@code len} bytes.
+     *
+     * @param is stream to read from
+     * @param buf the buffer to write to, must be at least {@code pos+len} long.
+     * @param offset the starting offset to write into buffer
+     * @param len the number of bytes to read
+     * @throws IOException if {@code is.read()} reported a problem.
+     * @throws EOFException if stream ends before all bytes are read.
+     */
+    protected static void readFully(InputStream is , byte[] buf, int offset, int len)
+        throws IOException, EOFException
+    {
+        int read = 0;
+        int pos = offset;
+        while(read < len)
+        {
+            int l = is.read(buf, pos, (len-read));
+            if (l < 0)
+            {
+                throw new EOFException("Only read " + read + " of " + len + " bytes.");
+            }
+            pos += l;
+            read += l;
+        }
     }
 
 

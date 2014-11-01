@@ -11,6 +11,7 @@ package com.seeburger.vfs2.provider.digestarc;
 import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
+import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -146,7 +147,7 @@ public class DarcTree
 
         String[] parts = name.split("/");
 
-        Entry me = null;
+        Entry me = root;
         Entry child = root;
         for(int i=1;i<parts.length;i++)
         {
@@ -379,36 +380,63 @@ public class DarcTree
             return newContent;
         }
 
-        /** Read and verify the tree header
-         * @throws IOException */
-        private long readHeader(InputStream in, String header) throws IOException
+
+        /**
+         * Read and verify the tree header
+         *
+         * @throws IOException if reading failed or header was malformed.
+         */
+        private long readHeader(InputStream in, String expectedType) throws IOException
         {
-            int sigLen = header.length() + 1;
-            byte[] buf = new byte[sigLen + 19 + 1]; // "tree <long digits>\0"
-            in.read(buf, 0, sigLen);
+            int typeLen = expectedType.length() + 1;
+            byte[] buf = new byte[typeLen + 19 + 1]; // "tree <long digits>\0"
+            try
+            {
+                DarcFileUtil.readFully(in, buf, 0, typeLen);
+            }
+            catch (EOFException eof)
+            {
+                throw new IOException("Malformed tree header. Cannot read magic=" + expectedType, eof);
+            }
+
             int i;
-            for(i=sigLen;i<buf.length;i++)
+            for(i=typeLen;i<buf.length;i++)
             {
                 int c = in.read();
                 if (c == -1)
-                    throw new IOException("EOF while reading header at pos=" + i);
+                {
+                    throw new IOException("Malformed tree header. EOF while reading header at pos=" + i);
+                }
                 buf[i] = (byte)c;
+
+                // length is \0 terminated
                 if (c == 0)
+                {
                     break;
+                }
             }
             if (i == buf.length)
             {
-                throw new IOException("Missing end of header at pos=" + i);
+                throw new IOException("Malformed tree header, no NUL byte till pos=" + i);
             }
 
-            String signature = new String(buf, 0, i, ASCII);
-            if (!signature.startsWith(header+" "))
+            final String header = new String(buf, 0, i, ASCII);
+            if (!header.startsWith(expectedType+" "))
             {
-                throw new IOException("File Header does not start with signature, but=" + signature);
+                throw new IOException("Malformed tree header. Expecting=" + expectedType + " found=" + header); // TODO: hex
             }
 
-            return Long.parseLong(signature.substring(sigLen));
+            String sizeString = header.substring(typeLen);
+            try
+            {
+                return Long.parseLong(sizeString);
+            }
+            catch (NumberFormatException nfe)
+            {
+                throw new IOException("Malformed tree header, cannot parse length argument=" + sizeString, nfe);
+            }
         }
+
 
         @Override
         public String toString()
