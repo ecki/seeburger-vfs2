@@ -19,6 +19,12 @@ import org.apache.commons.vfs2.FileSystemOptions;
  * The Darc file system supports specifying a change session. All
  * clients using the same session will see uncommitted changes. Without
  * a change session the file system is read only.
+ * <p>
+ * In this case a session can be specified as well, this is used to create
+ * multiple different/independend filesystem instances.
+ *
+ * @see #setChangeSession(FileSystemOptions, String)
+ * @see #setReadSession(FileSystemOptions, String)
  */
 public class DarcFileConfigBuilder extends FileSystemConfigBuilder
 {
@@ -39,14 +45,24 @@ public class DarcFileConfigBuilder extends FileSystemConfigBuilder
         return BUILDER;
     }
 
-    public void setChangeSession(final FileSystemOptions opts, final String name)
+    public void setChangeSession(final FileSystemOptions opts, final String sessionName)
     {
-        setParam(opts, "session", name);
+        setParam(opts, "session.change", sessionName);
     }
 
     public String getChangeSession(final FileSystemOptions opts)
     {
-        return getString(opts, "session", null);
+        return getString(opts, "session.change", null);
+    }
+
+    public void setReadSession(final FileSystemOptions opts, final String sessionName)
+    {
+        setParam(opts, "session.read", sessionName);
+    }
+
+    public String getReadSession(final FileSystemOptions opts)
+    {
+        return getString(opts, "session.read", null);
     }
 
     @Override
