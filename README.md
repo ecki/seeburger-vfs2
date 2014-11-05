@@ -7,7 +7,7 @@ SEEBURGER Extensions to Apache Commons VFS2
 * vfs2provider-jdbctable - allow storing blobs in database tables
 * (vfs2-util - currently included in vfs2provider-jdbctable/com.seeburger.vfs2.util) helper classes to deal with VFS2
   * `TreePrinter` for printing a VFS Directory
-  * emhanced clone of the `VFSClassLoader`
+  * enhanced clone of the `VFSClassLoader`
   * `FileNameGlobbing` - support for file name filtering
   * `VFSUtils` - static utility functions dealing with VFS2 Objects
 * FileOperations - mainly used by the above two providers
@@ -33,12 +33,12 @@ Use the following dependency declarations:
     <dependency>
         <groupId>com.seeburger.vfs2</groupId>
         <artifactId>vfs2provider-jdbctable</artifactId>
-        <version>1.2.0</version>
+        <version>1.3.0</version>
     </dependency>
     <dependency>
         <groupId>com.seeburger.vfs2</groupId>
         <artifactId>vfs2provider-digestarc</artifactId>
-        <version>1.2.0</version>
+        <version>1.3.0</version>
     </dependency>
 
 Note: the artifacts are not available via Maven Central.
@@ -48,5 +48,4 @@ Latest Release
 
 * *1.1.0* - Includes new com.seeburger.vfs2.operations package (in vfs2provider-jdbctable.jar)
 * *1.2.0* - Provide VFSClassLoader#getFileObject(String) which retrieves backing file for resource
-* *TBA* - make tests pass on Java 8, make JavaDoc work on Java 8+9 (with warnings)
-
+* *1.3.0* - make tests and javadoc work for Java 8/9. Add readOnly session to vfs2provider-digestarc

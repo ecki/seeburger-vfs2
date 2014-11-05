@@ -4,7 +4,7 @@
 
     <groupId>com.seeburger.vfs2</groupId>
     <artifactId>seeburger-vfs2-parent</artifactId>
-    <version>1.2.1-SNAPSHOT</version>
+    <version>1.3.0-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <name>SEEBURGER VFS2 Parent</name>
