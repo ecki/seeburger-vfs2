@@ -49,3 +49,4 @@ Latest Release
 * *1.1.0* - Includes new com.seeburger.vfs2.operations package (in vfs2provider-jdbctable.jar)
 * *1.2.0* - Provide VFSClassLoader#getFileObject(String) which retrieves backing file for resource
 * *1.3.0* - make tests and javadoc work for Java 8/9. Add readOnly session to vfs2provider-digestarc
+* *1.3.1* - DarcFileProvider will not create multiple instances of underlying file system (removes session from option)

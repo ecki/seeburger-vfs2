@@ -81,6 +81,7 @@ public class DarcFileProvider extends AbstractLayeredFileProvider implements Fil
                                             final FileSystemOptions fileSystemOptions)
         throws FileSystemException
     {
+        // not used because findFile() shortcuts it.
         final LayeredFileName rootName =
             new LayeredFileName(scheme, file.getName(), FileName.ROOT_PATH, FileType.FOLDER);
         return new DarcFileSystem(rootName, file, fileSystemOptions);
@@ -97,23 +98,56 @@ public class DarcFileProvider extends AbstractLayeredFileProvider implements Fil
         return capabilities;
     }
 
-    @Override
-    public synchronized FileObject createFileSystem(final String scheme,
-                                                    final FileObject file,
+    private synchronized FileObject findOrCreateFileSystem(final String scheme,
+                                                    final FileName rootName,
                                                     final FileSystemOptions fileSystemOptions)
         throws FileSystemException
     {
+        // implementation is based on super.createFileSystem() but
+        // without the need for FileObject and using correct cache key.
+
         // Check if cached
-        final FileName rootName = file.getName();
-        // super implementation does not pass options and therefore does not cache?
         FileSystem fs = findFileSystem(rootName, fileSystemOptions);
         if (fs == null)
         {
             // Create the file system
-            fs = doCreateFileSystem(scheme, file, fileSystemOptions);
+            final LayeredFileName name = new LayeredFileName(scheme, rootName, FileName.ROOT_PATH, FileType.FOLDER);
+            FileSystemOptions baseOptions = DarcFileConfigBuilder.getInstance().getCleanClone(fileSystemOptions);
+            FileObject file = getContext().getFileSystemManager().resolveFile(rootName.getURI(), baseOptions);
+
+            fs = new DarcFileSystem(name, file, fileSystemOptions);
+
             addFileSystem(rootName, fs);
         }
         return fs.getRoot();
     }
 
+
+    /**
+     * Locates a file object, by absolute URI.
+     * <p>
+     * This specific implementation makes sure the underlying
+     * file system is constructed with a single FS option, so
+     * it is read from the cache.
+     * <p>
+     * It does not use {@link #createFileSystem(String, FileObject, FileSystemOptions)}
+     * or {@link #doCreateFileSystem(String, FileObject, FileSystemOptions)}.
+     *
+     * @param baseFile The base FileObject.
+     * @param uri The name of the file to locate.
+     * @param properties The FileSystemOptions.
+     * @return The FileObject if it is located, null otherwise.
+     * @throws FileSystemException if an error occurs.
+     */
+    public FileObject findFile(final FileObject baseFile,
+                               final String uri,
+                               final FileSystemOptions properties) throws FileSystemException
+    {
+        // Split the URI up into its parts
+        final LayeredFileName name = (LayeredFileName) parseUri(baseFile != null ? baseFile.getName() : null, uri);
+
+        final FileObject rootFile = findOrCreateFileSystem(name.getScheme(), name.getOuterName(), properties);
+
+        return rootFile.resolveFile(name.getPath());
+    }
 }

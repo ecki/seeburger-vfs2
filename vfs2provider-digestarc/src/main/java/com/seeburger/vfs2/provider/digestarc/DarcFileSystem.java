@@ -32,7 +32,7 @@ import org.apache.commons.vfs2.provider.LayeredFileName;
  */
 public class DarcFileSystem extends AbstractFileSystem
 {
-    /** The provider responsible for looking up hashed names. */
+    /** The provider responsible for looking up hashed names, knows underlying file object. */
     final private BlobStorageProvider provider;
     /** The hash of the initial root Tree object. */
     final String rootHash;

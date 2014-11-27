@@ -65,6 +65,24 @@ public class DarcFileConfigBuilder extends FileSystemConfigBuilder
         return getString(opts, "session.read", null);
     }
 
+    /**
+     * Get a copy of filesystem options without the session information.
+     * <p>
+     * The instance is used to lookup the underlying file system. This version
+     * produces new instances which is not optimal.
+     */
+    protected FileSystemOptions getCleanClone(final FileSystemOptions opts)
+    {
+        if (opts == null)
+        {
+            return null;
+        }
+        final FileSystemOptions newOpts = (FileSystemOptions)opts.clone();
+        setParam(newOpts, "session.read", null);
+        setParam(newOpts, "session.change", null);
+        return newOpts;
+    }
+
     @Override
     protected Class<? extends FileSystem> getConfigClass()
     {
