@@ -1,8 +1,2 @@
-*.class
-
-# Package Files #
-*.jar
-*.war
-*.ear
 target/
 .settings/org.moreunit.prefs
