@@ -10,6 +10,7 @@ SEEBURGER Extensions to Apache Commons VFS2
   * enhanced clone of the `VFSClassLoader`
   * `FileNameGlobbing` - support for file name filtering
   * `VFSUtils` - static utility functions dealing with VFS2 Objects
+  * `DementFileReplicator` - extends the DefaultFileReplicator by not remebering the replicated objects.
 * FileOperations - mainly used by the above two providers
   * `DarcFileOperationProvider`
     * `CollectFilesOperation` - will travers a DarcFileTree and record all underlying blob files
@@ -50,3 +51,4 @@ Latest Release
 * *1.2.0* - Provide VFSClassLoader#getFileObject(String) which retrieves backing file for resource
 * *1.3.0* - make tests and javadoc work for Java 8/9. Add readOnly session to vfs2provider-digestarc
 * *1.3.1* - DarcFileProvider will not create multiple instances of underlying file system (removes session from option)
+* *1.4.0* - Updated plugin dependencies and added DementFileReplicator.
