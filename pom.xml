@@ -23,6 +23,7 @@
         <maven.compiler.source>6</maven.compiler.source>
         <maven.compiler.target>6</maven.compiler.target>
         <maven.compiler.compilerVersion>${maven.compiler.source}</maven.compiler.compilerVersion>
+        <version.commons-vfs2>2.1-SEE3</version.commons-vfs2>
     </properties>
 
     <modules>
@@ -123,7 +124,6 @@
         <dependency>
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-vfs2</artifactId>
-            <version>2.0</version>
             <exclusions>
                 <exclusion>
                     <artifactId>maven-scm-api</artifactId>
@@ -140,6 +140,7 @@
             </exclusions>
         </dependency>
 
+        <!-- common test dependencies -->
         <dependency>
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-vfs2</artifactId>
@@ -152,10 +153,14 @@
                 </exclusion>
             </exclusions>
         </dependency>
-
         <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>commons-io</groupId>
+            <artifactId>commons-io</artifactId>
             <scope>test</scope>
         </dependency>
 
@@ -166,18 +171,24 @@
             <dependency>
                 <groupId>org.apache.commons</groupId>
                 <artifactId>commons-vfs2</artifactId>
-                <version>2.0</version>
+                <version>${version.commons-vfs2}</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.commons</groupId>
                 <artifactId>commons-vfs2</artifactId>
-                <version>2.0</version>
                 <classifier>tests</classifier>
+                <version>${version.commons-vfs2}</version>
             </dependency>
             <dependency>
                 <groupId>junit</groupId>
                 <artifactId>junit</artifactId>
                 <version>4.11</version>
+            </dependency>
+            <dependency>
+                <groupId>commons-io</groupId>
+                <artifactId>commons-io</artifactId>
+                <version>2.4</version>
+                <scope>test</scope>
             </dependency>
 
             <dependency>
