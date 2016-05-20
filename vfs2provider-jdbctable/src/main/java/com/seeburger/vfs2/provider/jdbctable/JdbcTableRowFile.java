@@ -42,6 +42,9 @@ public class JdbcTableRowFile extends AbstractFileObject
     /** size of virtual files (never in DB) */
     static final long VIRTUAL_SIZE = -1;
 
+    /** used when empty array is needed */
+    static private final byte[] EMPTY_BYTES = new byte[0];
+
     public static class DataDescription
     {
         long generation;
@@ -89,7 +92,7 @@ public class JdbcTableRowFile extends AbstractFileObject
                 blob = rs.getBlob(3);
                 if (blob == null && size > 0)
                 {
-                    throw new IOException("Critical inconsitency, blob column is null for " +getName());
+                    throw new IOException("Critical consistency problem, blob column is null for name=" +getName());
                 }
 
                 contentSize = size;
@@ -101,7 +104,7 @@ public class JdbcTableRowFile extends AbstractFileObject
 
             if (rs.next())
             {
-                throw new IOException("Critical consitency problem, duplicate response to " + getName());
+                throw new IOException("Critical consistency problem, duplicate response to name=" + getName());
             }
         }
         finally
@@ -132,7 +135,7 @@ public class JdbcTableRowFile extends AbstractFileObject
                 {
                     ps.clearWarnings(); // Derby generates warnings on no-match: https://issues.apache.org/jira/browse/DERBY-448
                 }
-                throw new IOException("Inconsistent DB result count=" + count + "while inserting new directory=" + getName());
+                throw new IOException("Critical consistency problem, result count=" + count + "while inserting new directory=" + getName());
             }
 
             // TODO: update last modified of parent
@@ -177,7 +180,7 @@ public class JdbcTableRowFile extends AbstractFileObject
             }
 
             // count > 1
-            throw new IOException("Inconsistent DB result count=" + count + " for deleting name=" + getName());
+            throw new IOException("Critical consistency problem, result count=" + count + " for deleting name=" + getName());
         }
         finally
         {
@@ -288,7 +291,7 @@ public class JdbcTableRowFile extends AbstractFileObject
     {
         if (contentSize < 0)
         {
-            throw new IOException("Cannot determine size, failed to attach " + getName());
+            throw new IOException("Cannot determine size, failed to attach name=" + getName());
         }
         return contentSize;
     }
@@ -331,7 +334,7 @@ public class JdbcTableRowFile extends AbstractFileObject
                 {
                     ps.clearWarnings(); // Derby generates warnings on no-match: https://issues.apache.org/jira/browse/DERBY-448
                 }
-                throw new IOException("Inconsistent DB result count=" + count +" while rename to=" + newfile.getName() + " from=" + getName());
+                throw new IOException("Critical consistency problem, result count=" + count +" while rename to name=" + newfile.getName() + " from name=" + getName());
             }
 
             // TODO: update parent lastModified
@@ -394,7 +397,7 @@ public class JdbcTableRowFile extends AbstractFileObject
                 {
                     ps.clearWarnings();  // Derby generates warnings on no-match: https://issues.apache.org/jira/browse/DERBY-448
                 }
-                throw new IOException("Inconsistent DB result count=" + count + " while updating name=" + getName());
+                throw new IOException("Critical consistency problem, result count=" + count + " while updating name=" + getName());
             }
 
             con.commit(); // TODO: move behind endOutput?
@@ -438,13 +441,13 @@ public class JdbcTableRowFile extends AbstractFileObject
 
             if (!rs.next())
             {
-                throw new IOException("Database row not found for " + getName()); // TODO: deleted -> insert?
+                throw new IOException("Database row not found for name=" + getName()); // TODO: deleted -> insert?
             }
 
             blob = rs.getBlob(1);
-            if (blob == null)
+            if (blob == null) // TODO size > 0?
             {
-                throw new IOException("Blob column is null for " + getName());
+                throw new IOException("Critical consistency problem, Blob column is null for name=" + getName());
             }
 
             final long newLength = blob.length() + byteArray.length;
@@ -470,7 +473,7 @@ public class JdbcTableRowFile extends AbstractFileObject
 
             if (rs.next())
             {
-                throw new IOException("More than one match for " + getName());
+                throw new IOException("More than one match for name=" + getName());
             }
 
             con.commit();
@@ -519,7 +522,7 @@ public class JdbcTableRowFile extends AbstractFileObject
                 {
                     ps.clearWarnings(); // Derby generates warnings on no-match: https://issues.apache.org/jira/browse/DERBY-448
                 }
-                throw new IOException("Inconsistent DB result count=" + count + " while inserting name=" + getName());
+                throw new IOException("Critical consistency problem, result count=" + count + " while inserting name=" + getName());
             }
 
             con.commit();
@@ -562,6 +565,7 @@ public class JdbcTableRowFile extends AbstractFileObject
         PreparedStatement ps = null;
         ResultSet rs = null;
         Blob blob = null;
+        long size = -1;
         try
         {
             con = getConnection("readData"); // inside try because rethrown as IOException
@@ -571,29 +575,29 @@ public class JdbcTableRowFile extends AbstractFileObject
 
             if (!rs.next())
             {
-                throw new IOException("Database row not found for " + getName()); // TODO: Filenotfound exception?
+                throw new IOException("Database row not found for name=" + getName()); // TODO: Filenotfound exception?
             }
 
-            final long size = rs.getLong(1);
+            size = rs.getLong(1);
             blob = rs.getBlob(2);
-            if (size != 0 && blob == null)
+            if (blob == null && size > 0)
             {
-                throw new IOException("Blob column is null, expecting " + size + " bytes for " + getName());
+                throw new IOException("Critical consistency problem, Blob column is null while expecting size=" + size + " bytes for name=" + getName());
             }
 
             // cannot access Blob after ResultSet#next() or connection#close()
 
-            byte[] bytes;
 
             if (pos > size)
             {
-                throw new IOException("Requesting position " + pos + " but Blob size is " + size + " for file " + getName());
+                throw new IOException("Requested position=" + pos + " exceeds size=" + size + " for name=" + getName());
             }
 
-            // Oracle might have null for empty blob, so we don't touch it at all
+            byte[] bytes;
             if (size == 0)
             {
-                bytes = new byte[0];
+                // Oracle might have null for empty blob, so we don't touch it at all
+                bytes = EMPTY_BYTES;
             }
             else
             {
@@ -602,12 +606,12 @@ public class JdbcTableRowFile extends AbstractFileObject
 
             if (bytes == null)
             {
-                throw new IOException("Blob column content is null, expecting " + size + " bytes for " + getName());
+                throw new IOException("Critical consistency problem, Blob column content is null when expecting size=" + size + " bytes for name=" + getName());
             }
 
             if (rs.next())
             {
-                throw new IOException("Consitency Problem, more than one Database row for " + getName());
+                throw new IOException("Critical consistency problem, more than one Database row for name=" + getName());
             }
 
             return bytes;
@@ -615,7 +619,7 @@ public class JdbcTableRowFile extends AbstractFileObject
         catch (SQLException ex)
         {
             // TODO: retry?
-            throw new IOException("Database problem while reading blob for " + getName(), ex);
+            throw new IOException("Database problem while reading blob for name=" + getName() + ". pos=" + pos + ", len=" + len + ", size=" + size, ex);
         }
         finally
         {
@@ -719,7 +723,7 @@ public class JdbcTableRowFile extends AbstractFileObject
                 {
                     ps.clearWarnings(); // Derby generates warnings on no-match: https://issues.apache.org/jira/browse/DERBY-448
                 }
-                throw new IOException("Inconsistent DB result count=" + count +" while mark name=" + getName());
+                throw new IOException("Critical consistency problem, result count=" + count +" while mark name=" + getName());
             }
 
             connection.commit();
