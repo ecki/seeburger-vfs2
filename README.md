@@ -52,3 +52,4 @@ Latest Release
 * *1.3.0* - make tests and javadoc work for Java 8/9. Add readOnly session to vfs2provider-digestarc
 * *1.3.1* - DarcFileProvider will not create multiple instances of underlying file system (removes session from option)
 * *1.4.0* - Updated plugin dependencies and added DementFileReplicator.
+* 1.5.0 TODO - Use Apache Commons VFS 2.1, some cleaned up IOException messages.

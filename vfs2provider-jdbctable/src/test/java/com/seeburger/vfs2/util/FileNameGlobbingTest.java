@@ -228,6 +228,7 @@ public class FileNameGlobbingTest
         assertTrue(names.remove("test-data/read-tests/dir1/subdir2/file1.txt"));
         assertTrue(names.remove("test-data/read-tests/dir1/subdir1/file1.txt"));
         assertTrue(names.remove("test-data/read-tests/dir1/subdir3/file1.txt"));
+        assertTrue(names.remove("test-data/read-tests/dir1/subdir4.jar/file1.txt"));
         assertTrue(names.remove("test-data/read-tests/dir1/file1.txt"));
         assertTrue(names.remove("test-data/read-tests/file1.txt"));
         assertTrue(names.isEmpty());
@@ -256,6 +257,7 @@ public class FileNameGlobbingTest
         assertTrue(names.remove("test-data/read-tests/dir1/subdir2/file1.txt"));
         assertTrue(names.remove("test-data/read-tests/dir1/subdir1/file1.txt"));
         assertTrue(names.remove("test-data/read-tests/dir1/subdir3/file1.txt"));
+        assertTrue(names.remove("test-data/read-tests/dir1/subdir4.jar/file1.txt"));
         assertTrue(names.remove("test-data/read-tests/dir1/file1.txt"));
         assertTrue(names.remove("test-data/read-tests/file1.txt"));
         assertTrue(names.isEmpty());
@@ -284,6 +286,7 @@ public class FileNameGlobbingTest
         assertTrue(names.remove("test-data/read-tests/dir1/subdir2/file1.txt"));
         assertTrue(names.remove("test-data/read-tests/dir1/subdir1/file1.txt"));
         assertTrue(names.remove("test-data/read-tests/dir1/subdir3/file1.txt"));
+        assertTrue(names.remove("test-data/read-tests/dir1/subdir4.jar/file1.txt"));
         assertTrue(names.remove("test-data/read-tests/dir1/file1.txt"));
         assertTrue(names.remove("test-data/read-tests/file1.txt"));
         assertTrue(names.isEmpty());
@@ -312,12 +315,15 @@ public class FileNameGlobbingTest
         assertTrue(names.remove("test-data/read-tests/dir1/subdir1/file1.txt"));
         assertTrue(names.remove("test-data/read-tests/dir1/subdir2/file1.txt"));
         assertTrue(names.remove("test-data/read-tests/dir1/subdir3/file1.txt"));
+        assertTrue(names.remove("test-data/read-tests/dir1/subdir4.jar/file1.txt"));
         assertTrue(names.remove("test-data/read-tests/dir1/subdir1/file2.txt"));
         assertTrue(names.remove("test-data/read-tests/dir1/subdir2/file2.txt"));
         assertTrue(names.remove("test-data/read-tests/dir1/subdir3/file2.txt"));
+        assertTrue(names.remove("test-data/read-tests/dir1/subdir4.jar/file2.txt"));
         assertTrue(names.remove("test-data/read-tests/dir1/subdir1/file3.txt"));
         assertTrue(names.remove("test-data/read-tests/dir1/subdir2/file3.txt"));
         assertTrue(names.remove("test-data/read-tests/dir1/subdir3/file3.txt"));
+        assertTrue(names.remove("test-data/read-tests/dir1/subdir4.jar/file3.txt"));
         assertTrue(names.remove("test-data/read-tests/dir1/file1.txt"));
         assertTrue(names.remove("test-data/read-tests/dir1/file2.txt"));
         assertTrue(names.remove("test-data/read-tests/dir1/file3.txt"));
@@ -348,12 +354,15 @@ public class FileNameGlobbingTest
         assertTrue(names.remove("test-data/read-tests/dir1/subdir1/file1.txt"));
         assertTrue(names.remove("test-data/read-tests/dir1/subdir2/file1.txt"));
         assertTrue(names.remove("test-data/read-tests/dir1/subdir3/file1.txt"));
+        assertTrue(names.remove("test-data/read-tests/dir1/subdir4.jar/file1.txt"));
         assertTrue(names.remove("test-data/read-tests/dir1/subdir1/file2.txt"));
         assertTrue(names.remove("test-data/read-tests/dir1/subdir2/file2.txt"));
         assertTrue(names.remove("test-data/read-tests/dir1/subdir3/file2.txt"));
+        assertTrue(names.remove("test-data/read-tests/dir1/subdir4.jar/file2.txt"));
         assertTrue(names.remove("test-data/read-tests/dir1/subdir1/file3.txt"));
         assertTrue(names.remove("test-data/read-tests/dir1/subdir2/file3.txt"));
         assertTrue(names.remove("test-data/read-tests/dir1/subdir3/file3.txt"));
+        assertTrue(names.remove("test-data/read-tests/dir1/subdir4.jar/file3.txt"));
         assertTrue(names.remove("test-data/read-tests/dir1/file1.txt"));
         assertTrue(names.remove("test-data/read-tests/dir1/file2.txt"));
         assertTrue(names.remove("test-data/read-tests/dir1/file3.txt"));
