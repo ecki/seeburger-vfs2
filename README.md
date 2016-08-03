@@ -34,12 +34,12 @@ Use the following dependency declarations:
     <dependency>
         <groupId>com.seeburger.vfs2</groupId>
         <artifactId>vfs2provider-jdbctable</artifactId>
-        <version>1.3.0</version>
+        <version>1.5.1</version>
     </dependency>
     <dependency>
         <groupId>com.seeburger.vfs2</groupId>
         <artifactId>vfs2provider-digestarc</artifactId>
-        <version>1.3.0</version>
+        <version>1.5.1</version>
     </dependency>
 
 Note: the artifacts are not available via Maven Central.
@@ -52,4 +52,6 @@ Latest Release
 * *1.3.0* - make tests and javadoc work for Java 8/9. Add readOnly session to vfs2provider-digestarc
 * *1.3.1* - DarcFileProvider will not create multiple instances of underlying file system (removes session from option)
 * *1.4.0* - Updated plugin dependencies and added DementFileReplicator.
-* 1.5.0 TODO - Use Apache Commons VFS 2.1, some cleaned up IOException messages.
+* *1.5.0* - Uses Apache Commons VFS 2.1, some cleaned up IOException messages. JDBCTabel filesystem allows 50MB for reading blobs.
+* *1.5.1* - some warning cleanup, less array copies in DarcFileObject.
+
