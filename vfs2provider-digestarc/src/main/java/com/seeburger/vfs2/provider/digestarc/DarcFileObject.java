@@ -36,12 +36,11 @@ import com.seeburger.vfs2.provider.digestarc.DarcTree.File;
 /**
  * Represents Darc File Entries in a virtual tree.
  */
-public class DarcFileObject extends AbstractFileObject implements FileListener
+public class DarcFileObject extends AbstractFileObject<DarcFileSystem> implements FileListener
 {
     public static final String ATTRIBUTE_GITHASH = "githash";
 
     private final DarcTree tree;
-    private final BlobStorageProvider provider;
 
     private DarcTree.Entry cachedEntry;
     private WeakReference<FileObject> targetRef;
@@ -55,7 +54,6 @@ public class DarcFileObject extends AbstractFileObject implements FileListener
     {
         super(name, fs);
         this.tree = tree;
-        this.provider = fs.getBlobProvider();
     }
 
 
@@ -103,7 +101,7 @@ public class DarcFileObject extends AbstractFileObject implements FileListener
         if (entry instanceof Directory)
         {
             Directory dir = (Directory)entry;
-            return UriParser.encode(dir.getChildrenNames(provider));
+            return UriParser.encode(dir.getChildrenNames(getProvider()));
         }
 
         // if we are a file or virtual
@@ -123,19 +121,26 @@ public class DarcFileObject extends AbstractFileObject implements FileListener
         Entry entry = cachedEntry;
         if (entry != null)
             return entry;
+
+        String path;
         try
         {
-            entry = tree.resolveName(getName().getPathDecoded(), provider);
-            cachedEntry = entry;
-            return entry;
+            path = getName().getPathDecoded();
         }
         catch (FileSystemException fse)
         {
-            throw fse;
+            throw new FileSystemException("Cannot decode path for entry {0}.", fse, getName());
+        }
+
+        try
+        {
+            entry = tree.resolveName(path, getProvider());
+            cachedEntry = entry;
+            return entry;
         }
         catch (IOException ioe)
         {
-            throw new FileSystemException(ioe);
+            throw new FileSystemException("IOException while getting entry {0}.", ioe, getName());
         }
     }
 
@@ -146,7 +151,7 @@ public class DarcFileObject extends AbstractFileObject implements FileListener
     @Override
     protected long doGetLastModifiedTime() throws Exception
     {
-        return 0l; // Not supported by Darc File System
+        return 0L; // Not supported by Darc File System
     }
 
     /**
@@ -164,7 +169,7 @@ public class DarcFileObject extends AbstractFileObject implements FileListener
             throw new FileSystemException("vfs.provider/read-not-file.error", getName());
         }
 
-        FileObject delegatedFile = provider.resolveFileHash(entry.getHash());
+        FileObject delegatedFile = getProvider().resolveFileHash(entry.getHash());
         return new DarcFileInputStream(delegatedFile, entry.getHash());
     }
 
@@ -213,7 +218,7 @@ public class DarcFileObject extends AbstractFileObject implements FileListener
     {
         Entry entry = getEntry();
         String hash = entry.getHash();
-        FileObject targetFile = provider.resolveFileHash(hash);
+        FileObject targetFile = getProvider().resolveFileHash(hash);
         if (targetFile != null)
         {
             this.targetRef = new WeakReference<FileObject>(targetFile);
@@ -244,7 +249,7 @@ public class DarcFileObject extends AbstractFileObject implements FileListener
         {
             throw new FileSystemException("No change session specified, cannot delete file");
         }
-        tree.delete(getName().getPathDecoded(), provider);
+        tree.delete(getName().getPathDecoded(), getProvider());
     }
 
     @Override
@@ -255,7 +260,7 @@ public class DarcFileObject extends AbstractFileObject implements FileListener
         {
             throw new FileSystemException("No change session specified, cannot create folder");
         }
-        tree.createFolder(getName().getPathDecoded(), provider);
+        tree.createFolder(getName().getPathDecoded(), getProvider());
     }
 
     @Override
@@ -277,23 +282,18 @@ public class DarcFileObject extends AbstractFileObject implements FileListener
         throws Exception
     {
         // TODO this is the naive in-memory implementation
-        ByteArrayOutputStream  baos = this.dataOut;
+        byte[] content = this.dataOut.toByteArray();
         this.dataOut = null; // free early
-
-        byte[] content = baos.toByteArray();
-        baos = null;
-
         long len = content.length;
 
-        OutputStream os = provider.getTempStream();
-        ObjectStorage storage = new ObjectStorage();
-        byte[] digest = storage.writeBytes(os, content, "blob"); // closes stream
+        OutputStream os = getProvider().getTempStream();
+        byte[] digest = getObjectStorage().writeBytes(os, content, "blob"); // closes stream
         content = null;
 
-        String hash = provider.storeTempBlob(os, DarcTree.asHex(digest));
+        String hash = getProvider().storeTempBlob(os, DarcTree.asHex(digest));
         os = null;
 
-        tree.addFile(getName().getPathDecoded(), hash, len, provider);
+        tree.addFile(getName().getPathDecoded(), hash, len, getProvider());
 
         super.endOutput(); // call handleCreate or onChange
     }
@@ -326,5 +326,15 @@ public class DarcFileObject extends AbstractFileObject implements FileListener
         {
             targetRef.clear(); // force re-resolve
         }
+    }
+
+    private BlobStorageProvider getProvider()
+    {
+        return ((DarcFileSystem)getFileSystem()).getBlobProvider();
+    }
+
+    private ObjectStorage getObjectStorage()
+    {
+        return ((DarcFileSystem)getFileSystem()).getObjectStorage();
     }
 }

@@ -21,4 +21,5 @@ package code.sealed;
  */
 public class AnotherClass
 {
+    /* empty */
 }

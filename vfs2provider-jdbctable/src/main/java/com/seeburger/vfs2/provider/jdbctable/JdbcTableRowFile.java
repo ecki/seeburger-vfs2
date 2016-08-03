@@ -29,13 +29,11 @@ import org.apache.commons.vfs2.FileSystem;
 import org.apache.commons.vfs2.FileSystemException;
 import org.apache.commons.vfs2.FileType;
 import org.apache.commons.vfs2.NameScope;
-import org.apache.commons.vfs2.RandomAccessContent;
 import org.apache.commons.vfs2.provider.AbstractFileName;
 import org.apache.commons.vfs2.provider.AbstractFileObject;
-import org.apache.commons.vfs2.util.RandomAccessMode;
 
 
-public class JdbcTableRowFile extends AbstractFileObject
+public class JdbcTableRowFile extends AbstractFileObject<JdbcTableFileSystem>
 {
     /** value of size entry for folders in db. */
     static final long FOLDER_SIZE = -2;
@@ -194,7 +192,8 @@ public class JdbcTableRowFile extends AbstractFileObject
         return lastModified;
     }
 
-    // doSetLastModifiedTime is not overwritten -> reject
+    // doSetLastModifiedTime is not overwritten -> throws last modified not supported
+    // doGetRandomAccessContent(RandomAccessMode -> throws random access not supported
 
     @Override
     protected Map<String, Object> doGetAttributes() throws Exception
@@ -232,16 +231,8 @@ public class JdbcTableRowFile extends AbstractFileObject
         }
         else
         {
-            super.doSetAttribute(attrName, value);
+            super.doSetAttribute(attrName, value); // throws attribute not supported
         }
-    }
-
-    @Override
-    protected RandomAccessContent doGetRandomAccessContent(RandomAccessMode mode)
-                    throws Exception
-    {
-        // TODO Auto-generated method stub
-        return super.doGetRandomAccessContent(mode);
     }
 
     @Override
@@ -679,7 +670,7 @@ public class JdbcTableRowFile extends AbstractFileObject
     {
         // TODO: synchronized
         long currentSize = getContent().getSize();
-        long currentGen = 1l; // TODO - lastModified?
+        long currentGen = 1L; // TODO - lastModified?
 
         DataDescription desc = new DataDescription();
         desc.generation = currentGen;
@@ -693,7 +684,7 @@ public class JdbcTableRowFile extends AbstractFileObject
     void nextReadData(DataDescription desc, int bufsize) throws IOException
     {
         long currentSize = getContent().getSize();
-        long currentGen = 1l;
+        long currentGen = 1L;
 
         if (desc.dataLength != currentSize || desc.generation != currentGen)
         {

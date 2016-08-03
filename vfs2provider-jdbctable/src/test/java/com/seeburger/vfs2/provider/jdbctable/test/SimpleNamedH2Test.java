@@ -71,11 +71,11 @@ public class SimpleNamedH2Test
         final long now = System.currentTimeMillis();
 
         final FileObject testFile = manager.resolveFile("seejt:///key/dir_"+now);
-        assertEquals(false,  testFile.exists());
+        assertFalse(testFile.exists());
         assertEquals(FileType.IMAGINARY, testFile.getType());
 
         testFile.createFolder();
-        assertEquals(true,  testFile.exists());
+        assertTrue(testFile.exists());
         assertEquals(FileType.FOLDER, testFile.getType());
 
         verifyDatabase();
@@ -112,11 +112,11 @@ public class SimpleNamedH2Test
         builder.setTablename(opts, "tBlobs2");
 
         final FileObject testFile = manager.resolveFile("seejt:///key/dir_"+now, opts);
-        assertEquals(false,  testFile.exists());
+        assertFalse(testFile.exists());
         assertEquals(FileType.IMAGINARY, testFile.getType());
 
         testFile.createFolder();
-        assertEquals(true,  testFile.exists());
+        assertTrue(testFile.exists());
         assertEquals(FileType.FOLDER, testFile.getType());
 
         verifyDatabase();
@@ -154,7 +154,7 @@ public class SimpleNamedH2Test
         builder.setTablename(opts, "tBlobsMissing");
 
         final FileObject testFile = manager.resolveFile("seejt:///key/dir_"+now, opts);
-        assertEquals(false,  testFile.exists()); // will fail
+        assertFalse(testFile.exists()); // will fail
     }
 
 
@@ -230,9 +230,9 @@ public class SimpleNamedH2Test
 
     private void safeClose(ResultSet rs, PreparedStatement ps, Connection c)
     {
-        try { rs.close(); } catch (Exception ignored) { }
-        try { ps.close(); } catch (Exception ignored) { }
-        try { c.close(); } catch (Exception ignored) { }
+        try { rs.close(); } catch (Exception ignored) { /* ignored */ }
+        try { ps.close(); } catch (Exception ignored) { /* ignored */ }
+        try { c.close(); } catch (Exception ignored) { /* ignored */ }
         dialect.returnConnection(c);
     }
 }

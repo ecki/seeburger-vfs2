@@ -37,8 +37,8 @@ public class BlobStorageProvider
     /** @return the FileObject matching the specified blob hash. */
     public FileObject resolveFileHash(String hash) throws FileSystemException
     {
-        String relPath = hashToPath(hash); // make this specific for each root
-        return rootFile.resolveFile(relPath);
+        String relPath = hashToPath(hash);
+        return rootFile.resolveFile(relPath, NameScope.DESCENDENT);
     }
 
     /** Produce a relative path of the given hash (separate first two characters). */
@@ -52,26 +52,23 @@ public class BlobStorageProvider
         return new ByteArrayOutputStream();
     }
 
-    public String storeTempBlob(OutputStream tmp, String digest) throws IOException
+    public String storeTempBlob(OutputStream tempStream, String digest) throws IOException
     {
-        ByteArrayOutputStream baos = (ByteArrayOutputStream)tmp;
-        byte[] content = baos.toByteArray();
-
         FileObject target = resolveFileHash(digest);
         switch(target.getType())
         {
             case FOLDER:
                 throw new RuntimeException("Destination blob is an unexpected directory: " + target);
             case FILE:
-                return digest; // TODO: compare
+                return digest;
             case IMAGINARY:
                 FileObject parent = target.getParent();
-                parent.createFolder();
-                FileObject tmpObject = createTemp(parent);
-                OutputStream os = tmpObject.getContent().getOutputStream(false);
-                os.write(content);
-                os.close(); tmpObject.close();
-                tmpObject.moveTo(target);
+                FileObject tmpFile = createTemp(parent);
+                OutputStream os = tmpFile.getContent().getOutputStream(false);
+                ((ByteArrayOutputStream)tempStream).writeTo(os);
+                os.close();
+                tmpFile.close();
+                tmpFile.moveTo(target);
                 return digest;
             default:
                 throw new RuntimeException("Corrupted blob type: " + target);

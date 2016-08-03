@@ -8,7 +8,6 @@
 package com.seeburger.vfs2.provider.digestarc;
 
 
-import java.io.ByteArrayInputStream;
 import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;

@@ -159,7 +159,7 @@ public class JdbcTableInputStream extends InputStream
     /**
      * Set the current marked position in the stream.
      */
-    public void mark(int readAheadLimit)
+    public synchronized void mark(int readAheadLimit)
     {
         mark = bufferPos;
     }

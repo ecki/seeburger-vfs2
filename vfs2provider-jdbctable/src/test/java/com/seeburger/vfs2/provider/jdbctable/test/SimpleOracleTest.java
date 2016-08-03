@@ -71,9 +71,9 @@ public class SimpleOracleTest extends SimpleTestsBase
         SimpleTestsBase.dataSource = null;
     }
 
-    /* Since Oracle Database is shared I wont check for left-open connections */
     void verifyDatabase()
     {
+        /* Since Oracle Database is shared I wont check for left-open connections */
     }
 }
 

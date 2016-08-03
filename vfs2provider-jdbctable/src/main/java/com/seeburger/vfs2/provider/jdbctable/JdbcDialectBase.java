@@ -119,7 +119,7 @@ public class JdbcDialectBase implements JdbcDialect
             long duration = System.nanoTime() - start;
             if (duration > 100 * MS)
             {
-                System.out.printf("slow getConnection(): %.6fs%n", (duration / 1000000000.0)); // TODO: logging?
+                System.out.printf("slow getConnection(): %.6fs%n", Double.valueOf((duration / 1000000000.0))); // TODO: logging
             }
         }
     }

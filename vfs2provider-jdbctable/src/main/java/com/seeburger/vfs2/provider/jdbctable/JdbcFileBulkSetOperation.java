@@ -13,7 +13,6 @@ import java.util.Collection;
 
 import org.apache.commons.vfs2.FileObject;
 import org.apache.commons.vfs2.FileSystemException;
-import org.apache.commons.vfs2.FileSystemManager;
 import org.apache.commons.vfs2.NameScope;
 
 import com.seeburger.vfs2.operations.BulkSetAttributeOperation;

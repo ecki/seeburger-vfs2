@@ -34,6 +34,9 @@ public class DarcFileSystem extends AbstractFileSystem
 {
     /** The provider responsible for looking up hashed names, knows underlying file object. */
     final private BlobStorageProvider provider;
+    /** The storage format used to write bytes. */
+    final private ObjectStorage storage;
+
     /** The hash of the initial root Tree object. */
     final String rootHash;
     /** change session identifier, null means read only. */
@@ -76,8 +79,8 @@ public class DarcFileSystem extends AbstractFileSystem
             throw new FileSystemException("Cannot produce layered digest archive filesystem, missing root node " + parentLayer);
         }
 
-        // System.out.println("Setting up BlobStorage at " + rootFile + " and asuming root index at " + rootHash);
         provider = new BlobStorageProvider(rootFile);
+        storage = new ObjectStorage();
 
         DarcFileConfigBuilder config = DarcFileConfigBuilder.getInstance();
         changeSession = config.getChangeSession(fileSystemOptions);
@@ -156,14 +159,20 @@ public class DarcFileSystem extends AbstractFileSystem
         return new DarcFileObject(name, this, tree);
     }
 
-    /** Used to propagate the current blob provider to freshly created {@link DarcFileObject}s. */
+    public String commitChanges() throws IOException
+    {
+        return tree.commitChanges(provider);
+    }
+
+    /** Used to propagate the current blob provider to all {@link DarcFileObject}s. */
     protected BlobStorageProvider getBlobProvider()
     {
         return provider;
     }
 
-    public String commitChanges() throws IOException
+    /** Used to propagate the current object storage to all {@link DarcFileObject}s. */
+    protected ObjectStorage getObjectStorage()
     {
-        return tree.commitChanges(provider);
+        return storage;
     }
 }

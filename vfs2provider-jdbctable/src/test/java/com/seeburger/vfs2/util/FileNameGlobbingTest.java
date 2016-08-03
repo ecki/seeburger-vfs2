@@ -37,7 +37,7 @@ public class FileNameGlobbingTest
     @Test(expected=IllegalArgumentException.class)
     public void testFileNameGlobbingNullConstructor()
     {
-        new FileNameGlobbing(null);
+        assertNotNull(new FileNameGlobbing(null));
     }
 
     @Test(expected=IllegalArgumentException.class)

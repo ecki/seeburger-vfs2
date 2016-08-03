@@ -27,7 +27,6 @@ import org.apache.commons.vfs2.FileType;
 import org.apache.commons.vfs2.cache.DefaultFilesCache;
 import org.apache.commons.vfs2.impl.DefaultFileReplicator;
 import org.apache.commons.vfs2.impl.DefaultFileSystemManager;
-import org.apache.commons.vfs2.operations.FileOperation;
 import org.apache.commons.vfs2.provider.local.DefaultLocalFileProvider;
 import org.apache.commons.vfs2.provider.ram.RamFileProvider;
 import org.apache.commons.vfs2.provider.url.UrlFileProvider;
@@ -309,9 +308,8 @@ public class DarcBasicTest
 
             file.delete();
 
-            assertSame(1, list.deleted);
-            //assertSame(1, list.changed);
-            assertSame(1, list.created);
+            assertTrue("One file should be deleted", 1 == list.deleted);
+            assertTrue("One file should be created", 1 ==  list.created);
         }
         finally
         {
@@ -369,7 +367,7 @@ public class DarcBasicTest
         {
             changed++;
         }
-    };
+    }
 
 }
 

@@ -106,9 +106,9 @@ public class SimpleH2Test extends SimpleTestsBase
 
     private void safeClose(ResultSet rs, PreparedStatement ps, Connection c)
     {
-        try { rs.close(); } catch (Exception ignored) { }
-        try { ps.close(); } catch (Exception ignored) { }
-        try { c.close(); } catch (Exception ignored) { }
+        try { rs.close(); } catch (Exception ignored) { /* ignored */ }
+        try { ps.close(); } catch (Exception ignored) { /* ignored */ }
+        try { c.close(); } catch (Exception ignored) { /* ignored */ }
         dialect.returnConnection(c);
     }
 }

@@ -9,8 +9,6 @@ package com.seeburger.vfs2.provider.digestarc;
 
 import java.io.File;
 
-import junit.framework.Test;
-
 import org.apache.commons.vfs2.AllFileSelector;
 import org.apache.commons.vfs2.FileObject;
 import org.apache.commons.vfs2.FileSystemManager;
@@ -19,9 +17,8 @@ import org.apache.commons.vfs2.impl.DefaultFileSystemManager;
 import org.apache.commons.vfs2.provider.ram.RamFileProvider;
 import org.apache.commons.vfs2.test.AbstractProviderTestConfig;
 import org.apache.commons.vfs2.test.ProviderTestConfig;
-import org.apache.commons.vfs2.test.ProviderTestSuite;
 
-import com.seeburger.vfs2.util.TreePrinter;
+import junit.framework.Test;
 
 
 public class DarcProviderTestCase extends AbstractProviderTestConfig implements ProviderTestConfig

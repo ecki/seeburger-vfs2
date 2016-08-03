@@ -18,7 +18,6 @@ import java.security.NoSuchAlgorithmException;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.junit.Ignore;
 import org.junit.Test;
 
 import com.seeburger.vfs2.provider.digestarc.DarcTree.Directory;
@@ -99,7 +98,7 @@ public class DarcTreeNoProviderTest
     public void testResolveTraverseFile() throws IOException
     {
         DarcTree tree = buildDefaultTestTree();
-        Entry result = tree.resolveName("/file2/test", null);
+        /* throws */ tree.resolveName("/file2/test", null);
     }
 
     @Test
