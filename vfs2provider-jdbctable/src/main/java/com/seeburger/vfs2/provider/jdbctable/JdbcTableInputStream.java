@@ -18,7 +18,7 @@ import com.seeburger.vfs2.provider.jdbctable.JdbcTableRowFile.DataDescription;
 /**
  * Input Stream backed by a JDBC blob.
  * <P>
- * WARNING: this currently only allows to read blobs up to 5 MB.
+ * WARNING: this currently only allows to read blobs up to 50 MB.
  * This is a TODO, it is intended to reopen the Blob every {@link #MAX_BUFFER_SIZE}
  * read bytes.
  *
@@ -27,7 +27,7 @@ import com.seeburger.vfs2.provider.jdbctable.JdbcTableRowFile.DataDescription;
  */
 public class JdbcTableInputStream extends InputStream
 {
-    static final int MAX_BUFFER_SIZE = 5 * 1024 * 1024;
+    static final int MAX_BUFFER_SIZE = 50 * 1024 * 1024;
 
     /** Keep state for re-requesting additional data. */
     final DataDescription dataDescription;
