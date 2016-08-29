@@ -68,7 +68,23 @@ public class BlobStorageProvider
                 ((ByteArrayOutputStream)tempStream).writeTo(os);
                 os.close();
                 tmpFile.close();
-                tmpFile.moveTo(target);
+                try
+                {
+                    // this might fail if concurrent rename happens
+                    tmpFile.moveTo(target);
+                }
+                catch (FileSystemException ex)
+                {
+                    tmpFile.delete();
+                    // instead of trying to figure out the reason for
+                    // the exception we just check if the file is there
+                    // or not (the content must be correct)
+                    target.refresh();
+                    if (target.getType() != FileType.FILE)
+                    {
+                        throw ex;
+                    }
+                }
                 return digest;
             default:
                 throw new RuntimeException("Corrupted blob type: " + target);
