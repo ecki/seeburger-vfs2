@@ -697,7 +697,7 @@ public class JdbcTableRowFile extends AbstractFileObject<JdbcTableFileSystem>
         return;
     }
 
-    private void setMarkTime(long time) throws SQLException, IOException
+    private void setMarkTime(long time) throws SQLException, FileSystemException
     {
         Connection connection = getConnection("mark");
         PreparedStatement ps = null;
@@ -713,8 +713,12 @@ public class JdbcTableRowFile extends AbstractFileObject<JdbcTableFileSystem>
                 if (count == 0)
                 {
                     ps.clearWarnings(); // Derby generates warnings on no-match: https://issues.apache.org/jira/browse/DERBY-448
+                    throw new SQLException("Critical consistency problem, no record found to mark for name=" + getName());
                 }
-                throw new IOException("Critical consistency problem, result count=" + count +" while mark name=" + getName());
+                else
+                {
+                    throw new SQLException("Critical consistency problem, more than one match while marking. count=" + count +" name=" + getName());
+                }
             }
 
             connection.commit();

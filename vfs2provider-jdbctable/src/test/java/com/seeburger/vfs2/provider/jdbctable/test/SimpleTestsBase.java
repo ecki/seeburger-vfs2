@@ -776,6 +776,70 @@ public abstract class SimpleTestsBase
     }
 
     @Test
+    public void testMarkTimeMissing() throws FileSystemException
+    {
+        final long now = System.currentTimeMillis();
+
+        final FileObject testFile1 = manager.resolveFile("seejt:///key/marktime_"+now);
+        assertFalse(testFile1.exists());
+
+        // now we invoke the markTime and verify the exception
+        try
+        {
+            testFile1.getContent().setAttribute("markTime", Long.valueOf(1));
+            fail("Setting attributre on missing file should fail");
+        }
+        catch(FileSystemException ex)
+        {
+            assertTrue("Exception must contain attribute name. ex=" +ex, ex.getMessage().contains("markTime"));
+            assertTrue("Exception must contain file name. ex="+ex, ex.getMessage().contains("key/marktime_"));
+        } finally {
+            // and finally find connection leaks
+            verifyDatabase();
+        }
+    }
+
+    @Test
+    public void testMarkTimeCorrupt() throws FileSystemException, SQLException
+    {
+        final long now = System.currentTimeMillis();
+
+        final FileObject testFile1 = manager.resolveFile("seejt:///key/marktime_"+now);
+        testFile1.createFile();
+
+        try
+        {
+            // now we remove it from db but do not refresh
+            Connection c = dialect.getConnection();
+            PreparedStatement ps = dialect.prepareQuery(c, "DELETE FROM {table} WHERE cParent='/key' AND cName=?");
+            ps.setString(1, "marktime_"+now);
+            int count = ps.executeUpdate();
+            assertEquals(1, count); // proof the file existed
+            commitAndClose(ps, c);
+
+            // and finally (without refresh) we do it again
+            testFile1.getContent().setAttribute("markTime", Long.valueOf(1));
+            fail("Setting attribute on deleted record should fail");
+        }
+        catch(FileSystemException ex)
+        {
+            assertTrue("Exception must contain attribute name. ex=" +ex, ex.getMessage().contains("markTime"));
+            assertTrue("Exception must contain file name. ex="+ex, ex.getMessage().contains("key/marktime_"));
+
+            Throwable cause = ex.getCause();
+            assertEquals(SQLException.class, cause.getClass());
+            assertTrue("Exception must contain file name. ex="+cause, cause.getMessage().contains("key/marktime_"));
+            assertTrue("Exception must talk about corruption. ex="+cause, cause.getMessage().contains("consistency problem"));
+        }
+        finally
+        {
+            // and finally find connection leaks
+            verifyDatabase();
+        }
+    }
+
+
+    @Test
     public void testBulkSet() throws FileSystemException
     {
         final long now = System.currentTimeMillis();
