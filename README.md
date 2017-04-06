@@ -54,4 +54,7 @@ Latest Release
 * *1.4.0* - Updated plugin dependencies and added DementFileReplicator.
 * *1.5.0* - Uses Apache Commons VFS 2.1, some cleaned up IOException messages. JDBCTabel filesystem allows 50MB for reading blobs.
 * *1.5.1* - some warning cleanup, less array copies in DarcFileObject.
-
+* *1.5.2* - jdbctable: ignore rename race and check for outcome before throwing
+* *1.5.3* - jdbctable: Better logging by differentiating missing/excessive records.
+            jdbctable: Refresh before ignoring duplicate new hash
+            (avoids possible corruption with bg db deletes)
