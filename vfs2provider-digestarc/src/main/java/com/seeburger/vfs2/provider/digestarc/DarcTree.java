@@ -507,7 +507,7 @@ public class DarcTree
         {
             OutputStream os = provider.getTempStream();
             String hash = dir.writeToStream(os);
-            os.close(); // TODO: close always or never
+            os.close();
             provider.storeTempBlob(os, hash);
             dir.hash = hash;
             dir.modified = false;

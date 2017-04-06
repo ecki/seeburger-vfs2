@@ -19,7 +19,7 @@ import org.apache.commons.vfs2.NameScope;
 
 
 /**
- * Provides blob loading function to DarcTree.
+ * Provides blob storing function to {@link DarcTree}.
  * <P>
  * This loader can resolve hashes relative to a base directory.
  * It uses a two-digits sub directory and then the hash name.
@@ -47,14 +47,23 @@ public class BlobStorageProvider
         return hash.substring(0, 2) + "/" + hash.substring(2);
     }
 
+    /** Get output stream for finalisation by @link {@link #storeTempBlob(OutputStream, String)}. */
     public OutputStream getTempStream() throws FileSystemException
     {
         return new ByteArrayOutputStream();
     }
 
+    /**
+     * Make sure content exists in file for given digest.
+     * <p>
+     * The {@code tempStream} must be obtained from {@link #getTempStream()}.
+     * <p>
+     * This is used to persist (new) files as well as directory blobs.
+     */
     public String storeTempBlob(OutputStream tempStream, String digest) throws IOException
     {
         FileObject target = resolveFileHash(digest);
+        target.refresh(); // might be deleted in DB by reorg
         switch(target.getType())
         {
             case FOLDER:
@@ -91,6 +100,7 @@ public class BlobStorageProvider
         }
     }
 
+    /** Generate imaginary child with temporary file name. */
     private FileObject createTemp(FileObject parent) throws FileSystemException
     {
         FileObject tmp;
