@@ -59,4 +59,5 @@ Latest Release
 * *1.5.3* - jdbctable: Better logging by differentiating missing/excessive records.<br/>
             jdbctable: Refresh before ignoring duplicate new hash<br/>
             (avoids possible corruption with bg db deletes)
-* *1.6.0* - compile with Java 8, adjust travis matrix to exclude Java 6.
+* *1.6.0* - compile with Java 8, adjust travis matrix to exclude Java 6.<br/>
+            Compiles against Apache Commons VFS 2.2
