@@ -21,25 +21,26 @@ SEEBURGER Extensions to Apache Commons VFS2
 Building
 --------
 
-Can be build with Java 6 - Java 9, requires Maven 3.2.x.
+Can be build with Java 6 - Java 8, requires Maven 3.2.x.
 
-By default Java 6 compatibility is used (which should only be used when Maven is started with Java 6).
-To specify a specific version, use:
+By default Java 8 compatibility is used. To specify a specific version, use:
 
-    JAVA_HOME=/opt/jdk9
-    mvn -Prelease-profile -Dmaven.compiler.source=9 -Dmaven.compiler.target=9 clean install
+    JAVA_HOME=/opt/jdk7
+    mvn -Prelease-profile -Dmaven.compiler.source=7 -Dmaven.compiler.target=7 clean install
+
+Currently fails with JDK9.
 
 Use the following dependency declarations:
 
     <dependency>
         <groupId>com.seeburger.vfs2</groupId>
         <artifactId>vfs2provider-jdbctable</artifactId>
-        <version>1.5.1</version>
+        <version>1.6.0</version>
     </dependency>
     <dependency>
         <groupId>com.seeburger.vfs2</groupId>
         <artifactId>vfs2provider-digestarc</artifactId>
-        <version>1.5.1</version>
+        <version>1.6.0</version>
     </dependency>
 
 Note: the artifacts are not available via Maven Central.
@@ -55,6 +56,7 @@ Latest Release
 * *1.5.0* - Uses Apache Commons VFS 2.1, some cleaned up IOException messages. JDBCTabel filesystem allows 50MB for reading blobs.
 * *1.5.1* - some warning cleanup, less array copies in DarcFileObject.
 * *1.5.2* - jdbctable: ignore rename race and check for outcome before throwing
-* *1.5.3* - jdbctable: Better logging by differentiating missing/excessive records.
-            jdbctable: Refresh before ignoring duplicate new hash
+* *1.5.3* - jdbctable: Better logging by differentiating missing/excessive records.<br/>
+            jdbctable: Refresh before ignoring duplicate new hash<br/>
             (avoids possible corruption with bg db deletes)
+* *1.6.0* - compile with Java 8, adjust travis matrix to exclude Java 6.

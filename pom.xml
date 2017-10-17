@@ -1,10 +1,9 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
-    <prerequisites><maven>3.2.1</maven></prerequisites>
 
     <groupId>com.seeburger.vfs2</groupId>
     <artifactId>seeburger-vfs2-parent</artifactId>
-    <version>1.5.4-SNAPSHOT</version>
+    <version>1.6.0-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <name>SEEBURGER VFS2 Parent</name>
@@ -20,8 +19,8 @@
     <properties>
         <maven.build.timestamp.format>yyyyMMdd-HHmm</maven.build.timestamp.format>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <maven.compiler.source>6</maven.compiler.source>
-        <maven.compiler.target>6</maven.compiler.target>
+        <maven.compiler.source>8</maven.compiler.source>
+        <maven.compiler.target>8</maven.compiler.target>
         <maven.compiler.compilerVersion>${maven.compiler.source}</maven.compiler.compilerVersion>
         <version.commons-vfs2>2.1</version.commons-vfs2>
     </properties>
@@ -114,6 +113,11 @@
                 <plugin>
                     <artifactId>maven-surefire-plugin</artifactId>
                     <version>2.19</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-project-info-reports-plugin</artifactId>
+                    <version>2.9</version>
                 </plugin>
             </plugins>
         </pluginManagement>
@@ -209,10 +213,11 @@
         <license>
             <name>Apache License 2.0</name>
             <url>http://www.spdx.org/licenses/Apache-2.0</url>
-            <comments>Licensor: SEEBURGER AG, Germany.</comments>
+            <comments>Licenser: SEEBURGER AG, Germany.</comments>
         </license>
     </licenses>
 
+    <url>http://github.com/seeburger-ag/seeburger-vfs2</url>
     <inceptionYear>2013</inceptionYear>
 
     <organization>
@@ -223,11 +228,11 @@
     <distributionManagement>
         <repository>
             <id>release</id>
-            <url>http://repo.seeburger.de/archiva/repository/release/</url>
+            <url>https://repo.seeburger.de/archiva/repository/release/</url>
         </repository>
         <snapshotRepository>
             <id>snapshot</id>
-            <url>http://repo.seeburger.de/archiva/repository/snapshot/</url>
+            <url>https://repo.seeburger.de/archiva/repository/snapshot/</url>
         </snapshotRepository>
     </distributionManagement>
 
