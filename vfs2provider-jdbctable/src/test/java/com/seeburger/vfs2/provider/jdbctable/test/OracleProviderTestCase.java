@@ -84,7 +84,7 @@ public class OracleProviderTestCase extends AbstractProviderTestConfig implement
         System.setProperty("test.basedir",  "../src/test/test-data");
 
         // dynamically construct Oracle Data Source since this is a properitary dependency
-        DataSource ds = (DataSource)Class.forName("oracle.jdbc.pool.OracleDataSource").newInstance();
+        DataSource ds = (DataSource)Class.forName("oracle.jdbc.pool.OracleDataSource").getConstructor((Class<?>)null).newInstance((Object[])null);
         PropertyUtils.setSimpleProperty(ds, "user", "TESTVFS"); // ds.setUser("TESTVFS");
         PropertyUtils.setSimpleProperty(ds, "password", "secret"); // ds.setPassword("secret");
         PropertyUtils.setSimpleProperty(ds, "URL", "jdbc:oracle:thin:@localhost:1521:ORA1"); // ds.setURL("...");

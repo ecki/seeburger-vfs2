@@ -755,14 +755,14 @@ public abstract class SimpleTestsBase
         assertEquals(Long.valueOf(testFile1.getContent().getLastModifiedTime()), testFile1.getContent().getAttribute("markTime"));
 
         // support Long values
-        testFile1.getContent().setAttribute("markTime", new Long(1));
+        testFile1.getContent().setAttribute("markTime", Long.valueOf(1));
         testFile1.refresh();
-        assertEquals(new Long(1), testFile1.getContent().getAttribute("markTime"));
+        assertEquals(Long.valueOf(1), testFile1.getContent().getAttribute("markTime"));
 
         // support String values
         testFile1.getContent().setAttribute("markTime", "1");
         testFile1.close(); // TODO: currently required, will cache the string in DefaultFileContent
-        assertEquals(new Long(1), testFile1.getContent().getAttribute("markTime"));
+        assertEquals(Long.valueOf(1), testFile1.getContent().getAttribute("markTime"));
 
         // support null as alias for current
         testFile1.getContent().setAttribute("markTime", null);

@@ -23,7 +23,7 @@ public interface ExpireFilesOperation extends FileOperation
      * Specify the cut-off time stamp. All files older than this time stamp will be purged.
      * <P>
      * It is expected by the {@link JdbcTableOperationProvider} that the time stamp is set
-     * with <code>setAttribute("markTime", new Long(time))</code>.
+     * with <code>setAttribute("markTime", Long.valueOf(time))</code>.
      */
     void setTimeBefore(long timeBefore);
 
