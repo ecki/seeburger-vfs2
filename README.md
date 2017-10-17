@@ -21,14 +21,13 @@ SEEBURGER Extensions to Apache Commons VFS2
 Building
 --------
 
-Can be build with Java 6 - Java 8, requires Maven 3.2.x.
+Can be build with Java 6 - Java 9, requires Maven 3.2.x.
 
 By default Java 8 compatibility is used. To specify a specific version, use:
 
-    JAVA_HOME=/opt/jdk7
-    mvn -Prelease-profile -Dmaven.compiler.source=7 -Dmaven.compiler.target=7 clean install
+    JAVA_HOME=/opt/jdk9
+    mvn -Prelease-profile -Dmaven.compiler.source=9 -Dmaven.compiler.target=9 clean install
 
-Currently fails with JDK9.
 
 Use the following dependency declarations:
 
@@ -59,5 +58,6 @@ Latest Release
 * *1.5.3* - jdbctable: Better logging by differentiating missing/excessive records.<br/>
             jdbctable: Refresh before ignoring duplicate new hash<br/>
             (avoids possible corruption with bg db deletes)
-* *1.6.0* - compile with Java 8, adjust travis matrix to exclude Java 6.<br/>
+* *1.6.0* - default compile with Java 8. Adjust Travis-CI matrix to exclude Java 6.<br/>
             Compiles against Apache Commons VFS 2.2
+            Removed Java 9 deprecation warnings

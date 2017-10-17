@@ -8,10 +8,8 @@ matrix:
       env: VER=7
     - jdk: oraclejdk8
       env: VER=8
-
-# currently fails:
-#    - jdk: oraclejdk9
-#      env: VER=9
+    - jdk: oraclejdk9
+      env: VER=9
 
 
 # clean / compile - test - package - verify - install - deploy / site
