@@ -20,6 +20,7 @@ import org.apache.commons.vfs2.CacheStrategy;
 import org.apache.commons.vfs2.FileChangeEvent;
 import org.apache.commons.vfs2.FileContent;
 import org.apache.commons.vfs2.FileListener;
+import org.apache.commons.vfs2.FileNotFolderException;
 import org.apache.commons.vfs2.FileObject;
 import org.apache.commons.vfs2.FileSystemException;
 import org.apache.commons.vfs2.FileSystemOptions;
@@ -27,6 +28,7 @@ import org.apache.commons.vfs2.FileType;
 import org.apache.commons.vfs2.cache.DefaultFilesCache;
 import org.apache.commons.vfs2.impl.DefaultFileReplicator;
 import org.apache.commons.vfs2.impl.DefaultFileSystemManager;
+import org.apache.commons.vfs2.provider.LayeredFileName;
 import org.apache.commons.vfs2.provider.local.DefaultLocalFileProvider;
 import org.apache.commons.vfs2.provider.ram.RamFileProvider;
 import org.apache.commons.vfs2.provider.url.UrlFileProvider;
@@ -192,6 +194,23 @@ public class DarcBasicTest
     }
 
     @Test
+    public void testResolveNotFolder() throws IOException
+    {
+        FileObject root = getTestRoot(true);
+        FileObject file1 = root.resolveFile("dir1/dir1a/file1/file");
+        try {
+            file1.exists();
+            fail("Expecting FSE when resolving file after file.");
+        }
+        catch (FileSystemException fse)
+        {
+            Throwable cause = fse.getCause();
+            assertNotNull("Filesystem Exception " + fse + " must have a cause.", cause);
+            assertSame(FileNotFolderException.class, cause.getClass());
+        }
+    }
+
+    @Test
     public void testParentNoticesDelete() throws IOException
     {
         FileObject root = getTestRoot(true);
@@ -315,6 +334,24 @@ public class DarcBasicTest
         {
             file.getFileSystem().removeListener(file, list);
         }
+    }
+
+
+    @Test
+    public void testResolveChild() throws IOException
+    {
+        FileObject root = getTestRoot(true);
+
+        FileObject dir1 = root.resolveFile("dir1");
+        assertEquals(FileType.FOLDER, dir1.getType());
+        LayeredFileName dir1Name = (LayeredFileName)dir1.getName();
+
+        FileObject dir2 = root.resolveFile("dir1/dir1a");
+        assertEquals(FileType.FOLDER, dir2.getType());
+        LayeredFileName dir2Name = (LayeredFileName)dir2.getName();
+
+        assertEquals(dir1Name.getOuterName(), dir2Name.getOuterName());
+        // TODO this would be nice: assertSame(dir1Name.getOuterName(), dir2Name.getOuterName());
     }
 
     @Test

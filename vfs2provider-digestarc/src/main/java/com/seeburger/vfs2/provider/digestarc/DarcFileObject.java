@@ -138,6 +138,10 @@ public class DarcFileObject extends AbstractFileObject<DarcFileSystem> implement
             cachedEntry = entry;
             return entry;
         }
+        catch (FileSystemException fse)
+        {
+            throw fse;
+        }
         catch (IOException ioe)
         {
             throw new FileSystemException("IOException while getting entry {0}.", ioe, getName());

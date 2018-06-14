@@ -62,7 +62,15 @@ public class DarcTree
         Entry me = root;
         for(int i=1;i<parts.length;i++)
         {
-            Entry child = me.getChild(parts[i], provider);
+            Entry child;
+            try
+            {
+                child = me.getChild(parts[i], provider);
+            }
+            catch (FileNotFolderException fne)
+            {
+                throw new FileNotFolderException(name + " (pos " + (i-1) + ")"); // TODO intermediate
+            }
             if (child == null)
             {
                 return null; // if file or parent does not exist
@@ -81,14 +89,18 @@ public class DarcTree
         Entry me = root;
         for(int i=1;i<parts.length;i++)
         {
-            Entry child = me.getChild(parts[i], provider);
+            Entry child;
+            try
+            {
+                child = me.getChild(parts[i], provider);
+            }
+            catch (FileNotFolderException fnf)
+            {
+                throw new FileNotFolderException(name + " (pos " + (i-1) + ")"); // TODO intermediate
+            }
             if (child == null)
             {
                 // me is the last existing entry
-                if (me instanceof File)
-                {
-                    throw new FileNotFolderException(name);
-                }
                 Directory parentDir = (Directory)me;
                 Directory newChild = null;
                 for(int j=i;j<parts.length;j++)
@@ -114,16 +126,17 @@ public class DarcTree
         Entry child = root;
         for(int i=1;i<parts.length-1;i++)
         {
-            me = child;
-            child = me.getChild(parts[i], provider);
-//System.out.println("  me=" + parts[i-1] + " child=" + ((child!=null)?parts[i]:"-") + " i=" + i);
+            try
+            {
+                child = me.getChild(parts[i], provider);
+            }
+            catch (FileNotFolderException fnf)
+            {
+                throw new FileNotFolderException(name + " (pos " + (i-1) + ")"); // TODO intermediate
+            }
             if (child == null)
             {
                 // me is the last existing entry
-                if (me instanceof File)
-                {
-                    throw new FileNotFolderException(name);
-                }
                 Directory parentDir = (Directory)me;
                 Directory newChild = null;
                 for(int j=i;j<parts.length-1;j++)
@@ -135,6 +148,7 @@ public class DarcTree
                 child = parentDir;
                 break;
             }
+            me = child;
         }
         // child is the parent of the file
         ((Directory)child).addFile(parts[parts.length-1], length, hash, provider);
@@ -152,7 +166,14 @@ public class DarcTree
         for(int i=1;i<parts.length;i++)
         {
             me = child;
-            child = me.getChild(parts[i], provider);
+            try
+            {
+                child = me.getChild(parts[i], provider);
+            }
+            catch (FileNotFolderException fnf)
+            {
+                throw new FileNotFolderException(name + " (pos " + (i-1) + ")"); // TODO intermediate
+            }
             if (child == null)
             {
                 throw new RuntimeException("Not found " + name);
@@ -189,8 +210,7 @@ public class DarcTree
         @Override
         Entry getChild(String name, BlobStorageProvider provider) throws IOException
         {
-            //throw new FileNotFolderException(name); // TODO: name arg does not work, as it is relative string
-            throw new IOException("This Entry is no Folder. name=" + name);
+            throw new FileNotFolderException(name); // This exception will be replace with same but proper arg(s)
         }
 
         long getSize()
