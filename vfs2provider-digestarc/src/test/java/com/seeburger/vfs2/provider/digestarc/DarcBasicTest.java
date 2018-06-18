@@ -234,7 +234,7 @@ public class DarcBasicTest
         assertEquals(FileType.IMAGINARY, file.getType());
     }
 
-    @Test @Ignore // rename not implemneted
+    @Test @Ignore // rename not implemented
     public void testParentRename() throws IOException
     {
         FileObject root = getTestRoot(true);
