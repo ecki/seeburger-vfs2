@@ -10,6 +10,7 @@ package com.seeburger.vfs2.provider.jdbctable.test;
 import java.io.File;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
+import java.util.Locale;
 
 import javax.sql.DataSource;
 
@@ -98,6 +99,8 @@ public class PostgreSQLProviderTestCase extends AbstractProviderTestConfig imple
         flyway.migrate();
 
         Connection c = ds.getConnection();
+        System.out.println("Metadata: " + c.getMetaData().getDatabaseProductName() + " " +  c.getMetaData().getDatabaseProductVersion());
+        assertTrue("must contain dialec", c.getMetaData().getDatabaseProductName().toLowerCase(Locale.ROOT).contains("postgresql"));
         c.setAutoCommit(true);
         PreparedStatement ps = c.prepareStatement("DELETE FROM tBlobs");
         ps.executeUpdate();

@@ -36,6 +36,7 @@ public class JdbcDialectBase implements JdbcDialect
     private static final String ORACLE_DIALECT = "oracle";
     private static final String MSSQL_DIALECT$ = "micro$oft";
     private static final String MSSQL_DIALECT = "microsoft";
+    private static final String POSTGRESQL_DIALECT = "postgresql";
     private static final int MS = 1000000;
 
     /** Default table name. */
@@ -78,6 +79,10 @@ public class JdbcDialectBase implements JdbcDialect
             else if (provider.contains(ORACLE_DIALECT))
             {
                 return new JdbcDialectOracle(ds);
+            }
+            else if (provider.contains(POSTGRESQL_DIALECT))
+            {
+                return new JdbcDialectPostgreSQL(ds);
             }
             else
             {
