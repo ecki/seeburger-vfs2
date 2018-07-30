@@ -70,8 +70,11 @@ public interface JdbcDialect
      */
     PreparedStatement prepareUpdateable(Connection con, String sql) throws SQLException;
 
-    /** Does this dialect allow positional updates to Blobs or requires rewrite. */
+    /** Does this dialect allow positional updates to Blobs (with setBytes(int, byte[]) or requires rewrite. */
     boolean supportsAppendBlob();
+
+    /** Does this dialect allow to access Blobs with Blob datatype (instead of byte[]). */
+    boolean supportsBlob();
 
     /**
      * Clone the dialect object with given table name.

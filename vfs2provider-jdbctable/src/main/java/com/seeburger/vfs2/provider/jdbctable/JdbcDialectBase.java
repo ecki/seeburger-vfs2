@@ -29,6 +29,7 @@ import javax.sql.DataSource;
  * @see JdbcDialect
  * @see JdbcDialectOracle
  * @see JdbcDialectMSSQL
+ * @see JdbcDialectPostgreSQL
  */
 public class JdbcDialectBase implements JdbcDialect
 {
@@ -136,14 +137,12 @@ public class JdbcDialectBase implements JdbcDialect
         safeClose(c);
     }
 
-    /** {@inheritDoc} */
     @Override
     public String getQuotedTable()
     {
         return tableName;
     }
 
-    /** {@inheritDoc} */
     @Override
     public String expandSQL(String sql)
     {
@@ -164,7 +163,6 @@ public class JdbcDialectBase implements JdbcDialect
         return created;
     }
 
-    /** {@inheritDoc} */
     @Override
     public PreparedStatement prepareQuery(Connection con, String sql)
         throws SQLException
@@ -173,7 +171,6 @@ public class JdbcDialectBase implements JdbcDialect
         return con.prepareStatement(expanded); // TYPE_FORWARD_ONLY, CONCUR_READ_ONLY
     }
 
-    /** {@inheritDoc} */
     @Override
     public PreparedStatement prepareUpdateable(Connection con, String sql)
         throws SQLException
@@ -182,11 +179,16 @@ public class JdbcDialectBase implements JdbcDialect
         return con.prepareStatement(expanded, ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_UPDATABLE);
     }
 
-    /** {@inheritDoc} */
     @Override
     public boolean supportsAppendBlob()
     {
         return false;
+    }
+
+    @Override
+    public boolean supportsBlob()
+    {
+        return true;
     }
 
     /**

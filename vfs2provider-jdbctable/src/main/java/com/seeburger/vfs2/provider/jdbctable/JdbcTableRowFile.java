@@ -18,6 +18,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.SQLWarning;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -68,10 +69,9 @@ public class JdbcTableRowFile extends AbstractFileObject<JdbcTableFileSystem>
         Connection con = getConnection("doAttach");
         PreparedStatement ps = null;
         ResultSet rs = null;
-        Blob blob = null;
         try
         {
-            ps = dialect.prepareQuery(con, "SELECT cSize,cLastModified,cBlob FROM {table} WHERE (cParent=? AND cName=?)");
+            ps = dialect.prepareQuery(con, "SELECT cSize,cLastModified FROM {table} WHERE (cParent=? AND cName=?)");
             setPrimaryKey(ps, this, 0);
             rs = ps.executeQuery();
             if (!rs.next())
@@ -87,18 +87,9 @@ public class JdbcTableRowFile extends AbstractFileObject<JdbcTableFileSystem>
             }
             else
             {
-                blob = rs.getBlob(3);
-                if (blob == null && size > 0)
-                {
-                    throw new IOException("Critical consistency problem, blob column is null for name=" +getName());
-                }
-
                 contentSize = size;
                 injectType(FileType.FILE);
             }
-
-
-            // TODO: additional attributes
 
             if (rs.next())
             {
@@ -107,7 +98,7 @@ public class JdbcTableRowFile extends AbstractFileObject<JdbcTableFileSystem>
         }
         finally
         {
-            closeConnection(blob, rs, ps, con);
+            closeConnection(null, rs, ps, con);
         }
     }
 
@@ -379,7 +370,7 @@ public class JdbcTableRowFile extends AbstractFileObject<JdbcTableFileSystem>
             ps.setLong(1, byteArray.length);
             ps.setLong(2, now);
             ps.setLong(3, now);
-            ps.setBytes(4, byteArray);
+            ps.setBytes(4, byteArray); // no ned for supportsBlob()
 
             int count = ps.executeUpdate();
             if (count != 1)
@@ -425,7 +416,6 @@ public class JdbcTableRowFile extends AbstractFileObject<JdbcTableFileSystem>
         try
         {
             // some DB (like H2) require the PK Columns in the Result Set to be able to use updateRow()
-            //ps = dialect.prepareUpdateable(con, "SELECT cBlob, cSize, cMarkGarbage, cLastModified, cParent, cName FROM {table} WHERE (cParent=? AND cName=?) FOR UPDATE");
             ps = dialect.prepareUpdateable(con, "SELECT cBlob, cSize, cMarkGarbage, cLastModified, cParent, cName FROM {table} WHERE (cParent=? AND cName=?) {FOR UPDATE}");
             setPrimaryKey(ps, this, 0);
             rs = ps.executeQuery();
@@ -435,27 +425,43 @@ public class JdbcTableRowFile extends AbstractFileObject<JdbcTableFileSystem>
                 throw new IOException("Database row not found for name=" + getName()); // TODO: deleted -> insert?
             }
 
-            blob = rs.getBlob(1);
-            if (blob == null) // TODO size > 0?
+            final long newLength;
+            if (dialect.supportsBlob())
             {
-                throw new IOException("Critical consistency problem, Blob column is null for name=" + getName());
-            }
+                blob = rs.getBlob(1);
+                if (blob == null) // TODO size > 0?
+                {
+                    throw new IOException("Critical consistency problem, Blob column is null for name=" + getName());
+                }
 
-            final long newLength = blob.length() + byteArray.length;
-            if (dialect.supportsAppendBlob())
-            {
-                blob.setBytes(blob.length() + 1 , byteArray);
-            }
-            else
-            {
-                final int oldLen = (int)blob.length();
-                byte[] buf = new byte[(int)newLength];
-                byte[] oldBuf = blob.getBytes(1, oldLen);
-                System.arraycopy(oldBuf, 0, buf, 0, oldLen);
+                newLength = blob.length() + byteArray.length;
+                if (dialect.supportsAppendBlob())
+                {
+                    blob.setBytes(blob.length() + 1 , byteArray);
+                }
+                else
+                {
+                    final int oldLen = (int)blob.length();
+                    byte[] oldBuf = blob.getBytes(1, oldLen);
+                    final byte[] buf = Arrays.copyOf(oldBuf, (int)newLength);
+                    oldBuf=null;
+                    System.arraycopy(byteArray, 0, buf, oldLen, byteArray.length);
+                    blob.setBytes(1, buf);
+                }
+                rs.updateBlob(1, blob);
+            } else {
+                byte[] oldBuf = rs.getBytes(1);
+                if (oldBuf == null) // TODO size > 0?
+                {
+                    throw new IOException("Critical consistency problem, Blob column is null for name=" + getName());
+                }
+                newLength = oldBuf.length + byteArray.length;
+                final int oldLen = oldBuf.length;
+                final byte[] buf = Arrays.copyOf(oldBuf, (int)newLength);
+                oldBuf = null;
                 System.arraycopy(byteArray, 0, buf, oldLen, byteArray.length);
-                blob.setBytes(1, buf);
+                rs.updateBytes(1, buf);
             }
-            rs.updateBlob(1, blob);
             rs.updateLong(2, newLength);
             rs.updateLong(3, now);
             rs.updateLong(4, now);
@@ -504,7 +510,7 @@ public class JdbcTableRowFile extends AbstractFileObject<JdbcTableFileSystem>
             ps.setLong(3, byteArray.length);
             ps.setLong(4, now);
             ps.setLong(5, now);
-            ps.setBytes(6, byteArray);
+            ps.setBytes(6, byteArray); // no need for supportBlob()
 
             int count = ps.executeUpdate();
             if (count != 1)
@@ -570,34 +576,52 @@ public class JdbcTableRowFile extends AbstractFileObject<JdbcTableFileSystem>
             }
 
             size = rs.getLong(1);
-            blob = rs.getBlob(2);
-            if (blob == null && size > 0)
-            {
-                throw new IOException("Critical consistency problem, Blob column is null while expecting size=" + size + " bytes for name=" + getName());
-            }
-
-            // cannot access Blob after ResultSet#next() or connection#close()
-
 
             if (pos > size)
             {
                 throw new IOException("Requested position=" + pos + " exceeds size=" + size + " for name=" + getName());
             }
 
-            byte[] bytes;
-            if (size == 0)
+            final byte[] bytes;
+            if (dialect.supportsBlob())
             {
-                // Oracle might have null for empty blob, so we don't touch it at all
-                bytes = EMPTY_BYTES;
-            }
-            else
-            {
-                bytes = blob.getBytes(pos+1, len);
-            }
+                blob = rs.getBlob(2);
+                if (blob == null && size > 0)
+                {
+                    throw new IOException("Critical consistency problem, Blob column is null while expecting size=" + size + " bytes for name=" + getName());
+                }
 
-            if (bytes == null)
-            {
-                throw new IOException("Critical consistency problem, Blob column content is null when expecting size=" + size + " bytes for name=" + getName());
+                // cannot access Blob after ResultSet#next() or connection#close()
+
+                if (size == 0)
+                {
+                    // Oracle might have null for empty blob, so we don't touch it at all
+                    bytes = EMPTY_BYTES;
+                }
+                else
+                {
+                    bytes = blob.getBytes(pos+1, len);
+                }
+
+                if (bytes == null)
+                {
+                    throw new IOException("Critical consistency problem, Blob column content is null when expecting size=" + size + " bytes for name=" + getName());
+                }
+            } else {
+                if (size == 0)
+                {
+                    bytes = EMPTY_BYTES;
+                }
+                else
+                {
+                    byte[] buf = rs.getBytes(2);
+                    if (buf == null && size > 0)
+                    {
+                        throw new IOException("Critical consistency problem, Blob column is null while expecting size=" + size + " bytes for name=" + getName());
+                    }
+                    bytes = Arrays.copyOfRange(buf, (int)pos, len);
+                    buf = null;
+                }
             }
 
             if (rs.next())
