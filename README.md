@@ -61,3 +61,4 @@ Latest Release
 * *1.6.0* - default compile with Java 8. Adjust Travis-CI matrix to exclude Java 6.<br/>
             Compiles against Apache Commons VFS 2.2
             Removed Java 9 deprecation warnings
+* *1.7.0* - add support for PostegreSQL dialect
