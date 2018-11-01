@@ -66,78 +66,102 @@ public class JdbcTableRowFile extends AbstractFileObject<JdbcTableFileSystem>
     @Override
     protected void doAttach() throws Exception
     {
-        Connection con = getConnection("doAttach");
-        PreparedStatement ps = null;
-        ResultSet rs = null;
-        try
+        while (true)
         {
-            ps = dialect.prepareQuery(con, "SELECT cSize,cLastModified FROM {table} WHERE (cParent=? AND cName=?)");
-            setPrimaryKey(ps, this, 0);
-            rs = ps.executeQuery();
-            if (!rs.next())
+            Connection con = getConnection("doAttach");
+            PreparedStatement ps = null;
+            ResultSet rs = null;
+            try
             {
-                injectType(FileType.IMAGINARY);
+                ps = dialect.prepareQuery(con, "SELECT cSize,cLastModified FROM {table} WHERE (cParent=? AND cName=?)");
+                setPrimaryKey(ps, this, 0);
+                rs = ps.executeQuery();
+                if (!rs.next())
+                {
+                    injectType(FileType.IMAGINARY);
+                    return;
+                }
+                long size = rs.getLong(1);
+                lastModified = rs.getLong(2);
+                if (size == FOLDER_SIZE)
+                {
+                    injectType(FileType.FOLDER);
+                }
+                else
+                {
+                    contentSize = size;
+                    injectType(FileType.FILE);
+                }
+
+                if (rs.next())
+                {
+                    throw new IOException("Critical consistency problem, duplicate response to name=" + getName());
+                }
+
                 return;
             }
-            long size = rs.getLong(1);
-            lastModified = rs.getLong(2);
-            if (size == FOLDER_SIZE)
+            catch (SQLException e)
             {
-                injectType(FileType.FOLDER);
+                if (!isConnectionFailure(e))
+                {
+                    throw e;
+                }
             }
-            else
+            finally
             {
-                contentSize = size;
-                injectType(FileType.FILE);
+                closeConnection(null, rs, ps, con);
             }
-
-            if (rs.next())
-            {
-                throw new IOException("Critical consistency problem, duplicate response to name=" + getName());
-            }
-        }
-        finally
-        {
-            closeConnection(null, rs, ps, con);
         }
     }
 
     @Override
     protected void doCreateFolder() throws Exception
     {
-        long now = System.currentTimeMillis(); // TODO: DB side?
-        Connection con = getConnection("doCreateFolder");
-        PreparedStatement ps = null;
-        ResultSet rs = null;
-        try
+        while (true)
         {
-            ps = dialect.prepareQuery(con, "INSERT INTO {table} (cParent,cName,cSize,cLastModified,cMarkGarbage) VALUES (?,?,?,?,?)");
-            setPrimaryKey(ps, this, 0);
-            ps.setLong(3, FOLDER_SIZE);
-            ps.setLong(4, now);
-            ps.setLong(5, now);
-
-            int count = ps.executeUpdate();
-            if (count != 1)
+            long now = System.currentTimeMillis(); // TODO: DB side?
+            Connection con = getConnection("doCreateFolder");
+            PreparedStatement ps = null;
+            ResultSet rs = null;
+            try
             {
-                if (count == 0)
+                ps = dialect.prepareQuery(con, "INSERT INTO {table} (cParent,cName,cSize,cLastModified,cMarkGarbage) VALUES (?,?,?,?,?)");
+                setPrimaryKey(ps, this, 0);
+                ps.setLong(3, FOLDER_SIZE);
+                ps.setLong(4, now);
+                ps.setLong(5, now);
+
+                int count = ps.executeUpdate();
+                if (count != 1)
                 {
-                    ps.clearWarnings(); // Derby generates warnings on no-match: https://issues.apache.org/jira/browse/DERBY-448
+                    if (count == 0)
+                    {
+                        ps.clearWarnings(); // Derby generates warnings on no-match: https://issues.apache.org/jira/browse/DERBY-448
+                    }
+                    throw new IOException("Critical consistency problem, result count=" + count + "while inserting new directory=" + getName());
                 }
-                throw new IOException("Critical consistency problem, result count=" + count + "while inserting new directory=" + getName());
+
+                // TODO: update last modified of parent
+
+                con.commit();
+                con.close(); con = null;
+
+                lastModified = now;
+                contentSize = -1;
+
+                return;
+            } // TODO: add a more helpful diagnostic?
+            catch (SQLException e)
+            {
+                if (!isConnectionFailure(e))
+                {
+                    throw e;
+                }
             }
-
-            // TODO: update last modified of parent
-
-            con.commit();
-            con.close(); con = null;
-
-            lastModified = now;
-            contentSize = -1;
-        } // TODO: catch at least SQLEXception to add a more helpful diagnostic?
-        finally
-        {
-            rollbackConnection(null, rs, ps, con);
+            finally
+            {
+                rollbackConnection(null, rs, ps, con);
+            }
         }
     }
 
@@ -149,31 +173,41 @@ public class JdbcTableRowFile extends AbstractFileObject<JdbcTableFileSystem>
     @Override
     protected void doDelete() throws Exception
     {
-        Connection con = getConnection("doDelete");
-        PreparedStatement ps = null;
-        try
+        while (true)
         {
-            ps = dialect.prepareQuery(con, "DELETE FROM {table} WHERE cParent=? AND cName=?"); // TODO: ensure no children?
-            setPrimaryKey(ps, this, 0);
-            int count = ps.executeUpdate();
-
-            if (count == 0 || count == 1)
+            Connection con = getConnection("doDelete");
+            PreparedStatement ps = null;
+            try
             {
-                if (count == 0)
-                {
-                    ps.clearWarnings(); // Derby generates warnings on no-match: https://issues.apache.org/jira/browse/DERBY-448
-                }
-                con.commit();
-                con.close(); con = null;
-                return;
-            }
+                ps = dialect.prepareQuery(con, "DELETE FROM {table} WHERE cParent=? AND cName=?"); // TODO: ensure no children?
+                setPrimaryKey(ps, this, 0);
+                int count = ps.executeUpdate();
 
-            // count > 1
-            throw new IOException("Critical consistency problem, result count=" + count + " for deleting name=" + getName());
-        }
-        finally
-        {
-            rollbackConnection(null, null, ps, con);
+                if (count == 0 || count == 1)
+                {
+                    if (count == 0)
+                    {
+                        ps.clearWarnings(); // Derby generates warnings on no-match: https://issues.apache.org/jira/browse/DERBY-448
+                    }
+                    con.commit();
+                    con.close(); con = null;
+                    return;
+                }
+
+                // count > 1
+                throw new IOException("Critical consistency problem, result count=" + count + " for deleting name=" + getName());
+            }
+            catch (SQLException e)
+            {
+                if (!isConnectionFailure(e))
+                {
+                    throw e;
+                }
+            }
+            finally
+            {
+                rollbackConnection(null, null, ps, con);
+            }
         }
     }
 
@@ -246,25 +280,36 @@ public class JdbcTableRowFile extends AbstractFileObject<JdbcTableFileSystem>
         {
             throw new FileNotFolderException(this);
         }
-        Connection con = getConnection("doListChildren");
-        PreparedStatement ps = null;
-        ResultSet rs = null;
-        try
+
+        while (true)
         {
-            List<String> children = new ArrayList<String>(32);
-            ps = dialect.prepareQuery(con, "SELECT cName FROM {table} WHERE cParent=?");
-            ps.setString(1, getName().getPathDecoded());
-            rs = ps.executeQuery();
-            while(rs.next())
+            Connection con = getConnection("doListChildren");
+            PreparedStatement ps = null;
+            ResultSet rs = null;
+            try
             {
-                String name = rs.getString(1);
-                children.add(name);
+                List<String> children = new ArrayList<String>(32);
+                ps = dialect.prepareQuery(con, "SELECT cName FROM {table} WHERE cParent=?");
+                ps.setString(1, getName().getPathDecoded());
+                rs = ps.executeQuery();
+                while(rs.next())
+                {
+                    String name = rs.getString(1);
+                    children.add(name);
+                }
+                return children.toArray(new String[children.size()]);
             }
-            return children.toArray(new String[children.size()]);
-        }
-        finally
-        {
-            closeConnection(null, rs, ps, con);
+            catch (SQLException e)
+            {
+                if (!isConnectionFailure(e))
+                {
+                    throw e;
+                }
+            }
+            finally
+            {
+                closeConnection(null, rs, ps, con);
+            }
         }
     }
 
@@ -299,34 +344,46 @@ public class JdbcTableRowFile extends AbstractFileObject<JdbcTableFileSystem>
     @Override
     protected void doRename(FileObject newfile) throws Exception
     {
-        Connection con = getConnection("doRename");
-        long now = System.currentTimeMillis();
-        PreparedStatement ps = null;
-        try
+        while (true)
         {
-            ps = dialect.prepareQuery(con, "UPDATE {table} SET cParent=?,cName=?,cLastModified=? WHERE cParent=? AND cName=?");
-            setPrimaryKey(ps, this, 3);
-            setPrimaryKey(ps, (JdbcTableRowFile)newfile, 0);
-            ps.setLong(3, now);
-
-            int count = ps.executeUpdate();
-            if (count != 1)
+            Connection con = getConnection("doRename");
+            long now = System.currentTimeMillis();
+            PreparedStatement ps = null;
+            try
             {
-                if (count == 0)
+                ps = dialect.prepareQuery(con, "UPDATE {table} SET cParent=?,cName=?,cLastModified=? WHERE cParent=? AND cName=?");
+                setPrimaryKey(ps, this, 3);
+                setPrimaryKey(ps, (JdbcTableRowFile)newfile, 0);
+                ps.setLong(3, now);
+
+                int count = ps.executeUpdate();
+                if (count != 1)
                 {
-                    ps.clearWarnings(); // Derby generates warnings on no-match: https://issues.apache.org/jira/browse/DERBY-448
+                    if (count == 0)
+                    {
+                        ps.clearWarnings(); // Derby generates warnings on no-match: https://issues.apache.org/jira/browse/DERBY-448
+                    }
+                    throw new IOException("Critical consistency problem, result count=" + count +" while rename to name=" + newfile.getName() + " from name=" + getName());
                 }
-                throw new IOException("Critical consistency problem, result count=" + count +" while rename to name=" + newfile.getName() + " from name=" + getName());
+
+                // TODO: update parent lastModified
+
+                con.commit();
+                con.close(); con = null;
+
+                return;
             }
-
-            // TODO: update parent lastModified
-
-            con.commit();
-            con.close(); con = null;
-        }
-        finally
-        {
-            rollbackConnection(null, null, ps, con);
+            catch (SQLException e)
+            {
+                if (!isConnectionFailure(e))
+                {
+                    throw e;
+                }
+            }
+            finally
+            {
+                rollbackConnection(null, null, ps, con);
+            }
         }
     }
 
@@ -360,193 +417,228 @@ public class JdbcTableRowFile extends AbstractFileObject<JdbcTableFileSystem>
 
     private void writeDataOverwrite(long now, byte[] byteArray) throws SQLException, IOException
     {
-        Connection con = getConnection("writeDataOverwrite");
-        PreparedStatement ps = null;
-        ResultSet rs = null;
-        try
+        while (true)
         {
-            ps = dialect.prepareQuery(con, "UPDATE {table} SET cSize=?, cLastModified=?, cMarkGarbage=?, cBlob=? WHERE (cParent=? AND cName=?)");
-            setPrimaryKey(ps, this, 4);
-            ps.setLong(1, byteArray.length);
-            ps.setLong(2, now);
-            ps.setLong(3, now);
-            ps.setBytes(4, byteArray); // no ned for supportsBlob()
-
-            int count = ps.executeUpdate();
-            if (count != 1)
-            {
-                if (count == 0)
-                {
-                    ps.clearWarnings();  // Derby generates warnings on no-match: https://issues.apache.org/jira/browse/DERBY-448
-                }
-                throw new IOException("Critical consistency problem, result count=" + count + " while updating name=" + getName());
-            }
-
-            con.commit(); // TODO: move behind endOutput?
-            con.close(); con = null;
-
-            lastModified = now;
-            contentSize = byteArray.length;
-
+            Connection con = getConnection("writeDataOverwrite");
+            PreparedStatement ps = null;
+            ResultSet rs = null;
             try
             {
-                endOutput(); // setsFile type (and trigger notifications)
+                ps = dialect.prepareQuery(con, "UPDATE {table} SET cSize=?, cLastModified=?, cMarkGarbage=?, cBlob=? WHERE (cParent=? AND cName=?)");
+                setPrimaryKey(ps, this, 4);
+                ps.setLong(1, byteArray.length);
+                ps.setLong(2, now);
+                ps.setLong(3, now);
+                ps.setBytes(4, byteArray); // no ned for supportsBlob()
+
+                int count = ps.executeUpdate();
+                if (count != 1)
+                {
+                    if (count == 0)
+                    {
+                        ps.clearWarnings();  // Derby generates warnings on no-match: https://issues.apache.org/jira/browse/DERBY-448
+                    }
+                    throw new IOException("Critical consistency problem, result count=" + count + " while updating name=" + getName());
+                }
+
+                con.commit(); // TODO: move behind endOutput?
+                con.close(); con = null;
+
+                lastModified = now;
+                contentSize = byteArray.length;
+
+                try
+                {
+                    endOutput(); // setsFile type (and trigger notifications)
+                }
+                catch (FileSystemException fse)
+                {
+                    throw fse;
+                }
+                catch (Exception e)
+                {
+                    throw new IOException(e);
+                }
+
+                return;
             }
-            catch (FileSystemException fse)
+            catch (SQLException e)
             {
-                throw fse;
+                if (!isConnectionFailure(e))
+                {
+                    throw e;
+                }
             }
-            catch (Exception e)
+            finally
             {
-                throw new IOException(e);
+                rollbackConnection(null, rs, ps, con);
             }
-        }
-        finally
-        {
-            rollbackConnection(null, rs, ps, con);
         }
     }
 
     private void writeDataUpdate(long now, byte[] byteArray) throws SQLException, IOException
     {
-        Connection con = getConnection("writeDataUpdate");
-        PreparedStatement ps = null;
-        ResultSet rs = null;
-        Blob blob = null;
-        try
+        while (true)
         {
-            // some DB (like H2) require the PK Columns in the Result Set to be able to use updateRow()
-            ps = dialect.prepareUpdateable(con, "SELECT cBlob, cSize, cMarkGarbage, cLastModified, cParent, cName FROM {table} WHERE (cParent=? AND cName=?) {FOR UPDATE}");
-            setPrimaryKey(ps, this, 0);
-            rs = ps.executeQuery();
-
-            if (!rs.next())
-            {
-                throw new IOException("Database row not found for name=" + getName()); // TODO: deleted -> insert?
-            }
-
-            final long newLength;
-            if (dialect.supportsBlob())
-            {
-                blob = rs.getBlob(1);
-                if (blob == null) // TODO size > 0?
-                {
-                    throw new IOException("Critical consistency problem, Blob column is null for name=" + getName());
-                }
-
-                newLength = blob.length() + byteArray.length;
-                if (dialect.supportsAppendBlob())
-                {
-                    blob.setBytes(blob.length() + 1 , byteArray);
-                }
-                else
-                {
-                    final int oldLen = (int)blob.length();
-                    byte[] oldBuf = blob.getBytes(1, oldLen);
-                    final byte[] buf = Arrays.copyOf(oldBuf, (int)newLength);
-                    oldBuf=null;
-                    System.arraycopy(byteArray, 0, buf, oldLen, byteArray.length);
-                    blob.setBytes(1, buf);
-                }
-                rs.updateBlob(1, blob);
-            } else {
-                byte[] oldBuf = rs.getBytes(1);
-                if (oldBuf == null) // TODO size > 0?
-                {
-                    throw new IOException("Critical consistency problem, Blob column is null for name=" + getName());
-                }
-                newLength = oldBuf.length + byteArray.length;
-                final int oldLen = oldBuf.length;
-                final byte[] buf = Arrays.copyOf(oldBuf, (int)newLength);
-                oldBuf = null;
-                System.arraycopy(byteArray, 0, buf, oldLen, byteArray.length);
-                rs.updateBytes(1, buf);
-            }
-            rs.updateLong(2, newLength);
-            rs.updateLong(3, now);
-            rs.updateLong(4, now);
-
-            rs.updateRow();
-
-            if (rs.next())
-            {
-                throw new IOException("More than one match for name=" + getName());
-            }
-
-            con.commit();
-            con.close(); con = null;
-
-            lastModified = now;
-            contentSize = newLength;
-
+            Connection con = getConnection("writeDataUpdate");
+            PreparedStatement ps = null;
+            ResultSet rs = null;
+            Blob blob = null;
             try
             {
-                endOutput(); // setsFile type (and trigger notifications)
+                // some DB (like H2) require the PK Columns in the Result Set to be able to use updateRow()
+                ps = dialect.prepareUpdateable(con, "SELECT cBlob, cSize, cMarkGarbage, cLastModified, cParent, cName FROM {table} WHERE (cParent=? AND cName=?) {FOR UPDATE}");
+                setPrimaryKey(ps, this, 0);
+                rs = ps.executeQuery();
+
+                if (!rs.next())
+                {
+                    throw new IOException("Database row not found for name=" + getName()); // TODO: deleted -> insert?
+                }
+
+                final long newLength;
+                if (dialect.supportsBlob())
+                {
+                    blob = rs.getBlob(1);
+                    if (blob == null) // TODO size > 0?
+                    {
+                        throw new IOException("Critical consistency problem, Blob column is null for name=" + getName());
+                    }
+
+                    newLength = blob.length() + byteArray.length;
+                    if (dialect.supportsAppendBlob())
+                    {
+                        blob.setBytes(blob.length() + 1 , byteArray);
+                    }
+                    else
+                    {
+                        final int oldLen = (int)blob.length();
+                        byte[] oldBuf = blob.getBytes(1, oldLen);
+                        final byte[] buf = Arrays.copyOf(oldBuf, (int)newLength);
+                        oldBuf=null;
+                        System.arraycopy(byteArray, 0, buf, oldLen, byteArray.length);
+                        blob.setBytes(1, buf);
+                    }
+                    rs.updateBlob(1, blob);
+                } else {
+                    byte[] oldBuf = rs.getBytes(1);
+                    if (oldBuf == null) // TODO size > 0?
+                    {
+                        throw new IOException("Critical consistency problem, Blob column is null for name=" + getName());
+                    }
+                    newLength = oldBuf.length + byteArray.length;
+                    final int oldLen = oldBuf.length;
+                    final byte[] buf = Arrays.copyOf(oldBuf, (int)newLength);
+                    oldBuf = null;
+                    System.arraycopy(byteArray, 0, buf, oldLen, byteArray.length);
+                    rs.updateBytes(1, buf);
+                }
+                rs.updateLong(2, newLength);
+                rs.updateLong(3, now);
+                rs.updateLong(4, now);
+
+                rs.updateRow();
+
+                if (rs.next())
+                {
+                    throw new IOException("More than one match for name=" + getName());
+                }
+
+                con.commit();
+                con.close(); con = null;
+
+                lastModified = now;
+                contentSize = newLength;
+
+                try
+                {
+                    endOutput(); // setsFile type (and trigger notifications)
+                }
+                catch (FileSystemException fse)
+                {
+                    throw fse;
+                }
+                catch (Exception e)
+                {
+                    throw new IOException(e);
+                }
+
+                return;
             }
-            catch (FileSystemException fse)
+            catch (SQLException e)
             {
-                throw fse;
+                if (!isConnectionFailure(e))
+                {
+                    throw e;
+                }
             }
-            catch (Exception e)
+            finally
             {
-                throw new IOException(e);
+                rollbackConnection(blob, rs, ps, con);
             }
-        }
-        finally
-        {
-            rollbackConnection(blob, rs, ps, con);
         }
     }
 
     private void writeDataInsert(long now, byte[] byteArray) throws SQLException, IOException
     {
-        Connection con = getConnection("writeDataInsert");
-        PreparedStatement ps = null;
-        ResultSet rs = null;
-        try
+        while (true)
         {
-            ps = dialect.prepareQuery(con, "INSERT INTO {table} (cParent,cName,cSize,cLastModified,cMarkGarbage,cBlob) VALUES (?,?,?,?,?,?)");
-            setPrimaryKey(ps, this, 0);
-            ps.setLong(3, byteArray.length);
-            ps.setLong(4, now);
-            ps.setLong(5, now);
-            ps.setBytes(6, byteArray); // no need for supportBlob()
-
-            int count = ps.executeUpdate();
-            if (count != 1)
-            {
-                if (count == 0)
-                {
-                    ps.clearWarnings(); // Derby generates warnings on no-match: https://issues.apache.org/jira/browse/DERBY-448
-                }
-                throw new IOException("Critical consistency problem, result count=" + count + " while inserting name=" + getName());
-            }
-
-            con.commit();
-            con.close(); con = null;
-
-            lastModified = now;
-            contentSize = byteArray.length;
-
+            Connection con = getConnection("writeDataInsert");
+            PreparedStatement ps = null;
+            ResultSet rs = null;
             try
             {
-                endOutput(); // setsFile type (and trigger notifications)
-            }
-            catch (FileSystemException fse)
-            {
-                throw fse;
-            }
-            catch (Exception e)
-            {
-                throw new IOException(e);
-            }
+                ps = dialect.prepareQuery(con, "INSERT INTO {table} (cParent,cName,cSize,cLastModified,cMarkGarbage,cBlob) VALUES (?,?,?,?,?,?)");
+                setPrimaryKey(ps, this, 0);
+                ps.setLong(3, byteArray.length);
+                ps.setLong(4, now);
+                ps.setLong(5, now);
+                ps.setBytes(6, byteArray); // no need for supportBlob()
 
-            // TODO: update last modified of parent
+                int count = ps.executeUpdate();
+                if (count != 1)
+                {
+                    if (count == 0)
+                    {
+                        ps.clearWarnings(); // Derby generates warnings on no-match: https://issues.apache.org/jira/browse/DERBY-448
+                    }
+                    throw new IOException("Critical consistency problem, result count=" + count + " while inserting name=" + getName());
+                }
 
-        }
-        finally
-        {
-            rollbackConnection(null, rs, ps, con);
+                con.commit();
+                con.close(); con = null;
+
+                lastModified = now;
+                contentSize = byteArray.length;
+
+                try
+                {
+                    endOutput(); // setsFile type (and trigger notifications)
+                }
+                catch (FileSystemException fse)
+                {
+                    throw fse;
+                }
+                catch (Exception e)
+                {
+                    throw new IOException(e);
+                }
+
+                // TODO: update last modified of parent
+
+                return;
+            }
+            catch (SQLException e)
+            {
+                if (!isConnectionFailure(e))
+                {
+                    throw e;
+                }
+            }
+            finally
+            {
+                rollbackConnection(null, rs, ps, con);
+            }
         }
     }
 
@@ -558,87 +650,92 @@ public class JdbcTableRowFile extends AbstractFileObject<JdbcTableFileSystem>
      */
     byte[] readData(long pos, int len) throws IOException
     {
-        Connection con = null;
-        PreparedStatement ps = null;
-        ResultSet rs = null;
-        Blob blob = null;
-        long size = -1;
-        try
+        while (true)
         {
-            con = getConnection("readData"); // inside try because rethrown as IOException
-            ps = dialect.prepareQuery(con, "SELECT cSize,cBlob FROM {table} WHERE cParent=? AND cName=?");
-            setPrimaryKey(ps, this, 0);
-            rs = ps.executeQuery();
-
-            if (!rs.next())
+            Connection con = null;
+            PreparedStatement ps = null;
+            ResultSet rs = null;
+            Blob blob = null;
+            long size = -1;
+            try
             {
-                throw new IOException("Database row not found for name=" + getName()); // TODO: Filenotfound exception?
-            }
+                con = getConnection("readData"); // inside try because rethrown as IOException
+                ps = dialect.prepareQuery(con, "SELECT cSize,cBlob FROM {table} WHERE cParent=? AND cName=?");
+                setPrimaryKey(ps, this, 0);
+                rs = ps.executeQuery();
 
-            size = rs.getLong(1);
-
-            if (pos > size)
-            {
-                throw new IOException("Requested position=" + pos + " exceeds size=" + size + " for name=" + getName());
-            }
-
-            final byte[] bytes;
-            if (dialect.supportsBlob())
-            {
-                blob = rs.getBlob(2);
-                if (blob == null && size > 0)
+                if (!rs.next())
                 {
-                    throw new IOException("Critical consistency problem, Blob column is null while expecting size=" + size + " bytes for name=" + getName());
+                    throw new IOException("Database row not found for name=" + getName()); // TODO: Filenotfound exception?
                 }
 
-                // cannot access Blob after ResultSet#next() or connection#close()
+                size = rs.getLong(1);
 
-                if (size == 0)
+                if (pos > size)
                 {
-                    // Oracle might have null for empty blob, so we don't touch it at all
-                    bytes = EMPTY_BYTES;
-                }
-                else
-                {
-                    bytes = blob.getBytes(pos+1, len);
+                    throw new IOException("Requested position=" + pos + " exceeds size=" + size + " for name=" + getName());
                 }
 
-                if (bytes == null)
+                final byte[] bytes;
+                if (dialect.supportsBlob())
                 {
-                    throw new IOException("Critical consistency problem, Blob column content is null when expecting size=" + size + " bytes for name=" + getName());
-                }
-            } else {
-                if (size == 0)
-                {
-                    bytes = EMPTY_BYTES;
-                }
-                else
-                {
-                    byte[] buf = rs.getBytes(2);
-                    if (buf == null && size > 0)
+                    blob = rs.getBlob(2);
+                    if (blob == null && size > 0)
                     {
                         throw new IOException("Critical consistency problem, Blob column is null while expecting size=" + size + " bytes for name=" + getName());
                     }
-                    bytes = Arrays.copyOfRange(buf, (int)pos, len);
-                    buf = null;
+
+                    // cannot access Blob after ResultSet#next() or connection#close()
+
+                    if (size == 0)
+                    {
+                        // Oracle might have null for empty blob, so we don't touch it at all
+                        bytes = EMPTY_BYTES;
+                    }
+                    else
+                    {
+                        bytes = blob.getBytes(pos+1, len);
+                    }
+
+                    if (bytes == null)
+                    {
+                        throw new IOException("Critical consistency problem, Blob column content is null when expecting size=" + size + " bytes for name=" + getName());
+                    }
+                } else {
+                    if (size == 0)
+                    {
+                        bytes = EMPTY_BYTES;
+                    }
+                    else
+                    {
+                        byte[] buf = rs.getBytes(2);
+                        if (buf == null && size > 0)
+                        {
+                            throw new IOException("Critical consistency problem, Blob column is null while expecting size=" + size + " bytes for name=" + getName());
+                        }
+                        bytes = Arrays.copyOfRange(buf, (int)pos, len);
+                        buf = null;
+                    }
+                }
+
+                if (rs.next())
+                {
+                    throw new IOException("Critical consistency problem, more than one Database row for name=" + getName());
+                }
+
+                return bytes;
+            }
+            catch (SQLException ex)
+            {
+                if (!isConnectionFailure(ex))
+                {
+                    throw new IOException("Database problem while reading blob for name=" + getName() + ". pos=" + pos + ", len=" + len + ", size=" + size, ex);
                 }
             }
-
-            if (rs.next())
+            finally
             {
-                throw new IOException("Critical consistency problem, more than one Database row for name=" + getName());
+                closeConnection(blob, rs, ps, con);
             }
-
-            return bytes;
-        }
-        catch (SQLException ex)
-        {
-            // TODO: retry?
-            throw new IOException("Database problem while reading blob for name=" + getName() + ". pos=" + pos + ", len=" + len + ", size=" + size, ex);
-        }
-        finally
-        {
-            closeConnection(blob, rs, ps, con);
         }
     }
 
@@ -723,59 +820,82 @@ public class JdbcTableRowFile extends AbstractFileObject<JdbcTableFileSystem>
 
     private void setMarkTime(long time) throws SQLException, FileSystemException
     {
-        Connection connection = getConnection("mark");
-        PreparedStatement ps = null;
-        try
+        while (true)
         {
-            ps = dialect.prepareQuery(connection, "UPDATE {table} SET cMarkGarbage=? WHERE cParent=? AND cName=?");
-            setPrimaryKey(ps, this, 1);
-            ps.setLong(1, time);
-
-            int count = ps.executeUpdate();
-            if (count != 1)
+            Connection connection = getConnection("mark");
+            PreparedStatement ps = null;
+            try
             {
-                if (count == 0)
+                ps = dialect.prepareQuery(connection, "UPDATE {table} SET cMarkGarbage=? WHERE cParent=? AND cName=?");
+                setPrimaryKey(ps, this, 1);
+                ps.setLong(1, time);
+
+                int count = ps.executeUpdate();
+                if (count != 1)
                 {
-                    ps.clearWarnings(); // Derby generates warnings on no-match: https://issues.apache.org/jira/browse/DERBY-448
-                    throw new SQLException("Critical consistency problem, no record found to mark for name=" + getName());
+                    if (count == 0)
+                    {
+                        ps.clearWarnings(); // Derby generates warnings on no-match: https://issues.apache.org/jira/browse/DERBY-448
+                        throw new SQLException("Critical consistency problem, no record found to mark for name=" + getName());
+                    }
+                    else
+                    {
+                        throw new SQLException("Critical consistency problem, more than one match while marking. count=" + count +" name=" + getName());
+                    }
                 }
-                else
+
+                connection.commit();
+                connection.close(); connection = null;
+
+                return;
+            }
+            catch (SQLException e)
+            {
+                if (!isConnectionFailure(e))
                 {
-                    throw new SQLException("Critical consistency problem, more than one match while marking. count=" + count +" name=" + getName());
+                    throw e;
                 }
             }
-
-            connection.commit();
-            connection.close(); connection = null;
-        }
-        finally
-        {
-            rollbackConnection(null, null, ps, connection);
+            finally
+            {
+                rollbackConnection(null, null, ps, connection);
+            }
         }
     }
 
     private long getMarkTime() throws SQLException, FileSystemException
     {
-        long markTime = 0;
-        PreparedStatement ps = null;
-        ResultSet rs = null;
-        Connection connection = getConnection("mark");
-        try
+        while (true)
         {
-            ps = dialect.prepareQuery(connection, "SELECT cMarkGarbage FROM {table} WHERE cParent=? AND cName=?");
-            setPrimaryKey(ps, this, 0);
-
-            rs = ps.executeQuery();
-            if (rs.next())
+            long markTime = 0;
+            PreparedStatement ps = null;
+            ResultSet rs = null;
+            Connection connection = getConnection("mark");
+            try
             {
-                markTime = rs.getLong(1);
+                ps = dialect.prepareQuery(connection, "SELECT cMarkGarbage FROM {table} WHERE cParent=? AND cName=?");
+                setPrimaryKey(ps, this, 0);
+
+                rs = ps.executeQuery();
+                if (rs.next())
+                {
+                    markTime = rs.getLong(1);
+                }
+
+                return markTime;
+            }
+            catch (SQLException e)
+            {
+                if (!isConnectionFailure(e))
+                {
+                    throw e;
+                }
+            }
+            finally
+            {
+                closeConnection(null, rs, ps, connection);
             }
         }
-        finally
-        {
-            closeConnection(null, rs, ps, connection);
-        }
-        return markTime;
     }
 
 
@@ -890,4 +1010,9 @@ public class JdbcTableRowFile extends AbstractFileObject<JdbcTableFileSystem>
         }
     }
 
+    private boolean isConnectionFailure(SQLException e)
+    {
+        String sqlState = e.getSQLState();
+        return sqlState != null && sqlState.startsWith("08");
+    }
 }
