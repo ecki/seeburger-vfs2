@@ -651,8 +651,8 @@ public class JdbcTableRowFile extends AbstractFileObject<JdbcTableFileSystem>
 
     /**
      * Called to read Data for the InputStream
+     * @param pos in stream, first byte is pos=0
      * @param len the maximum length of buffer to return
-     * @param position in stream, first byte is pos=0
      * @throws SQLException
      */
     byte[] readData(long pos, int len) throws IOException
@@ -751,11 +751,13 @@ public class JdbcTableRowFile extends AbstractFileObject<JdbcTableFileSystem>
     /**
      * Sets primary key of this file on prepared statement.
      * <P>
-     * Supports multi column keys (driven by {@link #getKeys(JdbcTableRowFile)}).
+     * Supports multi-column keys (driven by {@link #getKeys(JdbcTableRowFile)}).
      *
+     * @param ps the prepared statement on which the parameters will be set
+     * @param file the file to extrace key from (uses {@link #getKeys(FileObject)})
      * @param before number of bind parameters before first key, typically 0
-     * @throws SQLException
-     * @throws FileSystemException
+     * @throws SQLException if seString on prepared statement throws
+     * @throws FileSystemException if {@link #getKeys(FileObject)} throws
      * */
     private void setPrimaryKey(PreparedStatement ps, JdbcTableRowFile file, int before) throws SQLException, FileSystemException
     {
@@ -769,8 +771,8 @@ public class JdbcTableRowFile extends AbstractFileObject<JdbcTableFileSystem>
     /**
      * Convert file name into composed key.
      *
-     * @param newfile
-     * @return
+     * @param file the instance of FileObject
+     * @return tuple with file parent path and name to be used as keys
      * @throws FileSystemException
      */
     private String[] getKeys(FileObject file) throws FileSystemException
