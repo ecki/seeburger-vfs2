@@ -13,6 +13,9 @@ import java.sql.DatabaseMetaData;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.SQLRecoverableException;
+import java.sql.SQLTransientConnectionException;
+import java.sql.SQLTransientException;
 import java.util.Locale;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -66,33 +69,42 @@ public class JdbcDialectBase implements JdbcDialect
     public static JdbcDialect getDialect(DataSource ds)
         throws SQLException
     {
-        Connection con = null;
-        try
+        SQLException lastEx = null;
+        for(int retry=0; retry < 2; retry++)
         {
-            con = ds.getConnection();
-            DatabaseMetaData md = con.getMetaData();
-            String provider = md.getDatabaseProductName().toLowerCase(Locale.ENGLISH);
-            if (provider.contains(MSSQL_DIALECT) || provider.contains(MSSQL_DIALECT$))
+            Connection con = null;
+            try
             {
-                return new JdbcDialectMSSQL(ds);
+                con = ds.getConnection();
+                DatabaseMetaData md = con.getMetaData();
+                String provider = md.getDatabaseProductName().toLowerCase(Locale.ENGLISH);
+                if (provider.contains(MSSQL_DIALECT) || provider.contains(MSSQL_DIALECT$))
+                {
+                    return new JdbcDialectMSSQL(ds);
+                }
+                else if (provider.contains(ORACLE_DIALECT))
+                {
+                    return new JdbcDialectOracle(ds);
+                }
+                else if (provider.contains(POSTGRESQL_DIALECT))
+                {
+                    return new JdbcDialectPostgreSQL(ds);
+                }
+                else
+                {
+                    return new JdbcDialectBase(ds);
+                }
             }
-            else if (provider.contains(ORACLE_DIALECT))
+            catch(SQLException ex )
             {
-                return new JdbcDialectOracle(ds);
+                lastEx = ex;
             }
-            else if (provider.contains(POSTGRESQL_DIALECT))
+            finally
             {
-                return new JdbcDialectPostgreSQL(ds);
+                safeClose(con);
             }
-            else
-            {
-                return new JdbcDialectBase(ds);
-            }
-        }
-        finally
-        {
-            safeClose(con);
-        }
+        } // retry
+        throw lastEx;
     }
 
 
@@ -119,6 +131,10 @@ public class JdbcDialectBase implements JdbcDialect
         try
         {
             return dataSource.getConnection();
+        }
+        catch (RuntimeException unexpected) // for example Oracle NegativeArrayExcepion
+        {
+            throw new SQLTransientConnectionException("Problem while getting connection. RuntimeException=" + unexpected, unexpected);
         }
         finally
         {
@@ -214,5 +230,38 @@ public class JdbcDialectBase implements JdbcDialect
         {
             try { con.close(); } catch (Exception ignored) { /* nothing to recover */ }
         }
+    }
+
+    @Override
+    public boolean shouldRetry(Exception e, int retry)
+    {
+        // first occurrence of any error is retried
+        if (retry == 0)
+            return true;
+
+        // We no more than 3 attempts
+        if (retry > 2 || retry < 0) // negative overflow should not happen
+            return false;
+
+        if (e instanceof SQLTransientException ||
+            e instanceof SQLTransientConnectionException ||
+            e instanceof SQLRecoverableException)
+        {
+            return true; // endless retries are avoided by #maxRetry()
+        }
+
+        // some drivers might not use above subexceptions, lets look at the state:
+        if (e instanceof SQLException)
+        {
+            SQLException sqlException = (SQLException)e;
+            String sqlState = sqlException.getSQLState();
+            if (sqlState != null && sqlState.startsWith("08"))
+            {
+                return true;
+            }
+        }
+
+        // not recognized as a retryable db problem
+        return false;
     }
 }

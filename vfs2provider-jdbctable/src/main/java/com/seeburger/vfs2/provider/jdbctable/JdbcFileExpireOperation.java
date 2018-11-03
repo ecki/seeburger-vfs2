@@ -65,13 +65,14 @@ public class JdbcFileExpireOperation implements ExpireFilesOperation
         JdbcDialect dialect = fileSystem.getDialect();
 
         Connection connection = null;
+        PreparedStatement ps = null;
         try
         {
+            // this operation is not retried: application would just retry later
             connection = dialect.getConnection();
-            PreparedStatement ps;
             if (prefix != null)
             {
-                if (prefix.endsWith("/"))
+                if (prefix.endsWith("/")) // TODO: prefix==/
                 {
                     prefix = prefix.substring(0, prefix.length()-1);
                 }
@@ -79,7 +80,7 @@ public class JdbcFileExpireOperation implements ExpireFilesOperation
                 ps = dialect.prepareQuery(connection, "DELETE FROM {table} WHERE cMarkGarbage < ? AND (cParent = ? OR cParent LIKE ?) AND cSize >= 0");
                 ps.setLong(1, timeBefore);
                 ps.setString(2, prefix);
-                ps.setString(3, prefix + "/%");
+                ps.setString(3, prefix + "/%"); // TODO: escape
             }
             else
             {
@@ -97,6 +98,10 @@ public class JdbcFileExpireOperation implements ExpireFilesOperation
         }
         finally
         {
+            if (ps != null)
+            {
+                try { ps.close(); } catch (Exception ignored) { /* nothing to do. */ }
+            }
             dialect.returnConnection(connection);
         }
     }

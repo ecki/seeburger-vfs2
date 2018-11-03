@@ -85,4 +85,13 @@ public interface JdbcDialect
      * @see JdbcTableProvider#createFileSystem(String, org.apache.commons.vfs2.FileObject, org.apache.commons.vfs2.FileSystemOptions)
      */
     JdbcDialect cloneDialect(String tableName);
+
+    /**
+     * Is called when an SQL Exception in a particular retry happened.
+     *
+     * @param exception the observed exception
+     * @param retry retry iteration (first is 0)
+     * @return true if the operation should be retried due to transient DB problems
+     */
+    boolean shouldRetry(Exception exception, int retry);
 }
