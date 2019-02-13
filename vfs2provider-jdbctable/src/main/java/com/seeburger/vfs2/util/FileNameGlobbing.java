@@ -40,7 +40,7 @@ public class FileNameGlobbing
     {
         if (pattern == null || pattern.isEmpty())
         {
-            throw new IllegalArgumentException("FileNameGlobbing with empty patter is not possible");
+            throw new IllegalArgumentException("FileNameGlobbing with empty pattern is not possible");
         }
 
         this.pattern = pattern;
