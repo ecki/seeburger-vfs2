@@ -97,10 +97,11 @@ public class JdbcTableRowFile extends AbstractFileObject<JdbcTableFileSystem>
 
                 if (rs.next())
                 {
-                    throw new IOException("Critical consistency problem, duplicate response to name=" + getName());
+                    // should not happen since there is a PK on cParent/cName
+                    throw new IOException("Critical consistency problem. Duplicate records in table=" + dialect.getQuotedTable() + " for name=" + getName());
                 }
 
-                return;
+                return; // exit retry loop
             }
             catch (SQLException e)
             {
