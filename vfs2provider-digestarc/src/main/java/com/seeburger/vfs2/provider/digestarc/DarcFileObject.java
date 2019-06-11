@@ -21,6 +21,7 @@ import org.apache.commons.vfs2.FileChangeEvent;
 import org.apache.commons.vfs2.FileListener;
 import org.apache.commons.vfs2.FileName;
 import org.apache.commons.vfs2.FileObject;
+import org.apache.commons.vfs2.FileSystem;
 import org.apache.commons.vfs2.FileSystemException;
 import org.apache.commons.vfs2.FileType;
 import org.apache.commons.vfs2.provider.AbstractFileName;
@@ -91,8 +92,47 @@ public class DarcFileObject extends AbstractFileObject<DarcFileSystem> implement
     }
 
     /**
-     * Lists the children of the file.
-     * @throws IOException
+     * Lists and resolve the children of the file.
+     * <p>
+     * This works around a VFS limitation in regards to URL encoded characters, see
+     * DarcBasicTest#testSpecialInName(). It is used instead of {@link #doListChildren()}.
+     *
+     * @throws IOException if any problem in the underlying provider happens
+     * @see AbstractFileObject#getChildren()
+     */
+    @Override
+    protected FileObject[] doListChildrenResolved() throws IOException
+    {
+        Entry entry = getEntry();
+        if (!(entry instanceof Directory))
+        {
+            return null;
+        }
+
+        final Directory dir = (Directory)entry;
+        final String[] names = dir.getChildrenNames(getProvider());
+        if (names.length == 0)
+        {
+            return new FileObject[0];
+        }
+
+        final String dirPath = ((AbstractFileName)getName()).getPath();
+        final FileObject[] children = new FileObject[names.length];
+        final FileSystem fs = getFileSystem();
+        for(int i=0; i < names.length; i++)
+        {
+            children[i] = fs.resolveFile(dirPath + "/" + UriParser.encode(names[i]));
+        }
+        return children;
+    }
+
+    /**
+     * Fallback implementation to get children names.
+     * <p>
+     * {@linkplain AbstractFileObject#getChildren() AFO.getChildren} will
+     * prefer {@link #doListChildrenResolved()} instead.
+     *
+     * @see AbstractFileObject#getChildren()
      */
     @Override
     protected String[] doListChildren() throws IOException
