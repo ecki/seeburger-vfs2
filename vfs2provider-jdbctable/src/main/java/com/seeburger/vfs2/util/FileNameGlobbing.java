@@ -169,6 +169,11 @@ public class FileNameGlobbing
             }
 
             String relname = fileInfo.getBaseFolder().getName().getRelativeName(file.getName());
+            // we never match the directory itself
+            if (".".equals(relname))
+            {
+                return false;
+            }
 
             if (file.getType().hasChildren())
             {
@@ -182,18 +187,17 @@ public class FileNameGlobbing
             throws Exception
         {
             int depth = fileInfo.getDepth();
-
-            // do we need to step into any first level child?
+            // we always traverse the start dir
             if (depth == 0)
             {
-                if ((exploded.length > 1) || (exploded.length == 1 && exploded[0].endsWith("/")))
                     return true;
-                else
-                    return false;
             }
 
+            // we actually need to traverse whole structure in order to do full string match
             if (maxCheckDir != -1 && depth >= maxCheckDir)
+            {
                 return true;
+            }
 
             FileObject file = fileInfo.getFile();
 
@@ -202,6 +206,7 @@ public class FileNameGlobbing
                 return false;
             }
 
+            // depth can not be 0 here
             if (depth <= exploded.length)
             {
                 String basename = file.getName().getBaseName();

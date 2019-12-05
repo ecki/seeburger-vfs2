@@ -370,12 +370,16 @@ public class FileNameGlobbingTest
         assertTrue(names.isEmpty());
     }
 
-
-
-    @Test @Ignore
+    @Test
     public void testGetSelectorDirectory() throws FileSystemException
     {
-        FileObject dir = getTestDir();
+        // we test with subdir where root resource are file and dir
+        FileObject dir = getTestDir().resolveFile("test-data/read-tests");
+        //             <DIR> dir1
+        //                 0 empty.txt
+        //                20 file space.txt
+        //                20 file%.txt
+        //                20 file1.txt
         FileNameGlobbing g = new FileNameGlobbing("*/");
 
         // get a selector for this pattern
@@ -385,21 +389,52 @@ public class FileNameGlobbingTest
         // use the selector to filter
         dir.refresh();
         FileObject[] files = dir.findFiles(s);
-        assertNotNull(files);
+        assertNotNull("no findfiles in dir " + dir, files);
 
         // construct set of relative names
         Set<String> names = new HashSet<String>();
         for(FileObject file : files)
             names.add(dir.getName().getRelativeName(file.getName()));
 
-        assertTrue(names.remove("test-data"));
-        assertTrue(names.remove("db"));
-        assertFalse("TODO: fix self dir match", names.remove("."));
-
-        assertTrue(names.isEmpty());
+        // make sure the only result is [dir1] (especially not [.]
+        assertTrue("Not dir1 in " + names, names.remove("dir1"));
+        assertTrue("Unexpected finds:" + names, names.isEmpty());
     }
 
+    @Test
+    public void testGetSelectorFile() throws FileSystemException
+    {
+        // we test with subdir where root resource are file and dir
+        FileObject dir = getTestDir().resolveFile("test-data/read-tests");
+        //             <DIR> dir1
+        //                 0 empty.txt
+        //                20 file space.txt
+        //                20 file%.txt
+        //                20 file1.txt
 
+        FileNameGlobbing g = new FileNameGlobbing("*");
+
+        // get a selector for this pattern
+        FileSelector s = g.getSelector();
+        assertNotNull(s);
+
+        // use the selector to filter
+        dir.refresh();
+        FileObject[] files = dir.findFiles(s);
+        assertNotNull("no findfiles in dir " + dir, files);
+
+        // construct set of relative names
+        Set<String> names = new HashSet<String>();
+        for(FileObject file : files)
+            names.add(dir.getName().getRelativeName(file.getName()));
+
+        // make sure only the files have been found
+        assertTrue(names.remove("empty.txt"));
+        assertTrue(names.remove("file space.txt"));
+        assertTrue(names.remove("file%25.txt")); // TODO: does not do decoding .-/
+        assertTrue(names.remove("file1.txt"));
+        assertTrue("Unexpected finds:" + names, names.isEmpty());
+    }
 
     private FileObject getTestDir() throws FileSystemException
     {
