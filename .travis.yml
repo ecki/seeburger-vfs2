@@ -1,4 +1,5 @@
 language: java
+dist: trusty
 
 install: mvn -B -C -e -q clean
 
@@ -8,8 +9,6 @@ matrix:
       env: VER=7
     - jdk: oraclejdk8
       env: VER=8
-    - jdk: oraclejdk9
-      env: VER=9
     - jdk: openjdk11
       env: VER=11
 
