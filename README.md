@@ -3,8 +3,8 @@ seeburger-vfs2
 
 SEEBURGER Extensions to Apache Commons VFS2
 
-* vfs2provider-digestarc - allows Git style content addressed storage of filesystem trees (with hashed blobs)
-* vfs2provider-jdbctable - allow storing blobs in database tables
+* vfs2provider-digestarc - allows Git style content addressed storage of filesystem trees (with hashed blobs) [![Known Vulnerabilities](https://snyk.io/test/github/ecki/seeburger-vfs2/badge.svg?targetFile=vfs2provider-digestarc/pom.xml)](https://snyk.io/test/github/ecki/seeburger-vfs2?targetFile=vfs2provider-digestarc/pom.xml)
+* vfs2provider-jdbctable - allow storing blobs in database tables [![Known Vulnerabilities](https://snyk.io/test/github/ecki/seeburger-vfs2/badge.svg?targetFile=vfs2provider-jdbctable/pom.xml)](https://snyk.io/test/github/ecki/seeburger-vfs2?targetFile=vfs2provider-jdbctable/pom.xml)
 * (vfs2-util - currently included in vfs2provider-jdbctable/com.seeburger.vfs2.util) helper classes to deal with VFS2
   * `TreePrinter` for printing a VFS Directory
   * enhanced clone of the `VFSClassLoader`
