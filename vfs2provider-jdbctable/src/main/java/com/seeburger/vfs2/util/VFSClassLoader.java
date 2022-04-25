@@ -32,6 +32,7 @@ import java.util.Iterator;
 import java.util.jar.Attributes;
 import java.util.jar.Attributes.Name;
 
+import org.apache.commons.vfs2.FileNotFolderException;
 import org.apache.commons.vfs2.FileObject;
 import org.apache.commons.vfs2.FileSystemException;
 import org.apache.commons.vfs2.FileSystemManager;
@@ -161,13 +162,13 @@ public class VFSClassLoader extends SecureClassLoader
         for (int i = 0; i < files.length; i++)
         {
             FileObject file = files[i];
-            if (!file.exists())
+            if (!safeExists(file))  // avoid FileNotFolderException
             {
                 // Does not exist - skip
                 continue;
             }
 
-            // TODO - use federation instead
+            // if it is a .jar file it needs to be overlayed with YIPFileSzstem
             if (file.getType().hasContent() && manager.canCreateFileSystem(file))
             {
                 // Use contents of the file
@@ -405,7 +406,7 @@ public class VFSClassLoader extends SecureClassLoader
             final FileObject baseFile = it.next();
             final FileObject file =
                 baseFile.resolveFile(name, NameScope.DESCENDENT_OR_SELF);
-            if (file.exists())
+            if (safeExists(file)) // avoid FileNotFolderException
             {
                 result.add(new Resource(name, baseFile, file).getURL());
             }
@@ -429,7 +430,7 @@ public class VFSClassLoader extends SecureClassLoader
             final FileObject baseFile = it.next();
             final FileObject file =
                 baseFile.resolveFile(name, NameScope.DESCENDENT_OR_SELF);
-            if (file.exists())
+            if (safeExists(file))  // avoid FileNotFolderException
             {
                 return new Resource(name, baseFile, file);
             }
@@ -437,6 +438,39 @@ public class VFSClassLoader extends SecureClassLoader
 
         return null;
     }
+
+    /**
+     * Call exists() on file but swallow FileNotFolderException.
+     * <p>
+     * This can be used if you only want to know if {@code file} exists,
+     * but don't care about unexpected files in parent path. This
+     * wrapper will return {@code false} in this case.
+     *
+     * @param file the file to test for existence, must not be null.
+     * @return true if the file exists, false if it does not exists or
+     *   if some parent is a file.
+     * @throws FileSystemException if exists throws, but not if it has {@link FileNotFolderException} cause.
+     */
+    private boolean safeExists(FileObject file) throws FileSystemException
+    {
+        try
+        {
+            return file.exists();
+        }
+        catch (FileSystemException fse)
+        {
+            // if file is in folder part the FNF exception might be thrown directly or one-level indirectly
+            if (fse instanceof FileNotFolderException || fse.getCause() instanceof FileNotFolderException)
+            {
+                return false;
+            }
+            else
+            {
+                throw fse;
+            }
+        }
+    }
+
 
     /**
      * Helper class for VFSClassLoader. This represents a resource loaded with
