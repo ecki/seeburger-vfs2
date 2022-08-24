@@ -22,6 +22,9 @@ import java.util.concurrent.ConcurrentMap;
 
 import javax.sql.DataSource;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
 
 /**
  * Base implementation of {@link JdbcDialect} interface.
@@ -36,6 +39,8 @@ import javax.sql.DataSource;
  */
 public class JdbcDialectBase implements JdbcDialect
 {
+    private static final Log LOG = LogFactory.getLog(JdbcDialectBase.class);
+
     private static final String ORACLE_DIALECT = "oracle";
     private static final String MSSQL_DIALECT$ = "micro$oft";
     private static final String MSSQL_DIALECT = "microsoft";
@@ -141,7 +146,7 @@ public class JdbcDialectBase implements JdbcDialect
             long duration = System.nanoTime() - start;
             if (duration > 100 * MS)
             {
-                System.out.printf("slow getConnection(): %.6fs%n", Double.valueOf((duration / 1000000000.0))); // TODO: logging
+                LOG.info(String.format("slow getConnection(): %.6fs%n", Double.valueOf((duration / 1000000000.0))));
             }
         }
     }

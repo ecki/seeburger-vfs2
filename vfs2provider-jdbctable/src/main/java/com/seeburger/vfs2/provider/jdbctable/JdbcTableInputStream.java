@@ -10,7 +10,8 @@ package com.seeburger.vfs2.provider.jdbctable;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.sql.SQLException;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
 import com.seeburger.vfs2.provider.jdbctable.JdbcTableRowFile.DataDescription;
 
@@ -27,6 +28,8 @@ import com.seeburger.vfs2.provider.jdbctable.JdbcTableRowFile.DataDescription;
  */
 public class JdbcTableInputStream extends InputStream
 {
+    private static final Log LOG = LogFactory.getLog(JdbcTableInputStream.class);
+
     static final int MAX_BUFFER_SIZE = 50 * 1024 * 1024;
 
     /** Keep state for re-requesting additional data. */
@@ -42,7 +45,7 @@ public class JdbcTableInputStream extends InputStream
     /** Current data chunk buffer. Only {@link #bufferSize} bytes are valid. */
     byte[] buf;
 
-    protected JdbcTableInputStream(JdbcTableRowFile file) throws IOException, SQLException
+    protected JdbcTableInputStream(JdbcTableRowFile file) throws IOException
     {
         long fileSize = file.getContent().getSize();
         int bufsize;
@@ -50,7 +53,7 @@ public class JdbcTableInputStream extends InputStream
         if (fileSize > (long)MAX_BUFFER_SIZE)
         {
             bufsize = MAX_BUFFER_SIZE;
-            System.out.println("TODO: Warning, JdbcTableInputStream on " + file  + " only supports " + MAX_BUFFER_SIZE + " bytes. (filesize=" + fileSize + ")");
+            LOG.warn("JdbcTableInputStream on " + file  + " only supports " + MAX_BUFFER_SIZE + " bytes. (filesize=" + fileSize + ")");
         }
         else
         {

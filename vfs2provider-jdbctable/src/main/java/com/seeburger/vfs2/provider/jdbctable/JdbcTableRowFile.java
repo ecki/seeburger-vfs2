@@ -23,6 +23,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.commons.vfs2.FileName;
 import org.apache.commons.vfs2.FileNotFolderException;
 import org.apache.commons.vfs2.FileObject;
@@ -36,6 +38,8 @@ import org.apache.commons.vfs2.provider.AbstractFileObject;
 
 public class JdbcTableRowFile extends AbstractFileObject<JdbcTableFileSystem>
 {
+    private static final Log LOG = LogFactory.getLog(JdbcTableRowFile.class);
+
     /** value of size entry for folders in db. */
     static final long FOLDER_SIZE = -2;
     /** size of virtual files (never in DB) */
@@ -989,8 +993,7 @@ public class JdbcTableRowFile extends AbstractFileObject<JdbcTableFileSystem>
         if (warnings != null)
         {
             RuntimeException stack = new RuntimeException("Found JDBC Warnings: " + warnings);
-            stack.fillInStackTrace();
-            stack.printStackTrace(System.err); // TODO: logging
+            LOG.warn("Found JDBC Warnings: " + warnings, stack);
         }
     }
 
@@ -1008,7 +1011,7 @@ public class JdbcTableRowFile extends AbstractFileObject<JdbcTableFileSystem>
             }
             catch (Exception e)
             {
-                e.printStackTrace(System.err);
+                LOG.warn("Ignoring exception while cleaning up connection", e);
             }
             dialect.returnConnection(connection);
         }
