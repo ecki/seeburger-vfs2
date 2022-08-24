@@ -22,8 +22,9 @@ Building
 --------
 
 Can be build with Java 7 - Java 11, requires Maven 3.2.x.
+(Testing framework fails with Java 17 for the moment).
 
-By default Java 8 compatibility is used. To specify a specific version, use:
+By default Java 8 target compatibility is used. To specify a specific version, use:
 
     JAVA_HOME=/opt/jdk11
     mvn -B -e -C -V -Prelease-profile -Dmaven.compiler.source=11 -Dmaven.compiler.target=11 clean install
