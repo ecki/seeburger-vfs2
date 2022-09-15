@@ -55,7 +55,10 @@ public class SimpleDerbyTest extends SimpleTestsBase
     {
         System.out.println("Tearing down database");
         EmbeddedDataSource ds = (EmbeddedDataSource)dataSource; dataSource = null;
-        ds.setShutdownDatabase("true");
+        if (ds != null) // avoid exception during init errors
+        {
+            ds.setShutdownDatabase("true");
+        }
     }
 
     @Override
