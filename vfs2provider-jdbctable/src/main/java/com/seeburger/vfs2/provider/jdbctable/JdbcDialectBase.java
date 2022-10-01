@@ -133,7 +133,7 @@ public class JdbcDialectBase implements JdbcDialect
 
     /** Borrow a new connection from pool (or create one). */
     @Override
-    public Connection getConnection()
+    public Connection getConnection(String where)
         throws SQLException
     {
         long start = System.nanoTime();
@@ -143,14 +143,14 @@ public class JdbcDialectBase implements JdbcDialect
         }
         catch (RuntimeException unexpected) // for example Oracle NegativeArrayExcepion
         {
-            throw new SQLTransientConnectionException("Problem while getting connection. RuntimeException=" + unexpected, unexpected);
+            throw new SQLTransientConnectionException("Problem while getting connection (for " + where +"). RuntimeException=" + unexpected, unexpected);
         }
         finally
         {
             long duration = System.nanoTime() - start;
             if (duration > 100 * MS)
             {
-                LOG.info(String.format("slow getConnection(): %.6fs%n", Double.valueOf((duration / 1000000000.0))));
+                LOG.info(String.format("slow getConnection() (for %s): %.6fs%n", where, Double.valueOf((duration / 1000000000.0))));
             }
         }
     }

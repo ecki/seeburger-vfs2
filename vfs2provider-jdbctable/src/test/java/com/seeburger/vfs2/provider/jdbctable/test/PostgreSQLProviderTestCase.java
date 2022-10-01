@@ -88,7 +88,7 @@ public class PostgreSQLProviderTestCase extends AbstractProviderTestConfig imple
         PGSimpleDataSource ds = new org.postgresql.ds.PGSimpleDataSource(); // slow
         ds.setUser("postgres");
         ds.setPassword("mysecretpassword");
-        ds.setServerName("10.15.79.226"); ds.setPortNumber(4432);
+        //ds.setServerName("10.15.79.226"); ds.setPortNumber(4432);
         ds.setDatabaseName("postgres");
         //ds.setAutoCommit(false);
 

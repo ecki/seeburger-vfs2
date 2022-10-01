@@ -74,9 +74,9 @@ public class JdbcDialectPostgreSQL extends JdbcDialectBase implements JdbcDialec
     }
 
     @Override
-    public Connection getConnection() throws SQLException
+    public Connection getConnection(String where) throws SQLException
     {
-        Connection c = super.getConnection();
+        Connection c = super.getConnection(where);
         c.setAutoCommit(false); // TODO
         return c;
     }

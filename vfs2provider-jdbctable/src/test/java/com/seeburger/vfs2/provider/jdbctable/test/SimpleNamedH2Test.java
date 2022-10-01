@@ -80,7 +80,7 @@ public class SimpleNamedH2Test
 
         verifyDatabase();
 
-        Connection c = dialect.getConnection();
+        Connection c = dialect.getConnection("verify:testTableDefault");
         PreparedStatement ps = dialect.prepareQuery(c, "SELECT cName,cParent,'{table}' FROM {table} WHERE cParent=? AND cName=?");
         ps.setString(1, "/key");
         ps.setString(2, "dir_"+now);
@@ -122,7 +122,7 @@ public class SimpleNamedH2Test
         verifyDatabase();
 
         JdbcDialect dialect2 = dialect.cloneDialect("tBlobs2");
-        Connection c = dialect2.getConnection();
+        Connection c = dialect2.getConnection("verify:testTable2");
         PreparedStatement ps = dialect2.prepareQuery(c, "SELECT cName,cParent,'{table}' FROM {table} WHERE cParent=? AND cName=?");
         ps.setString(1, "/key");
         ps.setString(2, "dir_"+now);
@@ -200,8 +200,8 @@ public class SimpleNamedH2Test
         ResultSet rs = null;
         try
         {
-            c = dialect.getConnection();
-            ps = c.prepareStatement("SELECT * FROM INFORMATION_SCHEMA.SESSIONS");
+            c = dialect.getConnection("verifyDatabase");
+            ps = c.prepareStatement("SELECT 'x' FROM INFORMATION_SCHEMA.SESSIONS");
             rs = ps.executeQuery();
             int count = 0;
             while(rs.next())

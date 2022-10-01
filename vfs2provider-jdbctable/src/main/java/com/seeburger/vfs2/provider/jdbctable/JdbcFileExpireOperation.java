@@ -61,18 +61,17 @@ public class JdbcFileExpireOperation implements ExpireFilesOperation
     public void process()
         throws FileSystemException
     {
-        JdbcTableFileSystem fileSystem = (JdbcTableFileSystem) root.getFileSystem();
-        JdbcDialect dialect = fileSystem.getDialect();
+        JdbcDialect dialect = ((JdbcTableFileSystem)root.getFileSystem()).getDialect();
 
         Connection connection = null;
         PreparedStatement ps = null;
         try
         {
             // this operation is not retried: application would just retry later
-            connection = dialect.getConnection();
-            if (prefix != null)
+            connection = dialect.getConnection("JdbcFileExpireOperation");
+            if (prefix != null && !"/".equals(prefix))
             {
-                if (prefix.endsWith("/")) // TODO: prefix==/
+                if (prefix.endsWith("/"))
                 {
                     prefix = prefix.substring(0, prefix.length()-1);
                 }
@@ -88,9 +87,11 @@ public class JdbcFileExpireOperation implements ExpireFilesOperation
                 ps.setLong(1, timeBefore);
             }
             this.deleteCount = ps.executeUpdate();
+
+            ps.close(); ps = null;
             connection.commit();
 
-            // TODO: do we need to flush the caches?
+            // here it could be flushed from the cache and/or requires refresh
         }
         catch (SQLException e)
         {

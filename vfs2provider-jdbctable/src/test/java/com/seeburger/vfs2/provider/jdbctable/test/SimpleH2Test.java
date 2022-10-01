@@ -76,7 +76,7 @@ public class SimpleH2Test extends SimpleTestsBase
         ResultSet rs = null;
         try
         {
-            c = dialect.getConnection();
+            c = dialect.getConnection("verifyDatabase");
             ps = c.prepareStatement("SELECT * FROM INFORMATION_SCHEMA.SESSIONS");
             rs = ps.executeQuery();
             int count = 0;

@@ -138,7 +138,7 @@ public abstract class SimpleTestsBase
 
         verifyDatabase();
 
-        Connection c = dialect.getConnection();
+        Connection c = dialect.getConnection("testCreateFolder");
         PreparedStatement ps = dialect.prepareQuery(c, "SELECT cName,cParent FROM {table} WHERE cParent=? AND cName=?");
         ps.setString(1, "/key");
         ps.setString(2, "dir_"+now);
@@ -184,7 +184,7 @@ public abstract class SimpleTestsBase
         assertEquals(FileType.FOLDER, testFolder.getType());
 
         // ensure we have 2 files in DB ...
-        Connection c = dialect.getConnection();
+        Connection c = dialect.getConnection("verify:testCreateFolders");
         PreparedStatement ps = dialect.prepareQuery(c, "SELECT cName FROM {table} WHERE cParent=? AND cSize=0");
         ps.setString(1, "/key/dir_"+now+"/sub");
         ResultSet rs = ps.executeQuery();
@@ -289,7 +289,7 @@ public abstract class SimpleTestsBase
     {
         final long now = System.currentTimeMillis();
         // now VFS thinks the file exists, we delete it in SQL
-        Connection c = dialect.getConnection();
+        Connection c = dialect.getConnection("testAppearingFolder");
         PreparedStatement ps = dialect.prepareQuery(c, "INSERT INTO {table} (cParent,cName,cSize,cLastModified,cMarkGarbage) VALUES(?,?,-2,?,?)");
         ps.setString(1, "/key");
         ps.setString(2, "newdir_"+now);
@@ -367,7 +367,7 @@ public abstract class SimpleTestsBase
         assertEquals(FileType.FILE, testFile.getType());
 
         // now VFS thinks the file exists, we delete it in SQL
-        Connection c = dialect.getConnection();
+        Connection c = dialect.getConnection("deleteVanishedFile");
         PreparedStatement ps = dialect.prepareQuery(c, "DELETE FROM {table} WHERE cParent='/key' AND cName=?");
         ps.setString(1, "missingfile_" + now);
         int count = ps.executeUpdate();
@@ -568,7 +568,7 @@ public abstract class SimpleTestsBase
         assertTrue(testFile.exists());
 
         // now VFS thinks the file exists, we delete it in SQL
-        Connection c = dialect.getConnection();
+        Connection c = dialect.getConnection("testReadVanishedFile");
         PreparedStatement ps = dialect.prepareQuery(c, "DELETE FROM {table} WHERE cParent='/key' and cName=?");
         ps.setString(1, "readfile_" + now);
         int count = ps.executeUpdate();
@@ -810,7 +810,7 @@ public abstract class SimpleTestsBase
         try
         {
             // now we remove it from db but do not refresh
-            Connection c = dialect.getConnection();
+            Connection c = dialect.getConnection("testMarkTimeCorrupt");
             PreparedStatement ps = dialect.prepareQuery(c, "DELETE FROM {table} WHERE cParent='/key' AND cName=?");
             ps.setString(1, "marktime_"+now);
             int count = ps.executeUpdate();

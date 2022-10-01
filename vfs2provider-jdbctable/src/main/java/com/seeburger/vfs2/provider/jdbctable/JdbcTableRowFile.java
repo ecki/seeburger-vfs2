@@ -46,7 +46,7 @@ public class JdbcTableRowFile extends AbstractFileObject<JdbcTableFileSystem>
     static final long VIRTUAL_SIZE = -1;
 
     /** used when empty array is needed */
-    static private final byte[] EMPTY_BYTES = new byte[0];
+    private static final byte[] EMPTY_BYTES = new byte[0];
 
     public static class DataDescription
     {
@@ -59,12 +59,10 @@ public class JdbcTableRowFile extends AbstractFileObject<JdbcTableFileSystem>
 
     long lastModified = -1;
     long contentSize = VIRTUAL_SIZE;
-    JdbcDialect dialect;
 
     public JdbcTableRowFile(AbstractFileName name, JdbcTableFileSystem fs)
     {
         super(name, fs);
-        dialect = fs.getDialect();
     }
 
     @Override
@@ -77,7 +75,7 @@ public class JdbcTableRowFile extends AbstractFileObject<JdbcTableFileSystem>
             ResultSet rs = null;
             try
             {
-                ps = dialect.prepareQuery(con, "SELECT cSize,cLastModified FROM {table} WHERE (cParent=? AND cName=?)");
+                ps = prepareQuery(con, "SELECT cSize,cLastModified FROM {table} WHERE (cParent=? AND cName=?)");
                 setPrimaryKey(ps, this, 0);
                 rs = ps.executeQuery();
                 if (!rs.next())
@@ -102,14 +100,14 @@ public class JdbcTableRowFile extends AbstractFileObject<JdbcTableFileSystem>
                 if (rs.next())
                 {
                     // should not happen since there is a PK on cParent/cName
-                    throw new IOException("Critical consistency problem. Duplicate records in table=" + dialect.getQuotedTable() + " for name=" + getName());
+                    throw new IOException("Critical consistency problem. Duplicate records for name=" + getName());
                 }
 
                 return; // exit retry loop
             }
             catch (SQLException e)
             {
-                if (!dialect.shouldRetry(e, retry))
+                if (!shouldRetry(e, retry))
                 {
                     throw e;
                 }
@@ -132,7 +130,7 @@ public class JdbcTableRowFile extends AbstractFileObject<JdbcTableFileSystem>
             ResultSet rs = null;
             try
             {
-                ps = dialect.prepareQuery(con, "INSERT INTO {table} (cParent,cName,cSize,cLastModified,cMarkGarbage) VALUES (?,?,?,?,?)");
+                ps = prepareQuery(con, "INSERT INTO {table} (cParent,cName,cSize,cLastModified,cMarkGarbage) VALUES (?,?,?,?,?)");
                 setPrimaryKey(ps, this, 0);
                 ps.setLong(3, FOLDER_SIZE);
                 ps.setLong(4, now);
@@ -145,13 +143,13 @@ public class JdbcTableRowFile extends AbstractFileObject<JdbcTableFileSystem>
                     {
                         ps.clearWarnings(); // Derby generates warnings on no-match: https://issues.apache.org/jira/browse/DERBY-448
                     }
-                    throw new IOException("Critical consistency problem, result count=" + count + "while inserting new directory=" + getName());
+                    throw new IOException("Critical consistency problem, result count=" + count + " while inserting new directory=" + getName());
                 }
 
                 // TODO: update last modified of parent
 
                 con.commit();
-                dialect.returnConnection(con); con = null;
+                returnConnection(con); con = null;
 
                 lastModified = now;
                 contentSize = FOLDER_SIZE;
@@ -160,7 +158,7 @@ public class JdbcTableRowFile extends AbstractFileObject<JdbcTableFileSystem>
             } // TODO: add a more helpful diagnostic?
             catch (SQLException e)
             {
-                if (!dialect.shouldRetry(e, retry))
+                if (!shouldRetry(e, retry))
                 {
                     throw e;
                 }
@@ -186,7 +184,7 @@ public class JdbcTableRowFile extends AbstractFileObject<JdbcTableFileSystem>
             PreparedStatement ps = null;
             try
             {
-                ps = dialect.prepareQuery(con, "DELETE FROM {table} WHERE cParent=? AND cName=?"); // TODO: ensure no children?
+                ps = prepareQuery(con, "DELETE FROM {table} WHERE cParent=? AND cName=?"); // TODO: ensure no children?
                 setPrimaryKey(ps, this, 0);
                 int count = ps.executeUpdate();
 
@@ -197,7 +195,7 @@ public class JdbcTableRowFile extends AbstractFileObject<JdbcTableFileSystem>
                         ps.clearWarnings(); // Derby generates warnings on no-match: https://issues.apache.org/jira/browse/DERBY-448
                     }
                     con.commit();
-                    dialect.returnConnection(con); con = null;
+                    returnConnection(con); con = null;
 
                     contentSize = VIRTUAL_SIZE;
 
@@ -209,7 +207,7 @@ public class JdbcTableRowFile extends AbstractFileObject<JdbcTableFileSystem>
             }
             catch (SQLException e)
             {
-                if (!dialect.shouldRetry(e, retry))
+                if (!shouldRetry(e, retry))
                 {
                     throw e;
                 }
@@ -300,7 +298,7 @@ public class JdbcTableRowFile extends AbstractFileObject<JdbcTableFileSystem>
             try
             {
                 List<String> children = new ArrayList<String>(32);
-                ps = dialect.prepareQuery(con, "SELECT cName FROM {table} WHERE cParent=?");
+                ps = prepareQuery(con, "SELECT cName FROM {table} WHERE cParent=?");
                 ps.setString(1, getName().getPathDecoded());
                 rs = ps.executeQuery();
                 while(rs.next())
@@ -312,7 +310,7 @@ public class JdbcTableRowFile extends AbstractFileObject<JdbcTableFileSystem>
             }
             catch (SQLException e)
             {
-                if (!dialect.shouldRetry(e, retry))
+                if (!shouldRetry(e, retry))
                 {
                     throw e;
                 }
@@ -363,7 +361,7 @@ public class JdbcTableRowFile extends AbstractFileObject<JdbcTableFileSystem>
             PreparedStatement ps = null;
             try
             {
-                ps = dialect.prepareQuery(con, "UPDATE {table} SET cParent=?,cName=?,cLastModified=? WHERE cParent=? AND cName=?");
+                ps = prepareQuery(con, "UPDATE {table} SET cParent=?,cName=?,cLastModified=? WHERE cParent=? AND cName=?");
                 setPrimaryKey(ps, this, 3);
                 setPrimaryKey(ps, (JdbcTableRowFile)newfile, 0);
                 ps.setLong(3, now);
@@ -381,13 +379,16 @@ public class JdbcTableRowFile extends AbstractFileObject<JdbcTableFileSystem>
                 // TODO: update parent lastModified
 
                 con.commit();
-                dialect.returnConnection(con); con = null;
+                returnConnection(con); con = null;
+
+                lastModified = -1;
+                contentSize = VIRTUAL_SIZE;
 
                 return;
             }
             catch (SQLException e)
             {
-                if (!dialect.shouldRetry(e, retry))
+                if (!shouldRetry(e, retry))
                 {
                     throw e;
                 }
@@ -436,7 +437,7 @@ public class JdbcTableRowFile extends AbstractFileObject<JdbcTableFileSystem>
             ResultSet rs = null;
             try
             {
-                ps = dialect.prepareQuery(con, "UPDATE {table} SET cSize=?, cLastModified=?, cMarkGarbage=?, cBlob=? WHERE (cParent=? AND cName=?)");
+                ps = prepareQuery(con, "UPDATE {table} SET cSize=?, cLastModified=?, cMarkGarbage=?, cBlob=? WHERE (cParent=? AND cName=?)");
                 setPrimaryKey(ps, this, 4);
                 ps.setLong(1, byteArray.length);
                 ps.setLong(2, now);
@@ -454,7 +455,7 @@ public class JdbcTableRowFile extends AbstractFileObject<JdbcTableFileSystem>
                 }
 
                 con.commit(); // TODO: move behind endOutput?
-                dialect.returnConnection(con); con = null;
+                returnConnection(con); con = null;
 
                 lastModified = now;
                 contentSize = byteArray.length;
@@ -476,7 +477,7 @@ public class JdbcTableRowFile extends AbstractFileObject<JdbcTableFileSystem>
             }
             catch (SQLException e)
             {
-                if (!dialect.shouldRetry(e, retry))
+                if (!shouldRetry(e, retry))
                 {
                     throw e;
                 }
@@ -499,7 +500,7 @@ public class JdbcTableRowFile extends AbstractFileObject<JdbcTableFileSystem>
             try
             {
                 // some DB (like H2) require the PK Columns in the Result Set to be able to use updateRow()
-                ps = dialect.prepareUpdateable(con, "SELECT cBlob, cSize, cMarkGarbage, cLastModified, cParent, cName FROM {table} WHERE (cParent=? AND cName=?) {FOR UPDATE}");
+                ps = prepareUpdateable(con, "SELECT cBlob, cSize, cMarkGarbage, cLastModified, cParent, cName FROM {table} WHERE (cParent=? AND cName=?) {FOR UPDATE}");
                 setPrimaryKey(ps, this, 0);
                 rs = ps.executeQuery();
 
@@ -509,7 +510,7 @@ public class JdbcTableRowFile extends AbstractFileObject<JdbcTableFileSystem>
                 }
 
                 final long newLength;
-                if (dialect.supportsBlob())
+                if (dialect().supportsBlob())
                 {
                     blob = rs.getBlob(1);
                     if (blob == null) // TODO size > 0?
@@ -518,7 +519,7 @@ public class JdbcTableRowFile extends AbstractFileObject<JdbcTableFileSystem>
                     }
 
                     newLength = blob.length() + byteArray.length;
-                    if (dialect.supportsAppendBlob())
+                    if (dialect().supportsAppendBlob())
                     {
                         blob.setBytes(blob.length() + 1 , byteArray);
                     }
@@ -557,7 +558,7 @@ public class JdbcTableRowFile extends AbstractFileObject<JdbcTableFileSystem>
                 }
 
                 con.commit();
-                dialect.returnConnection(con); con = null;
+                returnConnection(con); con = null;
 
                 lastModified = now;
                 contentSize = newLength;
@@ -579,7 +580,7 @@ public class JdbcTableRowFile extends AbstractFileObject<JdbcTableFileSystem>
             }
             catch (SQLException e)
             {
-                if (!dialect.shouldRetry(e, retry))
+                if (!shouldRetry(e, retry))
                 {
                     throw e;
                 }
@@ -591,7 +592,7 @@ public class JdbcTableRowFile extends AbstractFileObject<JdbcTableFileSystem>
         } // retry
     }
 
-    private void writeDataInsert(long now, byte[] byteArray) throws SQLException, IOException
+	private void writeDataInsert(long now, byte[] byteArray) throws SQLException, IOException
     {
         for(int retry=0; ; retry++)
         {
@@ -600,7 +601,7 @@ public class JdbcTableRowFile extends AbstractFileObject<JdbcTableFileSystem>
             ResultSet rs = null;
             try
             {
-                ps = dialect.prepareQuery(con, "INSERT INTO {table} (cParent,cName,cSize,cLastModified,cMarkGarbage,cBlob) VALUES (?,?,?,?,?,?)");
+                ps = prepareQuery(con, "INSERT INTO {table} (cParent,cName,cSize,cLastModified,cMarkGarbage,cBlob) VALUES (?,?,?,?,?,?)");
                 setPrimaryKey(ps, this, 0);
                 ps.setLong(3, byteArray.length);
                 ps.setLong(4, now);
@@ -618,7 +619,7 @@ public class JdbcTableRowFile extends AbstractFileObject<JdbcTableFileSystem>
                 }
 
                 con.commit();
-                dialect.returnConnection(con); con = null;
+                returnConnection(con); con = null;
 
                 lastModified = now;
                 contentSize = byteArray.length;
@@ -642,7 +643,7 @@ public class JdbcTableRowFile extends AbstractFileObject<JdbcTableFileSystem>
             }
             catch (SQLException e)
             {
-                if (!dialect.shouldRetry(e, retry))
+                if (!shouldRetry(e, retry))
                {
                     throw e;
                 }
@@ -654,7 +655,7 @@ public class JdbcTableRowFile extends AbstractFileObject<JdbcTableFileSystem>
         } // retry
     }
 
-    /**
+	/**
      * Called to read Data for the InputStream
      * @param pos in stream, first byte is pos=0
      * @param len the maximum length of buffer to return
@@ -672,7 +673,7 @@ public class JdbcTableRowFile extends AbstractFileObject<JdbcTableFileSystem>
             try
             {
                 con = getConnection("readData"); // inside try because rethrown as IOException
-                ps = dialect.prepareQuery(con, "SELECT cSize,cBlob FROM {table} WHERE cParent=? AND cName=?");
+                ps = prepareQuery(con, "SELECT cSize,cBlob FROM {table} WHERE cParent=? AND cName=?");
                 setPrimaryKey(ps, this, 0);
                 rs = ps.executeQuery();
 
@@ -690,7 +691,7 @@ public class JdbcTableRowFile extends AbstractFileObject<JdbcTableFileSystem>
                 // TODO: pos+len > size
 
                 final byte[] bytes;
-                if (dialect.supportsBlob())
+                if (dialect().supportsBlob())
                 {
 
                     // cannot access Blob after ResultSet#next() or connection#close()
@@ -740,7 +741,7 @@ public class JdbcTableRowFile extends AbstractFileObject<JdbcTableFileSystem>
             }
             catch (SQLException e)
             {
-                if (!dialect.shouldRetry(e, retry))
+                if (!shouldRetry(e, retry))
                 {
                     throw new IOException("Database problem while reading blob for name=" + getName() + ". pos=" + pos + ", len=" + len + ", size=" + size, e);
                 }
@@ -841,7 +842,7 @@ public class JdbcTableRowFile extends AbstractFileObject<JdbcTableFileSystem>
             PreparedStatement ps = null;
             try
             {
-                ps = dialect.prepareQuery(con, "UPDATE {table} SET cMarkGarbage=? WHERE cParent=? AND cName=?");
+                ps = prepareQuery(con, "UPDATE {table} SET cMarkGarbage=? WHERE cParent=? AND cName=?");
                 setPrimaryKey(ps, this, 1);
                 ps.setLong(1, time);
 
@@ -860,7 +861,7 @@ public class JdbcTableRowFile extends AbstractFileObject<JdbcTableFileSystem>
                 }
 
                 con.commit();
-                dialect.returnConnection(con); con = null;
+                returnConnection(con); con = null;
 
                 // markTime is not stored in this object, so not updated here
 
@@ -868,7 +869,7 @@ public class JdbcTableRowFile extends AbstractFileObject<JdbcTableFileSystem>
             }
             catch (SQLException e)
             {
-                if (!dialect.shouldRetry(e, retry))
+                if (!shouldRetry(e, retry))
                 {
                     throw e;
                 }
@@ -891,7 +892,7 @@ public class JdbcTableRowFile extends AbstractFileObject<JdbcTableFileSystem>
             Connection connection = getConnection("mark");
             try
             {
-                ps = dialect.prepareQuery(connection, "SELECT cMarkGarbage FROM {table} WHERE cParent=? AND cName=?");
+                ps = prepareQuery(connection, "SELECT cMarkGarbage FROM {table} WHERE cParent=? AND cName=?");
                 setPrimaryKey(ps, this, 0);
 
                 rs = ps.executeQuery();
@@ -904,7 +905,7 @@ public class JdbcTableRowFile extends AbstractFileObject<JdbcTableFileSystem>
             }
             catch (SQLException e)
             {
-                if (!dialect.shouldRetry(e, retry))
+                if (!shouldRetry(e, retry))
                 {
                     throw e;
                 }
@@ -916,13 +917,58 @@ public class JdbcTableRowFile extends AbstractFileObject<JdbcTableFileSystem>
         } // retry
     }
 
+    /**
+     * Get dialect from current file-system.
+     */
+	private JdbcDialect dialect()
+	{
+    	return ((JdbcTableFileSystem)getFileSystem()).getDialect();
+	}
 
-    private Connection getConnection(String where) throws SQLException
+    /** Forward to {@link JdbcDialect#shouldRetry(Exception, int)} */
+    private boolean shouldRetry(SQLException e, int retry)
     {
-        return dialect.getConnection();
+    	return dialect().shouldRetry(e, retry);
+	}
+
+    /**
+     * Forward to {@link JdbcDialect#getConnection(String)}
+     *
+     * @throws SQLException
+     */
+	private Connection getConnection(String where) throws SQLException
+    {
+    	return dialect().getConnection(where);
     }
 
-    public void closeConnection(Blob blob, ResultSet rs, PreparedStatement ps, Connection connection)
+    /**
+     * Forward to {@link JdbcDialect#prepareQuery(Connection, String)}
+     *
+     * @throws SQLException
+     */
+	private PreparedStatement prepareQuery(Connection con, String sql) throws SQLException
+	{
+    	return dialect().prepareQuery(con, sql);
+	}
+
+    /**
+     * Forward to {@link JdbcDialect#prepareUpdateable(Connection, String)
+     *
+     * @throws SQLException
+     */
+    private PreparedStatement prepareUpdateable(Connection con, String sql) throws SQLException
+    {
+    	return dialect().prepareUpdateable(con, sql);
+	}
+
+    /** Forward to {@link JdbcDialect#returnConnection(Connection)} */
+	private void returnConnection(Connection con)
+	{
+    	dialect().returnConnection(con);
+	}
+
+
+    private void closeConnection(Blob blob, ResultSet rs, PreparedStatement ps, Connection connection)
     {
         if (blob != null)
         {
@@ -957,7 +1003,7 @@ public class JdbcTableRowFile extends AbstractFileObject<JdbcTableFileSystem>
         if (connection != null)
         {
             processWarnings(connection);
-            dialect.returnConnection(connection);
+            returnConnection(connection);
         }
     }
 
@@ -1013,7 +1059,7 @@ public class JdbcTableRowFile extends AbstractFileObject<JdbcTableFileSystem>
             {
                 LOG.warn("Ignoring exception while cleaning up connection", e);
             }
-            dialect.returnConnection(connection);
+            returnConnection(connection);
         }
     }
 }

@@ -48,9 +48,10 @@ public interface JdbcDialect
      * It is expected auto-commit is turned off for this connection and it
      * is actually lend from a pool.
      *
+     * @param diagnostics string for logging the caller operation
      * @throws SQLException
      */
-    Connection getConnection() throws SQLException;
+    Connection getConnection(String where) throws SQLException;
 
     /**
      * Connection is no longer needed.
