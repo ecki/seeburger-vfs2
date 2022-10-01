@@ -29,13 +29,15 @@ import org.apache.commons.logging.LogFactory;
 /**
  * Base implementation of {@link JdbcDialect} interface.
  * <P>
- * Can be used for H2 and Derby databases. There are some more specific subclasses. Own implementations should
- * extend {@link JdbcDialectBase}.
+ * Can directly be used for H2 and Derby databases.
+ * There are some more specific subclasses.
  *
  * @see JdbcDialect
  * @see JdbcDialectOracle
  * @see JdbcDialectMSSQL
  * @see JdbcDialectPostgreSQL
+ * @see #getDialect(DataSource)
+ * @see JdbcDialect#cloneDialect(String)
  */
 public class JdbcDialectBase implements JdbcDialect
 {
@@ -50,7 +52,7 @@ public class JdbcDialectBase implements JdbcDialect
     /** Default table name. */
     protected static final String TABLE_NAME = "tBlobs";
 
-    /** Cache for prepared statements. Not shared with other instances. */
+    /** Cache for pre-processed SQL statements. (table specific) */
     protected final ConcurrentMap<String, String> sqlCache = new ConcurrentHashMap<String, String>(23);
 
     protected final DataSource dataSource;
@@ -61,8 +63,10 @@ public class JdbcDialectBase implements JdbcDialect
      * Determines what the type of the provided datasource is and
      * returns the appropriate JdbcDialect.
      * <P>
-     * Returns {@link JdbcDialectMSSQL} for Microsoft database, {@link JdbcDialectOracle}
-     * for Oracle drivers and {@link JdbcDialectBase} for all others.
+     * Returns {@link JdbcDialectMSSQL} for <i>Microsoft</i> database (jTDS or MSSQL),
+     * {@link JdbcDialectOracle} for <i>Oracle</i> drivers,
+     * {@link JdbcDialectPostgreSQL} for <i>pgjdbc</i>
+     * and {@link JdbcDialectBase} for all others.
      *
      * @param ds returning one of the know database driver connections
      * @return new instance of dialect with default table name configured
@@ -172,7 +176,7 @@ public class JdbcDialectBase implements JdbcDialect
     @Override
     public String expandSQL(String sql)
     {
-        // no synchronisation here needed as producing multiple instances is acceptable
+        // no synchronization here needed as producing multiple instances is acceptable
         // and sqlCache is a ConcurrentMap and therefore thread safe
         String cached = sqlCache.get(sql);
 

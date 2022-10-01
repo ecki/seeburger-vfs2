@@ -18,7 +18,7 @@ public class JdbcFileUtil
     /** Unwrap decorated fileObject and cast if possible.
      *
      * @param file a possibly decorate {@link JdbcTableRowFile}
-     * @return the unwraped obejct or null
+     * @return the un-wrapped object or null
      */
     public static JdbcTableRowFile unwrapJdbcFile(FileObject file)
     {

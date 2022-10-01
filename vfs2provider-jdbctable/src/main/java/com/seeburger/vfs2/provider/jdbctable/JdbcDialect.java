@@ -20,22 +20,32 @@ import javax.sql.DataSource;
  * Database driver abstraction layer.
  * <P>
  * This can be used to customize the way connections are retrieved and used. The default
- * implementations {@link JdbcDialectBase} and {@link JdbcDialectMSSQL} and {@link JdbcDialectOracle}
- * are all based on {@link DataSource} objects.
+ * base implementation is {@link JdbcDialectBase}.
+ * <p>
+ * The following additional DB specific implementations
+ * work with a provided {@link DataSource} object:
+ * <ul>
+ * <li> {@link JdbcDialectMSSQL}</li>
+ * <li> {@link JdbcDialectOracle}</li>
+ * <li> {@link JdbcDialectPostgreSQL}</li>
+ * </ul>
+ *
+ * @see JdbcDialectBase#getDialect(DataSource)
+ * @see #cloneDialect(String)
  */
 public interface JdbcDialect
 {
     /**
      * Returns the (appropriately quoted) table identifier for use in Statements.
      * <P>
-     * This is also used to construct namespaces (schema, owener, database).
+     * This is also used to construct name spaces (schema, owner, database).
      */
     String getQuotedTable();
 
     /**
      * Get connection (from DataSource).
      * <P>
-     * It is expected autocommit is turned off for this connection and it
+     * It is expected auto-commit is turned off for this connection and it
      * is actually lend from a pool.
      *
      * @throws SQLException
