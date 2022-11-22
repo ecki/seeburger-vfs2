@@ -13,6 +13,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 
 import org.apache.commons.vfs2.FileObject;
+import org.apache.commons.vfs2.FileSystem;
 import org.apache.commons.vfs2.FileSystemException;
 import org.apache.commons.vfs2.FileType;
 import org.apache.commons.vfs2.NameScope;
@@ -94,6 +95,17 @@ public class BlobStorageProvider
                         throw ex;
                     }
                 }
+                finally
+                {
+                    try
+                    {
+                        // we no longer need the temp file in cache
+                        FileSystem fs = tmpFile.getFileSystem();
+                        fs.getFileSystemManager().getFilesCache().removeFile(fs, tmpFile.getName());
+                    }
+                    catch(Exception ignored)
+                    { /* do nothing */ }
+                }
                 return digest;
             default:
                 throw new RuntimeException("Corrupted blob type: " + target);
@@ -108,6 +120,7 @@ public class BlobStorageProvider
         {
             String tempName = "new-" + System.nanoTime() + ".tmp";
             tmp = parent.resolveFile(tempName, NameScope.CHILD);
+            // we cant remove the collission files from cache
         } while (tmp.getType() != FileType.IMAGINARY);
 
         return tmp;
