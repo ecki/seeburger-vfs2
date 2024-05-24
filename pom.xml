@@ -3,7 +3,7 @@
 
     <groupId>com.seeburger.vfs2</groupId>
     <artifactId>seeburger-vfs2-parent</artifactId>
-    <version>1.7.9-SNAPSHOT</version>
+    <version>1.8.0-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <name>SEEBURGER VFS2 Parent</name>
@@ -19,10 +19,11 @@
     <properties>
         <maven.build.timestamp.format>yyyyMMdd-HHmm</maven.build.timestamp.format>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <maven.compiler.source>8</maven.compiler.source>
-        <maven.compiler.target>8</maven.compiler.target>
-        <maven.compiler.compilerVersion>${maven.compiler.source}</maven.compiler.compilerVersion>
+        <maven.compiler.release>11</maven.compiler.release>
         <version.commons-vfs2>2.2</version.commons-vfs2>
+        <!-- surefire for Java11+ -->
+        <argLine>--add-opens=java.base/java.lang=ALL-UNNAMED</argLine>
+        <forkCount>1</forkCount>
     </properties>
 
     <modules>
@@ -48,7 +49,7 @@
                 </plugin>
                 <plugin>
                     <artifactId>maven-compiler-plugin</artifactId>
-                    <version>3.3</version>
+                    <version>3.13.0</version>
                     <inherited>true</inherited>
                     <configuration>
                         <compilerArgument>-Xlint:all</compilerArgument>
