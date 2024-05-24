@@ -48,25 +48,26 @@ public class DarcFileCollectOperation implements CollectFilesOperation
     public void process()
         throws FileSystemException
     {
-        if (root instanceof DarcFileObject)
+        if (!(root instanceof DarcFileObject))
         {
-            DarcFileObject darcFile = (DarcFileObject) root;
-            FileObject delegateFile = darcFile.getDelegateFile();
+            return;
+        }
 
-            filesList.add(delegateFile.getName().getURI());
+        final DarcFileObject darcFile = (DarcFileObject) root;
+        final String uri = darcFile.getDelegateURI();
+        filesList.add(uri);
 
-            if (darcFile.getType() == FileType.FOLDER)
+        if (darcFile.getType() == FileType.FOLDER)
+        {
+            FileObject[] fileList = darcFile.getChildren();
+            for (FileObject nextFile : fileList)
             {
-                FileObject[] fileList = darcFile.getChildren();
-                for (FileObject nextFile : fileList)
+                FileOperations fileOperations = nextFile.getFileOperations();
+                CollectFilesOperation operation = (CollectFilesOperation) fileOperations.getOperation(CollectFilesOperation.class);
+                if (operation != null)
                 {
-                    FileOperations fileOperations = nextFile.getFileOperations();
-                    CollectFilesOperation operation = (CollectFilesOperation) fileOperations.getOperation(CollectFilesOperation.class);
-                    if (operation != null)
-                    {
-                        operation.setFilesList(filesList);
-                        operation.process();
-                    }
+                    operation.setFilesList(filesList);
+                    operation.process();
                 }
             }
         }

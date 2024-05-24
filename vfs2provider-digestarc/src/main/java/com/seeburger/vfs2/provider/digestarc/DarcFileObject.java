@@ -372,6 +372,28 @@ public class DarcFileObject extends AbstractFileObject<DarcFileSystem> implement
         }
     }
 
+
+    /**
+     * Used by DarcFileCollectOperation to get URI of delegate.
+     * <P>
+     * This is done to avoid listener registration in {@link #getDelegateFile()}.
+     *
+     * @throws FileSystemException if lower level miss-behaves
+     */
+    protected String getDelegateURI() throws FileSystemException
+    {
+        Entry entry = getEntry();
+        String hash = entry.getHash();
+        FileObject targetFile = getProvider().resolveFileHash(hash);
+        if (targetFile != null)
+        {
+            /* we could refresh target here */
+            return targetFile.getName().getURI();
+        }
+        throw new FileSystemException("Expected file blob with hash=" + hash + " cannot be resolved");
+    }
+
+
     private BlobStorageProvider getProvider()
     {
         return ((DarcFileSystem)getFileSystem()).getBlobProvider();
