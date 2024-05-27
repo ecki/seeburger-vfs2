@@ -13,14 +13,20 @@ import java.util.Collection;
 import org.apache.commons.vfs2.FileObject;
 import org.apache.commons.vfs2.FileSystemException;
 import org.apache.commons.vfs2.FileType;
+import org.apache.commons.vfs2.impl.DecoratedFileObject;
 import org.apache.commons.vfs2.operations.FileOperations;
+import org.apache.commons.vfs2.provider.AbstractFileObject;
 
 import com.seeburger.vfs2.operations.CollectFilesOperation;
 
 
 /**
- * This class is a FileOperation implementation responsible for
- * creating a list of file uri string object from a specified file tree.
+ * Collect all delegated files.
+ * <p>
+ * This class uses the provided collection to add all encountered
+ * decorated objects of a Darc subtree. If the collection is not
+ * truncated (which is allowed) already collected subdirs will
+ * not be reported multiple times.
  */
 public class DarcFileCollectOperation implements CollectFilesOperation
 {
@@ -48,28 +54,66 @@ public class DarcFileCollectOperation implements CollectFilesOperation
     public void process()
         throws FileSystemException
     {
-        if (!(root instanceof DarcFileObject))
+        final DarcFileObject darcFile = unwrapDarcFile(root);
+
+        if (darcFile == null)
+            return;
+
+        process(darcFile);
+    }
+
+    private void process(final DarcFileObject darcFile)
+        throws FileSystemException
+    {
+        // by using the internal getDelefateURI() we
+        // avoid the getDelegateFile() API which caches and
+        // decorates all files with a FileListener.
+        final String uri = darcFile.getDelegateURI();
+
+        // the following only works for Set-like "no change on duplicate" behavior
+        final boolean existed = !filesList.add(uri); // returns true if changed
+
+        // if this folder was already visited there is no need
+        // to do it again. This will also reduce the chance of loops
+        if (existed)
         {
             return;
         }
 
-        final DarcFileObject darcFile = (DarcFileObject) root;
-        final String uri = darcFile.getDelegateURI();
-        filesList.add(uri);
-
-        if (darcFile.getType() == FileType.FOLDER)
+        if (darcFile.getType().hasChildren())
         {
             FileObject[] fileList = darcFile.getChildren();
-            for (FileObject nextFile : fileList)
+            for (FileObject n : fileList)
             {
-                FileOperations fileOperations = nextFile.getFileOperations();
-                CollectFilesOperation operation = (CollectFilesOperation) fileOperations.getOperation(CollectFilesOperation.class);
-                if (operation != null)
-                {
-                    operation.setFilesList(filesList);
-                    operation.process();
-                }
+                // typically no unwrap needed
+                DarcFileObject nextFile = unwrapDarcFile(n);
+                if (nextFile == null)
+                    continue;
+                process(nextFile);
             }
         }
+    }
+
+    /**
+     * Cast or unwrap FileObjects into DarcFileObject.
+     *
+     * @param a FileObject or null
+     * @return the cast file object or null otherwise
+     */
+    private DarcFileObject unwrapDarcFile(final FileObject file)
+    {
+        FileObject r = file;
+        // && not needed: will secure about DarcFO extending DecoratedFO in future
+        while (r instanceof DecoratedFileObject && !(r instanceof DarcFileObject))
+        {
+            r = ((DecoratedFileObject)r).getDecoratedFileObject();
+        }
+
+        if (!(r instanceof DarcFileObject))
+        {
+            return null;
+        }
+
+        return (DarcFileObject)r;
     }
 }
