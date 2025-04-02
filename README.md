@@ -26,19 +26,19 @@ Can be build with Java 11+, requires Maven 3.9.x
 By default Java 11 target compatibility is used. To specify a specific version, use:
 
     JAVA_HOME=/opt/jdk17
-    mvn -B -e -C -V -Prelease-profile -Dmaven.compiler.release=8 clean install
+    mvn -B -e -C -V -Prelease-profile "-Dmaven.compiler.release=17" clean install
 
 Use the following dependency declarations (compile scope should only needed for com.seeburger.vfs2.util):
 
     <dependency>
         <groupId>com.seeburger.vfs2</groupId>
         <artifactId>vfs2provider-jdbctable</artifactId>
-        <version>1.8.0</version>
+        <version>1.9.0</version>
     </dependency>
     <dependency>
         <groupId>com.seeburger.vfs2</groupId>
         <artifactId>vfs2provider-digestarc</artifactId>
-        <version>1.8.0</version>
+        <version>1.9.0</version>
     </dependency>
 
 Note: the artifacts are not available via Maven Central.

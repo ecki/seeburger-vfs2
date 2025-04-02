@@ -7,7 +7,6 @@
  */
 package com.seeburger.vfs2.provider.jdbctable;
 
-
 import javax.sql.DataSource;
 
 
@@ -16,7 +15,7 @@ import javax.sql.DataSource;
  * <P>
  * Tested with JTHIN 11.2 and 11.1 drivers.
  */
-public class JdbcDialectOracle extends JdbcDialectBase implements JdbcDialect
+public class JdbcDialectOracle extends JdbcDialectBase
 {
     private String quotedTable;
 

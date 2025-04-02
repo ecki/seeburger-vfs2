@@ -4,7 +4,7 @@
     <parent>
         <groupId>com.seeburger.vfs2</groupId>
         <artifactId>seeburger-vfs2-parent</artifactId>
-        <version>1.8.2-SNAPSHOT</version>
+        <version>1.9.0-SNAPSHOT</version>
     </parent>
 
     <artifactId>vfs2provider-jdbctable</artifactId>

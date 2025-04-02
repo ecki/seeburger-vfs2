@@ -7,7 +7,6 @@
  */
 package com.seeburger.vfs2.provider.jdbctable.test;
 
-
 import java.io.File;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -19,9 +18,8 @@ import org.apache.commons.vfs2.FileObject;
 import org.apache.commons.vfs2.FileSystemManager;
 import org.apache.commons.vfs2.FileSystemOptions;
 import org.apache.commons.vfs2.impl.DefaultFileSystemManager;
-import org.apache.commons.vfs2.test.AbstractProviderTestConfig;
-import org.apache.commons.vfs2.test.ProviderTestConfig;
-import org.apache.commons.vfs2.test.ProviderTestSuite;
+import org.apache.commons.vfs2.AbstractProviderTestConfig;
+import org.apache.commons.vfs2.ProviderTestSuite;
 import org.apache.derby.jdbc.EmbeddedDataSource;
 
 import com.googlecode.flyway.core.Flyway;
@@ -30,7 +28,7 @@ import com.seeburger.vfs2.provider.jdbctable.JdbcTableProvider;
 import com.seeburger.vfs2.util.TreePrinter;
 
 
-public class DerbyProviderTestCase extends AbstractProviderTestConfig implements ProviderTestConfig
+public class DerbyProviderTestCase extends AbstractProviderTestConfig
 {
     private static final String TABLE_NAME = "tBlobs";
     private static EmbeddedDataSource dataSource;
@@ -70,7 +68,7 @@ public class DerbyProviderTestCase extends AbstractProviderTestConfig implements
             FileObject base = manager.resolveFile("seejt:/key/test-data", opts);
 
             // fs.importTree(getTestDirectory());
-            FileObject from = manager.resolveFile(new File("."), getTestDirectory());
+            FileObject from = getReadFolder();
             base.copyFrom(from, new AllFileSelector());
             base.resolveFile("read-tests/emptydir").createFolder();
 

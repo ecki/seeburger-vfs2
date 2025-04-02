@@ -15,13 +15,12 @@ import org.apache.commons.vfs2.FileSystemManager;
 import org.apache.commons.vfs2.FileSystemOptions;
 import org.apache.commons.vfs2.impl.DefaultFileSystemManager;
 import org.apache.commons.vfs2.provider.ram.RamFileProvider;
-import org.apache.commons.vfs2.test.AbstractProviderTestConfig;
-import org.apache.commons.vfs2.test.ProviderTestConfig;
+import org.apache.commons.vfs2.AbstractProviderTestConfig;
 
 import junit.framework.Test;
 
 
-public class DarcProviderTestCase extends AbstractProviderTestConfig implements ProviderTestConfig
+public class DarcProviderTestCase extends AbstractProviderTestConfig
 {
     private FileSystemOptions opts;
     private boolean inited;
@@ -58,7 +57,7 @@ public class DarcProviderTestCase extends AbstractProviderTestConfig implements 
             FileObject base = manager.resolveFile("darc:ram:/!/test-data", opts);
 
             // fs.importTree(getTestDirectory());
-            FileObject from = manager.resolveFile(new File("."), getTestDirectory());
+            FileObject from = getReadFolder();
             base.copyFrom(from, new AllFileSelector());
             base.resolveFile("read-tests/emptydir").createFolder();
 

@@ -7,7 +7,6 @@
  */
 package com.seeburger.vfs2.provider.jdbctable.test;
 
-
 import static org.junit.Assert.assertEquals;
 
 import java.sql.Connection;
@@ -61,7 +60,7 @@ public class SimpleMSSQLTest extends SimpleTestsBase
         rs.close(); c.close();
 
         SimpleTestsBase.dataSource = ds;
-        SimpleTestsBase.dialect = JdbcDialectBase.getDialect(dataSource);
+        SimpleTestsBase.dialect = JdbcDialectBase.getDialect(ds);
 
         assertEquals(JdbcDialectMSSQL.class.getName(), dialect.getClass().getName());
     }

@@ -7,31 +7,26 @@
  */
 package com.seeburger.vfs2.provider.digestarc;
 
-
-import junit.framework.Test;
-
-import org.apache.commons.vfs2.impl.test.VfsClassLoaderTests;
-import org.apache.commons.vfs2.test.ContentTests;
-import org.apache.commons.vfs2.test.LastModifiedTests;
-import org.apache.commons.vfs2.test.NamingTests;
-import org.apache.commons.vfs2.test.ProviderDeleteTests;
-import org.apache.commons.vfs2.test.ProviderRandomReadTests;
-import org.apache.commons.vfs2.test.ProviderRandomReadWriteTests;
-import org.apache.commons.vfs2.test.ProviderReadTests;
-import org.apache.commons.vfs2.test.ProviderRenameTests;
-import org.apache.commons.vfs2.test.ProviderTestConfig;
-import org.apache.commons.vfs2.test.ProviderTestSuite;
-import org.apache.commons.vfs2.test.ProviderWriteAppendTests;
-import org.apache.commons.vfs2.test.ProviderWriteTests;
-import org.apache.commons.vfs2.test.UriTests;
-import org.apache.commons.vfs2.test.UrlStructureTests;
-import org.apache.commons.vfs2.test.UrlTests;
+import org.apache.commons.vfs2.impl.VfsClassLoaderTests;
+import org.apache.commons.vfs2.ContentTests;
+import org.apache.commons.vfs2.LastModifiedTests;
+import org.apache.commons.vfs2.NamingTests;
+import org.apache.commons.vfs2.ProviderDeleteTests;
+import org.apache.commons.vfs2.ProviderRandomReadTests;
+import org.apache.commons.vfs2.ProviderRandomReadWriteTests;
+import org.apache.commons.vfs2.ProviderReadTests;
+import org.apache.commons.vfs2.ProviderRenameTests;
+import org.apache.commons.vfs2.ProviderTestConfig;
+import org.apache.commons.vfs2.ProviderTestSuite;
+import org.apache.commons.vfs2.ProviderWriteAppendTests;
+import org.apache.commons.vfs2.ProviderWriteTests;
+import org.apache.commons.vfs2.UriTests;
+import org.apache.commons.vfs2.UrlStructureTests;
+import org.apache.commons.vfs2.UrlTests;
 
 
 /** DarcProvider is tested with apache base test suite sans ProviderCacheStrategyTest. */
-public class DarcProviderTestSuite
-    extends ProviderTestSuite
-    implements Test
+public class DarcProviderTestSuite extends ProviderTestSuite
 {
     public DarcProviderTestSuite(ProviderTestConfig testConfig) throws Exception
     {

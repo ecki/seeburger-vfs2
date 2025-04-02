@@ -7,11 +7,7 @@
  */
 package com.seeburger.vfs2.provider.jdbctable;
 
-
 import javax.sql.DataSource;
-
-import com.seeburger.vfs2.provider.jdbctable.JdbcDialect;
-import com.seeburger.vfs2.provider.jdbctable.JdbcDialectBase;
 
 
 /**
@@ -19,7 +15,7 @@ import com.seeburger.vfs2.provider.jdbctable.JdbcDialectBase;
  * <P>
  * Tested with JTDS driver.
  */
-public class JdbcDialectMSSQL extends JdbcDialectBase implements JdbcDialect
+public class JdbcDialectMSSQL extends JdbcDialectBase
 {
     /** Cached quoted identifier, possibly containing schema name. */
     private String quotedTable;

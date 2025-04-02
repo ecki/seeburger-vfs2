@@ -7,7 +7,6 @@
  */
 package com.seeburger.vfs2.provider.digestarc;
 
-
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
@@ -21,14 +20,13 @@ import org.apache.commons.vfs2.FileSystemException;
 import org.apache.commons.vfs2.FileSystemOptions;
 import org.apache.commons.vfs2.FileType;
 import org.apache.commons.vfs2.provider.AbstractLayeredFileProvider;
-import org.apache.commons.vfs2.provider.FileProvider;
 import org.apache.commons.vfs2.provider.LayeredFileName;
 
 
 /**
  * A file system provider for Digest Archives.
  */
-public class DarcFileProvider extends AbstractLayeredFileProvider implements FileProvider
+public class DarcFileProvider extends AbstractLayeredFileProvider
 {
     /** The list of capabilities this provider supports */
     protected static final Collection<Capability> capabilities =

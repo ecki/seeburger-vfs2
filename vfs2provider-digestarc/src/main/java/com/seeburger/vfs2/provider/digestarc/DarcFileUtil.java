@@ -7,7 +7,6 @@
  */
 package com.seeburger.vfs2.provider.digestarc;
 
-
 import java.io.Closeable;
 import java.io.EOFException;
 import java.io.File;
@@ -58,7 +57,7 @@ public class DarcFileUtil
             }
             if (current instanceof DelegateFileObject)
             {
-                current = ((DelegateFileObject)current).getDelegateFile();
+                current = ((DelegateFileObject<?>)current).getDelegateFile();
                 continue;
             }
             // if null or unknown
@@ -109,8 +108,10 @@ public class DarcFileUtil
             throw new IllegalArgumentException("The class=" + fs.getClass() + " is no DarcFileSystem for " + file);
         }
 
-        DarcFileSystem dfs = (DarcFileSystem)fs;
-        return dfs.commitChanges();
+        try (DarcFileSystem dfs = (DarcFileSystem)fs;)
+        {
+            return dfs.commitChanges();
+        }
     }
 
     /**

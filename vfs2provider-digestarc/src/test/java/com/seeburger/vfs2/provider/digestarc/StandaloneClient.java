@@ -7,7 +7,6 @@
  */
 package com.seeburger.vfs2.provider.digestarc;
 
-
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -44,94 +43,93 @@ public class StandaloneClient
         File testDir = new File("target/testdir");
         populateTestdir(testDir);
 
-        DefaultFileSystemManager manager = new DefaultFileSystemManager();
-        manager.addProvider("seearc", new DarcFileProvider());
-        manager.addProvider("file", new DefaultLocalFileProvider());
-        manager.setCacheStrategy(CacheStrategy.ON_RESOLVE);
-        manager.init();
-
-        FileSystemOptions opts = new FileSystemOptions();
-        DarcFileConfigBuilder config = DarcFileConfigBuilder.getInstance();
-        config.setChangeSession(opts, "2");
-
-        FileObject base = manager.resolveFile(testDir, "");
-        String uri = "seearc:" + base.getName().getURI();
-        FileObject dir1 = manager.resolveFile(uri, opts);
-        dir1.createFolder();
-        DarcFileSystem fs = (DarcFileSystem)dir1.getFileSystem();
-        System.out.println("Commiting empty: " + fs.commitChanges());
-
-
-        base = manager.resolveFile(testDir, "a3/6af8df2216a8357967276438ea608fe1a2c0e1");
-        uri = "seearc:" + base.getName().getURI() + "!/";
-        dir1 = manager.resolveFile(uri, opts);
-        fs = (DarcFileSystem)dir1.getFileSystem();
-        final FileObject root = fs.getRoot();
-
-        TreePrinter.printTree(root, "| ", System.out);
-
-        FileObject testFile = dir1.resolveFile("file2");
-
-        System.out.println("opened file: " + testFile);
-        System.out.println("       size: " + testFile.getContent().getSize());
-
-        InputStream is = testFile.getContent().getInputStream();
-        int c;
-        while((c = is.read()) != -1)
+        try (DefaultFileSystemManager manager = new DefaultFileSystemManager();)
         {
-            System.out.print(" " + String.valueOf((char)c));
+            manager.addProvider("seearc", new DarcFileProvider());
+            manager.addProvider("file", new DefaultLocalFileProvider());
+            manager.setCacheStrategy(CacheStrategy.ON_RESOLVE);
+            manager.init();
+
+            FileSystemOptions opts = new FileSystemOptions();
+            DarcFileConfigBuilder config = DarcFileConfigBuilder.getInstance();
+            config.setChangeSession(opts, "2");
+
+            FileObject base = manager.resolveFile(testDir, "");
+            String uri = "seearc:" + base.getName().getURI();
+            FileObject dir1 = manager.resolveFile(uri, opts);
+            dir1.createFolder();
+            DarcFileSystem fs = (DarcFileSystem)dir1.getFileSystem();
+            System.out.println("Commiting empty: " + fs.commitChanges());
+
+
+            base = manager.resolveFile(testDir, "a3/6af8df2216a8357967276438ea608fe1a2c0e1");
+            uri = "seearc:" + base.getName().getURI() + "!/";
+            dir1 = manager.resolveFile(uri, opts);
+            fs = (DarcFileSystem)dir1.getFileSystem();
+            final FileObject root = fs.getRoot();
+
+            TreePrinter.printTree(root, "| ", System.out);
+
+            FileObject testFile = dir1.resolveFile("file2");
+
+            System.out.println("opened file: " + testFile);
+            System.out.println("       size: " + testFile.getContent().getSize());
+
+            InputStream is = testFile.getContent().getInputStream();
+            int c;
+            while((c = is.read()) != -1)
+            {
+                System.out.print(" " + String.valueOf((char)c));
+            }
+            System.out.println();
+            is.close();
+
+            System.out.println("now creating new files and folders");
+
+            dir1.resolveFile("newtestfile1").createFile();
+            dir1.resolveFile("folder").createFolder();
+            dir1.resolveFile("folder1/folder2/folder3/").createFolder();
+            System.out.println(" children 3 levels non exist: " + dir1.resolveFile("folder1/folder2/folder3/").getChildren());
+            dir1.resolveFile("folder/newtestfile2").createFile();
+            dir1.resolveFile("file1").delete();
+
+            TreePrinter.printTree(root, "+| ", System.out);
+
+            System.out.println("Listing the fs outside session");
+            opts = new FileSystemOptions();
+            config.setChangeSession(opts, "3");
+
+            final FileObject dir3 = manager.resolveFile(uri, opts);
+            final FileObject root3 = dir3.getFileSystem().getRoot();
+
+            TreePrinter.printTree(root3, "<< ", System.out);
+
+            try
+            {
+                dir3.resolveFile("folder1/folder2/folder3/").getChildren();
+            } catch (FileNotFolderException expected) { System.out.println("not folder (expected): " + expected); }
+
+            System.out.println("Listing the fs inside session");
+            opts = new FileSystemOptions();
+            config.setChangeSession(opts, "2");
+
+            final FileObject dir5 = manager.resolveFile(uri, opts);
+            final FileObject root5 = dir5.getFileSystem().getRoot();
+
+            TreePrinter.printTree(root5, ">> ", System.out);
+
+
+            fs = (DarcFileSystem)dir1.getFileSystem();
+            String newHash = fs.commitChanges();
+            System.out.println("commited changes: " + newHash);
+
+            base = manager.resolveFile(testDir, BlobStorageProvider.hashToPath(newHash));
+            FileObject dir2 = manager.createFileSystem("seearc", base);
+            TreePrinter.printTree(dir2, "== ", System.out);
+
+            FileObject dir4 = dir2.getChild("folder");
+            dir4.getChildren();
         }
-        System.out.println();
-        is.close();
-
-        System.out.println("now creating new files and folders");
-
-        dir1.resolveFile("newtestfile1").createFile();
-        dir1.resolveFile("folder").createFolder();
-        dir1.resolveFile("folder1/folder2/folder3/").createFolder();
-        System.out.println(" children 3 levels non exist: " + dir1.resolveFile("folder1/folder2/folder3/").getChildren());
-        dir1.resolveFile("folder/newtestfile2").createFile();
-        dir1.resolveFile("file1").delete();
-
-        TreePrinter.printTree(root, "+| ", System.out);
-
-        System.out.println("Listing the fs outside session");
-        opts = new FileSystemOptions();
-        config.setChangeSession(opts, "3");
-
-        final FileObject dir3 = manager.resolveFile(uri, opts);
-        final FileObject root3 = dir3.getFileSystem().getRoot();
-
-        TreePrinter.printTree(root3, "<< ", System.out);
-
-        try
-        {
-            dir3.resolveFile("folder1/folder2/folder3/").getChildren();
-        } catch (FileNotFolderException expected) { System.out.println("not folder (expected): " + expected); }
-
-        System.out.println("Listing the fs inside session");
-        opts = new FileSystemOptions();
-        config.setChangeSession(opts, "2");
-
-        final FileObject dir5 = manager.resolveFile(uri, opts);
-        final FileObject root5 = dir5.getFileSystem().getRoot();
-
-        TreePrinter.printTree(root5, ">> ", System.out);
-
-
-        fs = (DarcFileSystem)dir1.getFileSystem();
-        String newHash = fs.commitChanges();
-        System.out.println("commited changes: " + newHash);
-
-        base = manager.resolveFile(testDir, BlobStorageProvider.hashToPath(newHash));
-        FileObject dir2 = manager.createFileSystem("seearc", base);
-        TreePrinter.printTree(dir2, "== ", System.out);
-
-        FileObject dir4 = dir2.getChild("folder");
-        dir4.getChildren();
-
-
-
     }
 
     private static void populateTestdir(File base) throws IOException, NoSuchAlgorithmException

@@ -17,7 +17,7 @@ import javax.sql.DataSource;
 /**
  * PostgreSQL Database specific dialect for JdbcTable VFS Provider.
  */
-public class JdbcDialectPostgreSQL extends JdbcDialectBase implements JdbcDialect
+public class JdbcDialectPostgreSQL extends JdbcDialectBase
 {
     private String quotedTable;
 

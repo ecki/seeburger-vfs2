@@ -7,7 +7,6 @@
  */
 package com.seeburger.vfs2.util;
 
-
 import static org.junit.Assert.*;
 
 import java.io.File;
@@ -438,13 +437,15 @@ public class FileNameGlobbingTest
 
     private FileObject getTestDir() throws FileSystemException
     {
-        DefaultFileSystemManager manager = new DefaultFileSystemManager();
-        manager.addProvider("file", new DefaultLocalFileProvider());
-        manager.setCacheStrategy(CacheStrategy.MANUAL);
-        manager.setFilesCache(new DefaultFilesCache());
-        FileObject file = manager.resolveFile(new File("."), "../src/test/");
-        assertTrue("Test directory must exist", file.getType().hasChildren());
-        return file;
+        try (DefaultFileSystemManager manager = new DefaultFileSystemManager();)
+        {
+            manager.addProvider("file", new DefaultLocalFileProvider());
+            manager.setCacheStrategy(CacheStrategy.MANUAL);
+            manager.setFilesCache(new DefaultFilesCache());
+            FileObject file = manager.resolveFile(new File("."), "../src/test/");
+            assertTrue("Test directory must exist", file.getType().hasChildren());
+            return file;
+        }
     }
 
     private void assertBase(String expected, String pattern)

@@ -7,7 +7,6 @@
  */
 package com.seeburger.vfs2.provider.jdbctable.test;
 
-
 import java.io.File;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -21,16 +20,15 @@ import org.apache.commons.vfs2.AllFileSelector;
 import org.apache.commons.vfs2.FileObject;
 import org.apache.commons.vfs2.FileSystemManager;
 import org.apache.commons.vfs2.impl.DefaultFileSystemManager;
-import org.apache.commons.vfs2.test.AbstractProviderTestConfig;
-import org.apache.commons.vfs2.test.ProviderTestConfig;
-import org.apache.commons.vfs2.test.ProviderTestSuite;
+import org.apache.commons.vfs2.AbstractProviderTestConfig;
+import org.apache.commons.vfs2.ProviderTestSuite;
 
 import com.googlecode.flyway.core.Flyway;
 import com.seeburger.vfs2.provider.jdbctable.JdbcDialectOracle;
 import com.seeburger.vfs2.provider.jdbctable.JdbcTableProvider;
 
 
-public class OracleProviderTestCase extends AbstractProviderTestConfig implements ProviderTestConfig
+public class OracleProviderTestCase extends AbstractProviderTestConfig
 {
     private static DataSource dataSource;
     private boolean inited;
@@ -61,7 +59,7 @@ public class OracleProviderTestCase extends AbstractProviderTestConfig implement
             FileObject base = manager.resolveFile("seejt:/key/test-data");
 
             // fs.importTree(getTestDirectory());
-            FileObject from = manager.resolveFile(new File("."), getTestDirectory());
+            FileObject from = getReadFolder();
             base.copyFrom(from, new AllFileSelector());
             base.resolveFile("read-tests/emptydir").createFolder();
 

@@ -7,15 +7,11 @@
  */
 package com.seeburger.vfs2.provider.digestarc;
 
-
 import java.util.Collection;
 
 import org.apache.commons.vfs2.FileObject;
 import org.apache.commons.vfs2.FileSystemException;
-import org.apache.commons.vfs2.FileType;
 import org.apache.commons.vfs2.impl.DecoratedFileObject;
-import org.apache.commons.vfs2.operations.FileOperations;
-import org.apache.commons.vfs2.provider.AbstractFileObject;
 
 import com.seeburger.vfs2.operations.CollectFilesOperation;
 

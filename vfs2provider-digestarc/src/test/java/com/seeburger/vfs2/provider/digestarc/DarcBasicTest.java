@@ -7,7 +7,6 @@
  */
 package com.seeburger.vfs2.provider.digestarc;
 
-
 import static org.junit.Assert.*;
 
 import java.io.File;
@@ -293,44 +292,49 @@ public class DarcBasicTest
      * @throws IOException */
     private FileObject getTestRoot(boolean write) throws IOException
     {
-        DefaultFileSystemManager manager = new DefaultFileSystemManager();
-        manager.addProvider("file", new DefaultLocalFileProvider());
-        manager.addProvider("ram", new RamFileProvider());
-        manager.addProvider("darc", new DarcFileProvider());
-        manager.addOperationProvider("darc", DarcFileOperationProvider.getInstance());
+        try (DefaultFileSystemManager manager = new DefaultFileSystemManager();)
+        {
+            manager.addProvider("file", new DefaultLocalFileProvider());
+            manager.addProvider("ram", new RamFileProvider());
+            manager.addProvider("darc", new DarcFileProvider());
+            manager.addOperationProvider("darc", DarcFileOperationProvider.getInstance());
 
-        manager.setCacheStrategy(CacheStrategy.MANUAL);
-        manager.setFilesCache(new DefaultFilesCache());
+            manager.setCacheStrategy(CacheStrategy.MANUAL);
+            manager.setFilesCache(new DefaultFilesCache());
 
-        manager.setDefaultProvider(new UrlFileProvider());
-        manager.setBaseFile(manager.resolveFile("ram:/"));
+            manager.setDefaultProvider(new UrlFileProvider());
+            manager.setBaseFile(manager.resolveFile("ram:/"));
 
-        File tmp = new File(System.getProperty("java.io.tmpdir"), "vfslocal");
-        tmp.mkdirs();
-        manager.setReplicator(new DefaultFileReplicator(tmp));
+            File tmp = new File(System.getProperty("java.io.tmpdir"), "vfslocal");
+            tmp.mkdirs();
+            manager.setReplicator(new DefaultFileReplicator(tmp));
 
-        FileSystemOptions writeOpts = new FileSystemOptions();
-        DarcFileConfigBuilder config = DarcFileConfigBuilder.getInstance();
-        config.setChangeSession(writeOpts, "+");
-        FileObject root = manager.resolveFile("darc:ram:/", writeOpts);
-        root.resolveFile("dir1").createFolder();
-        root.resolveFile("dir1/dir1a").createFolder();
-        root.resolveFile("dir1/dir1b").createFolder();
-        root.resolveFile("dir1/dir1a/file1").createFile();
-        root.resolveFile("dir1/dir1a/file2").createFile();
-        root.resolveFile("dir2").createFolder();
-        root.resolveFile("dir2/dir2a").createFolder();
-        root.resolveFile("dir2/dir2a/file1").createFile();
-        root.resolveFile("dir2/dir2a/file2").createFile();
-        root.resolveFile("dir2/dir2b").createFolder();
-        DarcFileSystem fs = (DarcFileSystem)root.getFileSystem();
-        String id = fs.commitChanges();
+            FileSystemOptions writeOpts = new FileSystemOptions();
+            DarcFileConfigBuilder config = DarcFileConfigBuilder.getInstance();
+            config.setChangeSession(writeOpts, "+");
+            FileObject root = manager.resolveFile("darc:ram:/", writeOpts);
+            root.resolveFile("dir1").createFolder();
+            root.resolveFile("dir1/dir1a").createFolder();
+            root.resolveFile("dir1/dir1b").createFolder();
+            root.resolveFile("dir1/dir1a/file1").createFile();
+            root.resolveFile("dir1/dir1a/file2").createFile();
+            root.resolveFile("dir2").createFolder();
+            root.resolveFile("dir2/dir2a").createFolder();
+            root.resolveFile("dir2/dir2a/file1").createFile();
+            root.resolveFile("dir2/dir2a/file2").createFile();
+            root.resolveFile("dir2/dir2b").createFolder();
+            try (DarcFileSystem fs = (DarcFileSystem)root.getFileSystem();)
+            {
+                String id = fs.commitChanges();
 
-        if (write)
-            return manager.resolveFile("darc:ram:/" + BlobStorageProvider.hashToPath(id) + "!/", writeOpts);
-        else
-            return manager.resolveFile("darc:ram:/" + BlobStorageProvider.hashToPath(id) + "!/");
+                if (write)
+                    return manager.resolveFile("darc:ram:/" + BlobStorageProvider.hashToPath(id) + "!/", writeOpts);
+                else
+                    return manager.resolveFile("darc:ram:/" + BlobStorageProvider.hashToPath(id) + "!/");
+            }
+        }
     }
+
 
     @Test
     public void testCreateRecreate() throws IOException
