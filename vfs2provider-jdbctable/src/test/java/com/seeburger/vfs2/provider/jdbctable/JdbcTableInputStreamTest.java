@@ -12,6 +12,7 @@ import static org.junit.Assert.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
+import java.io.IOException;
 import java.util.Arrays;
 
 import org.apache.commons.vfs2.FileContent;
@@ -113,6 +114,87 @@ public class JdbcTableInputStreamTest
                    stream.available() > 0);
     }
 
+    /**
+     * After a chunk-load failure the stream must keep its previous position so a subsequent
+     * retry computes the same next chunk and can continue reading.
+     */
+    @Test
+    public void testReadRetriesSameChunkAfterNextReadDataIOException() throws Exception
+    {
+        byte[] fullData = makeData(12);
+        int chunkSize = 4;
+
+        FileContent content = mock(FileContent.class);
+        when(content.getSize()).thenReturn((long) fullData.length);
+
+        JdbcTableRowFile file = mock(JdbcTableRowFile.class);
+        when(file.getContent()).thenReturn(content);
+
+        DataDescription startDesc = new DataDescription();
+        startDesc.dataLength = fullData.length;
+        startDesc.pos = 0;
+        startDesc.buffer = Arrays.copyOf(fullData, chunkSize);
+        when(file.startReadData(anyInt())).thenReturn(startDesc);
+
+        final int[] nextReadCalls = { 0 };
+        doAnswer((InvocationOnMock inv) -> {
+            DataDescription desc = inv.getArgument(0);
+            int maxLen = inv.getArgument(1);
+            nextReadCalls[0]++;
+            if (nextReadCalls[0] == 1)
+            {
+                throw new IOException("simulated DB read failure");
+            }
+            int len = (int) Math.min(Math.min(maxLen, chunkSize), fullData.length - desc.pos);
+            desc.buffer = Arrays.copyOfRange(fullData, (int) desc.pos, (int) desc.pos + len);
+            return null;
+        }).when(file).nextReadData(any(DataDescription.class), anyInt());
+
+        JdbcTableInputStream stream = new JdbcTableInputStream(file);
+
+        byte[] firstChunk = new byte[chunkSize];
+        assertEquals(chunkSize, stream.read(firstChunk, 0, chunkSize));
+
+        try
+        {
+            stream.read();
+            fail("Expected IOException from nextReadData");
+        }
+        catch (IOException expected)
+        {
+            assertEquals("dataDescription.pos must remain at previous chunk after failure",
+                         0L, startDesc.pos);
+        }
+
+        assertEquals("Retry must continue from the same chunk position",
+                     fullData[chunkSize] & 0xff, stream.read());
+        assertEquals("Successful retry must move to the requested chunk start",
+                     (long) chunkSize, startDesc.pos);
+        verify(file, times(2)).nextReadData(any(DataDescription.class), anyInt());
+    }
+
+    @Test
+    public void testResetFailsAfterCrossingChunkBoundary() throws Exception
+    {
+        int chunkSize = 4;
+        JdbcTableInputStream stream = buildStream(makeData(chunkSize + 2), chunkSize);
+
+        stream.mark(0);
+        byte[] firstChunk = new byte[chunkSize];
+        assertEquals(chunkSize, stream.read(firstChunk, 0, firstChunk.length));
+        assertEquals("Cross chunk to make mark invalid", chunkSize + 1, stream.read());
+
+        try
+        {
+            stream.reset();
+            fail("Expected reset to fail after moving to another chunk");
+        }
+        catch (IOException expected)
+        {
+            // expected
+        }
+    }
+
     // -----------------------------------------------------------------------
     // Helpers
     // -----------------------------------------------------------------------
@@ -162,7 +244,7 @@ public class JdbcTableInputStreamTest
         doAnswer((InvocationOnMock inv) -> {
             DataDescription desc   = inv.getArgument(0);
             int             maxLen = inv.getArgument(1);
-            int             len    = (int) Math.min(maxLen, fullData.length - desc.pos);
+            int             len    = (int) Math.min(Math.min(maxLen, chunkSize), fullData.length - desc.pos);
             desc.buffer = Arrays.copyOfRange(fullData, (int) desc.pos, (int) desc.pos + len);
             return null;
         }).when(file).nextReadData(any(DataDescription.class), anyInt());
