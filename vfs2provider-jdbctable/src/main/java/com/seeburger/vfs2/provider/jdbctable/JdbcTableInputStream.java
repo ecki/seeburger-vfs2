@@ -17,13 +17,11 @@ import com.seeburger.vfs2.provider.jdbctable.JdbcTableRowFile.DataDescription;
 
 
 /**
- * Input Stream backed by a JDBC blob.
- * <P>
- * WARNING: this currently only allows to read blobs up to 50 MB.
- * This is a TODO, it is intended to reopen the Blob every {@link #MAX_BUFFER_SIZE}
- * read bytes.
+ * Input Stream backed by a JDBC blob that transparently loads data in chunks of at most
+ * {@link #MAX_BUFFER_SIZE} bytes, supporting files of arbitrary size.
  *
  * @see JdbcTableRowFile#startReadData(int)
+ * @see JdbcTableRowFile#nextReadData(DataDescription, int)
  * @see JdbcTableRowFile#doGetInputStream()
  */
 public class JdbcTableInputStream extends InputStream
@@ -32,11 +30,26 @@ public class JdbcTableInputStream extends InputStream
 
     static final int MAX_BUFFER_SIZE = 50 * 1024 * 1024;
 
-    /** Keep state for re-requesting additional data. */
-    final DataDescription dataDescription;
+    /**
+     * Abstracts next-chunk loading so the stream can be tested without a real database.
+     * Implementations must return a byte array of up to {@code maxLen} bytes read from
+     * the backing store starting at absolute file position {@code pos}.
+     */
+    interface ChunkLoader
+    {
+        byte[] load(long pos, int maxLen) throws IOException;
+    }
+
+    /** Keep state for re-requesting additional data (position, generation, total length). */
+    private final DataDescription dataDescription;
+
+    /** Loads the next chunk from the backing store when the current buffer is exhausted. */
+    private final ChunkLoader chunkLoader;
 
     /** position for mark/reset support. */
     long mark = 0;
+    /** absolute start position of the chunk active at {@link #mark(int)} time. */
+    long markChunkPos = 0;
 
     /** read position in the buffer */
     int bufferPos;
@@ -48,33 +61,78 @@ public class JdbcTableInputStream extends InputStream
     protected JdbcTableInputStream(JdbcTableRowFile file) throws IOException
     {
         long fileSize = file.getContent().getSize();
-        int bufsize;
+        int bufsize = (fileSize > MAX_BUFFER_SIZE) ? MAX_BUFFER_SIZE : (int) fileSize;
 
-        if (fileSize > (long)MAX_BUFFER_SIZE)
-        {
-            bufsize = MAX_BUFFER_SIZE;
-            LOG.warn("JdbcTableInputStream on " + file  + " only supports " + MAX_BUFFER_SIZE + " bytes. (filesize=" + fileSize + ")");
-        }
-        else
-        {
-            bufsize = (int)fileSize;
-        }
-
-        // This is used to keep optimistic lockig state.
+        // This is used to keep optimistic locking state.
         dataDescription = file.startReadData(bufsize);
         buf = dataDescription.buffer;
         bufferPos = 0;
         bufferSize = buf.length;
+
+        if (LOG.isDebugEnabled() && fileSize > MAX_BUFFER_SIZE)
+        {
+            LOG.debug("JdbcTableInputStream on " + file + " will load " + fileSize
+                      + " bytes in chunks of " + MAX_BUFFER_SIZE);
+        }
+
+        this.chunkLoader = (pos, maxLen) -> {
+            long previousPos = dataDescription.pos;
+            dataDescription.pos = pos;
+            try
+            {
+                file.nextReadData(dataDescription, maxLen);
+                return dataDescription.buffer;
+            }
+            catch (IOException ex)
+            {
+                    dataDescription.pos = previousPos;
+                throw ex;
+            }
+        };
+    }
+
+    /**
+     * Loads the next chunk from the backing store into {@link #buf}.
+     * Updates {@code dataDescription.pos}, {@link #bufferPos}, and {@link #bufferSize}.
+     *
+     * @return {@code true} if at least one byte was loaded; {@code false} at EOF
+     * @throws IOException if the backing store signals an error or detects a content change
+     */
+    private boolean loadNextChunk() throws IOException
+    {
+        long previousPos = dataDescription.pos;
+        long nextPos = previousPos + bufferSize;
+        if (nextPos >= dataDescription.dataLength)
+        {
+            return false;
+        }
+        int maxLen = (int) Math.min(MAX_BUFFER_SIZE, dataDescription.dataLength - nextPos);
+        try
+        {
+            buf = chunkLoader.load(nextPos, maxLen);
+        }
+        catch (IOException ex)
+        {
+            dataDescription.pos = previousPos;
+            throw ex;
+        }
+        dataDescription.pos = nextPos;
+        bufferPos = 0;
+        bufferSize = buf.length;
+        return bufferSize > 0;
     }
 
     /**
      * Reads the next byte of data from this input stream.
      */
-    public synchronized int read()
+    public synchronized int read() throws IOException
     {
         if (bufferPos >= bufferSize)
         {
-            return -1;
+            if (!loadNextChunk())
+            {
+                return -1;
+            }
         }
 
         return (buf[bufferPos++] & 0xff);
@@ -84,31 +142,27 @@ public class JdbcTableInputStream extends InputStream
      * Reads up to <code>len</code> bytes of data into an array of bytes
      * from this input stream.
      */
-    public synchronized int read(byte b[], int off, int len)
+    public synchronized int read(byte b[], int off, int len) throws IOException
     {
         if (off < 0 || len < 0 || len > b.length - off)
         {
             throw new IndexOutOfBoundsException();
         }
 
-        if (bufferPos >= bufferSize)
-        {
-            return -1;
-        }
-
-        int readBytes;
-        if (bufferPos + len > bufferSize)
-        {
-            readBytes = bufferSize - bufferPos;
-        } else {
-            readBytes = len;
-        }
-
-        if (readBytes <= 0) // == 0
+        if (len == 0)
         {
             return 0;
         }
 
+        if (bufferPos >= bufferSize)
+        {
+            if (!loadNextChunk())
+            {
+                return -1;
+            }
+        }
+
+        int readBytes = Math.min(len, bufferSize - bufferPos);
         System.arraycopy(buf, bufferPos, b, off, readBytes);
         bufferPos += readBytes;
         return readBytes;
@@ -116,43 +170,49 @@ public class JdbcTableInputStream extends InputStream
 
     /**
      * Skips <code>n</code> bytes of input from this input stream.
+     * Transparently advances across chunk boundaries.
      */
-    public synchronized long skip(long n)
+    public synchronized long skip(long n) throws IOException
     {
-        int skipBytes;
-
-        if (bufferPos + n > bufferSize)
-        {
-            skipBytes = bufferSize - bufferPos;
-        }
-        else if (n > Integer.MAX_VALUE)
-        {
-            skipBytes = Integer.MAX_VALUE;
-        }
-        else
-        {
-            skipBytes = (int)n;
-        }
-
-        if (skipBytes < 0)
+        if (n <= 0)
         {
             return 0;
         }
-        bufferPos += skipBytes;
-        return skipBytes;
+
+        long remaining = n;
+        while (remaining > 0)
+        {
+            int inBuffer = bufferSize - bufferPos;
+            if (inBuffer > 0)
+            {
+                long skipNow = Math.min(remaining, inBuffer);
+                bufferPos += (int) skipNow;
+                remaining -= skipNow;
+            }
+            else
+            {
+                if (!loadNextChunk())
+                {
+                    break;
+                }
+            }
+        }
+
+        return n - remaining;
     }
 
     /**
-     * Returns the number of remaining bytes that can be read (or skipped over)
-     * from this input stream.
+     * Returns the total number of bytes that can still be read (or skipped) from this
+     * stream, spanning all remaining chunks.
      */
     public synchronized int available()
     {
-        return bufferSize - bufferPos;
+        long totalRemaining = dataDescription.dataLength - dataDescription.pos - bufferPos;
+        return (int) Math.min(totalRemaining, Integer.MAX_VALUE);
     }
 
     /**
-     * mark/reset is supported.
+     * mark/reset is supported within the current chunk only.
      */
     public boolean markSupported()
     {
@@ -165,14 +225,19 @@ public class JdbcTableInputStream extends InputStream
     public synchronized void mark(int readAheadLimit)
     {
         mark = bufferPos;
+        markChunkPos = dataDescription.pos;
     }
 
     /**
      * Resets the buffer to the marked position.
      */
-    public synchronized void reset()
+    public synchronized void reset() throws IOException
     {
-        bufferPos = (int)mark; // TODO: relative to buffer
+        if (dataDescription.pos != markChunkPos)
+        {
+            throw new IOException("Marked position is no longer in the current chunk");
+        }
+        bufferPos = (int) mark;
     }
 
     public void close() throws IOException
